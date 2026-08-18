@@ -17,7 +17,7 @@ public class WebDemo {
     public static void main(String[] args) {
         StandardEnvironment environment = new StandardEnvironment();
         new ConfigFilePropertySourceLoader().load(environment);
-        int port = Integer.parseInt(environment.getProperty("server.port", "8080"));
+        int port = Integer.parseInt(environment.getProperty("server.port", "9090"));
 
         AnnotationConfigApplicationContext context =
                 new AnnotationConfigApplicationContext(environment, WebConfig.class);

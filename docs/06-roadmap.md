@@ -33,6 +33,11 @@
 
 顺序：仅线性，M_{n+1} 依赖 M_n 已落地验收。
 
+### 端口约定
+
+- 后端：`server.port = 9090`（`application.yml` 默认值 + `WebDemo` 兜底一致）
+- 前端：React/Vite 开发服务器 = `9010`（M9 `demo-frontend/` 落地生效）
+
 ---
 
 ## 3. 各里程碑产出与落地证据
@@ -65,7 +70,7 @@
 ### M4 · 外部化配置
 
 - **产出**：`Environment/PropertySource`、properties/yaml 解析、`@Value` 占位符与默认值、Profile。
-- **落地证据**：`ConfigDemo` 真实 `main` 启动，从 `application.yml` + `application.properties` 读值注入字段，并逐一断言——yaml 二级嵌套、列表拍平（`app.features[0]/[1]`）、int 类型转换、默认值（`${app.missing:3000}`）、嵌套占位符（`${app.${app.pointer}}`）、properties 解析（`app.version`）、prod profile 覆盖 `server.port`（8080→8443），全部在运行期真实通过。
+- **落地证据**：`ConfigDemo` 真实 `main` 启动，从 `application.yml` + `application.properties` 读值注入字段，并逐一断言——yaml 二级嵌套、列表拍平（`app.features[0]/[1]`）、int 类型转换、默认值（`${app.missing:3000}`）、嵌套占位符（`${app.${app.pointer}}`）、properties 解析（`app.version`）、prod profile 覆盖 `server.port`（9090→8443），全部在运行期真实通过。
 - **落地边界（显式技术债）**：YAML 仅为「教学子集」、`@Value` 不支持 SpEL 与复杂类型、Profile 仅手动激活、配置文件仅 classpath 根——详见 §7 的 D10–D13。
 
 ### M5 · Web 与 MVC

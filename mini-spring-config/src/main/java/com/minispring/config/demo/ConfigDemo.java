@@ -40,7 +40,7 @@ public class ConfigDemo {
         if ("prod".equals(profile)) {
             check(app.getPort() == 8443, "@Value 注入 server.port=8443（prod 覆盖默认）");
         } else {
-            check(app.getPort() == 8080, "@Value 注入 server.port=8080（默认值）");
+            check(app.getPort() == 9090, "@Value 注入 server.port=9090（默认值）");
         }
         System.out.println("    [OK] 环境真实生效：name=" + app.getName() + ", port=" + app.getPort());
         ctx.close();
