@@ -144,7 +144,7 @@
 | D8 | AOP 仅 JDK 动态代理，无接口的类无法被织入 | 对具体类（如 M5 的 Controller）做 AOP 时 | M5/M6 前评估：引入 CGLIB 代理策略，或将被增强 Bean 接口化 |
 | D9 | demo 包名跨模块重复：`com.minispring.demo` 同时出现在 core（IocDemo）与 context（demo 组件），Scanner 的 `getResource` 按 classpath 顺序命中首个目录，扫描结果依赖 classpath 顺序 | 同一包名跨模块、以文件目录扫描时 | M5 组装前把 demo 包模块化（`core.demo` / `context.demo`） |
 | D10 | Profile 激活仅支持手动 `setActiveProfiles`，未从 `spring.profiles.active` / `SPRING_PROFILES_ACTIVE` 自动读取 | 部署阶段按环境变量切换 profile | M10 部署前接上 |
-| D11 | YAML 解析为「教学子集」：无 anchor、多行字符串（`|`/`>`）、list-of-map 嵌套；值内 `#` 被当作注释截断 | 配置用到这些语法 | 按需扩展 `YamlPropertySourceLoader` |
+| D11 | YAML 解析为「教学子集」：无 anchor、多行字符串（`|`/`>`）、flow style（`{k:v}`/`[a,b]`）、list-of-map 嵌套；值内 `#` 被当作注释截断；引号不剥离（`port: "8080"` 的引号会带进值，转 int 抛 NumberFormatException） | 配置用到这些语法 / 给标量加引号 | 按需扩展 `YamlPropertySourceLoader`（引号剥离建议 M5 写 HTTP/JDBC 配置前先补） |
 | D12 | `@Value` 不支持 SpEL（`#{...}`）；类型转换仅 String + 基本/包装类型（无 List/Map/枚举） | 注入复杂类型或 SpEL 表达式 | M5 参数绑定时一并评估，或收窄标注 |
 | D13 | 配置文件仅 classpath 根 `application.*`，不支持 `config/` 子目录、命令行参数覆盖 | 外部部署自定义配置位置 | M10 部署规范统一约定 |
 
