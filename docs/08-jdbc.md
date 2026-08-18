@@ -61,7 +61,7 @@ Long insertAndReturnKey(String sql, Object... args)   // GENERATED_KEY，users �
 ## 4. demo 数据流（MySQL 容器：mysql:8.0，mem_limit 512M，宿主端口 3306——占用则 13306，决策点 C）
 
 - 表：`users(id PK AI, name, email)`（对齐现有 User）、`accounts(id PK, balance DECIMAL)`（转账）；
-- `UserRepository`（JdbcTemplate 实现）← `UserController`：GET/POST/PUT/DELETE `/users`，**写后 docker exec 直查 MySQL 取证**；
+- `UserController`（直接注入 `JdbcTemplate`，无独立 Repository 层——教学子集不设 DAO 抽象）：GET/POST/PUT/DELETE `/users`，**写后 docker exec 直查 MySQL 取证**；
 - `AccountService.transfer(from, to, amount)`（`@Transactional`）：扣款+入款两条 UPDATE；构造「扣款后抛异常」→ 两账户余额不变（回滚取证）；
 - 隔离实证：MySQL 默认 RR，事务 A 改未提交、事务 B 读旧值 → 「无脏读」的运行期证据。
 
@@ -88,7 +88,7 @@ Long insertAndReturnKey(String sql, Object... args)   // GENERATED_KEY，users �
 4. `mini-spring-jdbc` 模块：异常体系 + JdbcTemplate + RowMapper（+ 单测：H2？**否——用 MySQL 容器真连**，教学项目不引 H2）
 5. 编程式 TransactionManager + 声明式 @Transactional（AOP）
 6. `DataSourceAutoConfiguration` + `JdbcAutoConfiguration`（optional + name + @ConditionalOnProperty）+ SPI
-7. demo：UserRepository / AccountService(接口化) / Controller + application.yml
+7. demo：UserController（直接注入 JdbcTemplate）/ AccountService(接口化) / Controller + application.yml
 8. V1~V10 全跑 + M0~M7 回归（30 单测 + demo 10 接口 + 分离 classpath 两场景）
 9. roadmap / README 更新 + 三次审查记录 → tag `v0.m8`
 

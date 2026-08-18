@@ -10,7 +10,7 @@ public class ConfigAppProperties {
     @Value("${app.name}")
     private String name;
 
-    // 同名 key 同时出现在 yml 与 properties，验证 yml 优先级更高（D37）
+    // 同名 key 同时出现在 yml 与 properties，验证 properties 优先级更高（与 Spring Boot 官方一致，D37 已纠正）
     @Value("${app.owner}")
     private String owner;
 
@@ -39,7 +39,7 @@ public class ConfigAppProperties {
     @Value("${app.${app.pointer}}")
     private String nestedPlaceholder;
 
-    // prod 层同名 key：验证 profile 文件里 yml 优先级也高于 properties（D37）；默认 profile 无此 key，走空默认值
+    // prod 层同名 key：验证 profile 文件里 properties 优先级也高于 yml（D37 已纠正）；默认 profile 无此 key，走空默认值
     @Value("${app.conflict:}")
     private String conflict;
 

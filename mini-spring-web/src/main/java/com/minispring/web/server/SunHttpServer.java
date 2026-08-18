@@ -62,8 +62,9 @@ public class SunHttpServer implements WebServer {
             HttpResponse response = new SunHttpResponse(exchange);
             try {
                 handler.handle(request, response);
-            } catch (Exception e) {
-                // 兜底：任何漏网的异常都转成 500，避免连接被直接断开
+            } catch (Throwable e) {
+                // 兜底：任何漏网的异常/错误（含 Error，如 P0-1 的 StackOverflowError）都转成 500，
+                // 避免连接被直接断开、客户端收到无 HTTP 响应的裸连接错误
                 if (!response.isCommitted()) {
                     response.setStatus(500);
                     response.setContentType("text/plain; charset=utf-8");

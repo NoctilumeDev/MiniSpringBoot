@@ -97,11 +97,21 @@ public class WebMvcAutoConfiguration {
             }
             DispatcherServlet servlet = beanFactory.getBean(names[0], DispatcherServlet.class);
             String portValue = environment.getProperty("server.port");
-            int port = (portValue == null || portValue.isEmpty()) ? DEFAULT_PORT : Integer.parseInt(portValue.trim());
+            // N18（M0-M9 复审）：非数字 port 报可读错误并携带配置值——与同模块
+            // DataSourceAutoConfiguration.intProperty 的兜底风格对称，不再裸抛 NumberFormatException
+            int port = (portValue == null || portValue.isEmpty()) ? DEFAULT_PORT : parsePort(portValue.trim());
             this.webServer = new SunHttpServer(servlet);
             this.webServer.start(port);
             singletonRegistry.registerSingleton(WEB_SERVER_BEAN_NAME, webServer);
             System.out.println("  [http] 内嵌服务器已启动: http://localhost:" + port);
+        }
+
+        private static int parsePort(String value) {
+            try {
+                return Integer.parseInt(value);
+            } catch (NumberFormatException e) {
+                throw new IllegalStateException("server.port 配置了非数字值: \"" + value + "\"（期望整数端口）", e);
+            }
         }
 
         @Override

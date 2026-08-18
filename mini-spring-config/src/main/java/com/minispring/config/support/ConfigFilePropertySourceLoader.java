@@ -17,23 +17,25 @@ public class ConfigFilePropertySourceLoader {
     private static final String DEFAULT_NAME = "application";
 
     public void load(StandardEnvironment environment) {
-        // 默认文件：properties 最低、yml 次之（下标越小优先级越高，故 yml 先 addLast 拿到更高优先级）；
-        // 记录第一个加载的默认文件源作为插入 profile 的锚点。
+        // 默认文件：properties 优先于 yml（与 Spring Boot 官方一致：同位置 .properties > .yml——
+        // D37 曾按「yml 覆盖 properties」反向修复，经官方文档事实核查后纠正）。
+        // addLast 追加到末尾，先加入的 index 更小 → 优先级更高，故先 addLast properties。
         String anchor = null;
-        if (addLastIfPresent(environment, DEFAULT_NAME + ".yml")) {
-            anchor = DEFAULT_NAME + ".yml";
-        }
-        if (addLastIfPresent(environment, DEFAULT_NAME + ".properties") && anchor == null) {
+        if (addLastIfPresent(environment, DEFAULT_NAME + ".properties")) {
             anchor = DEFAULT_NAME + ".properties";
+        }
+        if (addLastIfPresent(environment, DEFAULT_NAME + ".yml") && anchor == null) {
+            anchor = DEFAULT_NAME + ".yml";
         }
         if (anchor == null) {
             return; // 没有任何配置文件
         }
 
-        // 带 profile 的文件，优先级高于默认文件（插到锚点之前）；与默认层同规则：yml 高于 properties，故先插 yml
+        // 带 profile 的文件，优先级高于默认文件（插到锚点之前）；同层内 properties 优先于 yml。
+        // addBefore 是「后插入的优先级更高」，故先插 properties 再插 yml → properties 靠前。
         for (String profile : environment.getActiveProfiles()) {
-            addBeforeIfPresent(environment, DEFAULT_NAME + "-" + profile + ".yml", anchor);
             addBeforeIfPresent(environment, DEFAULT_NAME + "-" + profile + ".properties", anchor);
+            addBeforeIfPresent(environment, DEFAULT_NAME + "-" + profile + ".yml", anchor);
         }
     }
 

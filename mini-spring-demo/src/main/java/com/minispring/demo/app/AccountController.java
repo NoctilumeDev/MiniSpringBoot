@@ -29,11 +29,8 @@ public class AccountController {
     public Map<String, Object> transfer(@RequestParam("from") long fromId,
                                         @RequestParam("to") long toId,
                                         @RequestParam("amount") String amount) {
-        accountService.transfer(fromId, toId, new BigDecimal(amount));
-        return Map.of(
-                "from", fromId, "to", toId,
-                "fromBalance", accountService.balance(fromId),
-                "toBalance", accountService.balance(toId));
+        // P0-6：余额由 Service 在事务内返回（与提交一致），Controller 不再提交后二次读
+        return accountService.transfer(fromId, toId, new BigDecimal(amount));
     }
 
     /** 刻意中途抛异常：预期 500 + 两账户余额保持原值（回滚取证）。 */

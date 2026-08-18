@@ -1,12 +1,22 @@
 package com.minispring.core.support;
 
 import com.minispring.core.BeanDefinition;
+import com.minispring.core.DisposableBean;
 import com.minispring.core.PropertyValue;
 import org.junit.jupiter.api.Test;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.Callable;
+import java.util.concurrent.CyclicBarrier;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * IoC 容器的基线单测（仅作最低基线，不作为「落地验收」依据）。
@@ -29,9 +39,6 @@ class DefaultListableBeanFactoryTest {
         }
     }
 
-    static class Proto {
-    }
-
     @Test
     void resolvesCircularDependency() {
         DefaultListableBeanFactory factory = new DefaultListableBeanFactory();
@@ -49,6 +56,42 @@ class DefaultListableBeanFactoryTest {
         assertSame(a, a.getB().getA());
     }
 
+    static class Proto {
+    }
+
+    /** 构造慢的单例：拉宽并发 getBean 的竞态窗口，让 N5 用例稳定复现。 */
+    static class SlowBean {
+        SlowBean() {
+            try {
+                Thread.sleep(100);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+        }
+    }
+
+    static final List<String> DESTROY_LOG = new ArrayList<>();
+
+    /** 依赖方（先创建）。bean 名刻意取 "aaa"：其哈希桶位（1）先于 "zzz"（10）被
+     *  ConcurrentHashMap 遍历——若销毁仍按定义表无序遍历，会先销毁依赖方，本用例必失败。 */
+    static class DisposableDepA implements DisposableBean {
+        @Override
+        public void destroy() {
+            DESTROY_LOG.add("aaa");
+        }
+    }
+
+    /** 使用方（后创建，持有 aaa 的引用）。 */
+    static class DisposableUserZ implements DisposableBean {
+        @SuppressWarnings("unused")
+        private DisposableDepA dep;
+
+        @Override
+        public void destroy() {
+            DESTROY_LOG.add("zzz");
+        }
+    }
+
     @Test
     void prototypeCreatesNewInstanceEveryTime() {
         DefaultListableBeanFactory factory = new DefaultListableBeanFactory();
@@ -58,5 +101,43 @@ class DefaultListableBeanFactoryTest {
         factory.registerBeanDefinition("proto", bd);
 
         assertNotSame(factory.getBean("proto"), factory.getBean("proto"));
+    }
+
+    /** N4：销毁必须按创建逆序——使用者（zzz）先于其依赖（aaa）销毁。 */
+    @Test
+    void destroysSingletonsInReverseCreationOrder() {
+        DefaultListableBeanFactory factory = new DefaultListableBeanFactory();
+        DESTROY_LOG.clear();
+
+        factory.registerBeanDefinition("aaa", new BeanDefinition(DisposableDepA.class));
+        BeanDefinition bdUser = new BeanDefinition(DisposableUserZ.class);
+        bdUser.addPropertyValue(PropertyValue.ref("dep", "aaa"));
+        factory.registerBeanDefinition("zzz", bdUser);
+
+        factory.getBean("zzz"); // 触发创建：aaa 先入一级缓存，zzz 后
+        factory.destroySingletons();
+
+        assertEquals(List.of("zzz", "aaa"), DESTROY_LOG);
+    }
+
+    /** N5：并发 getBean 同名单例不得误报循环依赖（修复前第二个线程撞 currentlyInCreation 直接抛错）。 */
+    @Test
+    void concurrentGetBeanDoesNotFalseReportCircularDependency() throws Exception {
+        DefaultListableBeanFactory factory = new DefaultListableBeanFactory();
+        factory.registerBeanDefinition("slow", new BeanDefinition(SlowBean.class));
+
+        CyclicBarrier barrier = new CyclicBarrier(2);
+        Callable<Object> get = () -> {
+            barrier.await();
+            return factory.getBean("slow");
+        };
+        ExecutorService pool = Executors.newFixedThreadPool(2);
+        try {
+            Future<Object> f1 = pool.submit(get);
+            Future<Object> f2 = pool.submit(get);
+            assertSame(f1.get(), f2.get());
+        } finally {
+            pool.shutdownNow();
+        }
     }
 }

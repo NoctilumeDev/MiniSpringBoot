@@ -23,6 +23,7 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -56,6 +57,9 @@ public class DefaultListableBeanFactory implements ListableBeanFactory, BeanDefi
 
     // 正在创建中的单例：用于识别「构造器注入卡死型循环依赖」（三级缓存尚未暴露时就折返，直接给出可读错误而非 StackOverflow）
     private final Set<String> currentlyInCreation = ConcurrentHashMap.newKeySet();
+
+    // 单例创建顺序（N4：销毁时逆序，依赖 Bean 先于使用者销毁——与 Spring 的 reverse destruction 一致）
+    private final List<String> singletonCreationOrder = new ArrayList<>();
 
     // 配置环境（Environment），由上下文注入；@Value 处理器靠它以占位符查值
     private Environment environment;
@@ -114,26 +118,34 @@ public class DefaultListableBeanFactory implements ListableBeanFactory, BeanDefi
         if (bean != null) {
             return bean;
         }
-        // 二级缓存命中 → 返回提前暴露的半成品
-        bean = earlySingletonObjects.get(name);
-        if (bean != null) {
-            return bean;
+        // N5（M0-M9 复审）：单例创建加锁 + 双重检查——并发 getBean 同名单例时，第二个线程
+        // 不再撞进 currentlyInCreation 被误报为循环依赖，而是等首个线程创建完、命中断言缓存。
+        synchronized (this) {
+            bean = singletonObjects.get(name);
+            if (bean != null) {
+                return bean;
+            }
+            // 二级缓存命中 → 返回提前暴露的半成品
+            bean = earlySingletonObjects.get(name);
+            if (bean != null) {
+                return bean;
+            }
+            // 三级缓存命中 → 从工厂取出半成品，升级到二级缓存后返回
+            ObjectFactory<?> factory = singletonFactories.get(name);
+            if (factory != null) {
+                bean = factory.getObject();
+                earlySingletonObjects.put(name, bean);
+                singletonFactories.remove(name);
+                return bean;
+            }
+            // A-4：三级缓存还没暴露就折返创建自己 —— 构造器注入型循环依赖（无法用提前暴露破解），给出可读错误
+            if (currentlyInCreation.contains(name)) {
+                throw new BeansException("检测到无法提前暴露的循环依赖（构造器注入或 prototype 作用域）: " + name
+                        + " —— 请改用「单例 + 字段/方法注入」，或调整依赖方向");
+            }
+            // 都没有 → 完整创建
+            return createBean(name, bd);
         }
-        // 三级缓存命中 → 从工厂取出半成品，升级到二级缓存后返回
-        ObjectFactory<?> factory = singletonFactories.get(name);
-        if (factory != null) {
-            bean = factory.getObject();
-            earlySingletonObjects.put(name, bean);
-            singletonFactories.remove(name);
-            return bean;
-        }
-        // A-4：三级缓存还没暴露就折返创建自己 —— 构造器注入型循环依赖（无法用提前暴露破解），给出可读错误
-        if (currentlyInCreation.contains(name)) {
-            throw new BeansException("检测到无法提前暴露的循环依赖（构造器注入或 prototype 作用域）: " + name
-                    + " —— 请改用「单例 + 字段/方法注入」，或调整依赖方向");
-        }
-        // 都没有 → 完整创建
-        return createBean(name, bd);
     }
 
     @Override
@@ -225,6 +237,8 @@ public class DefaultListableBeanFactory implements ListableBeanFactory, BeanDefi
             singletonObjects.put(beanName, bean);
             earlySingletonObjects.remove(beanName);
             singletonFactories.remove(beanName);
+            // N4：记录单例创建顺序（销毁时逆序，依赖 Bean 先于使用者销毁）
+            singletonCreationOrder.add(beanName);
         }
         return bean;
     }
@@ -509,20 +523,24 @@ public class DefaultListableBeanFactory implements ListableBeanFactory, BeanDefi
     // ---------- 销毁 ----------
 
     public void destroySingletons() {
-        for (Map.Entry<String, BeanDefinition> entry : beanDefinitionMap.entrySet()) {
-            if (entry.getValue().isSingleton()) {
-                try {
-                    destroyBean(entry.getKey(), singletonObjects.get(entry.getKey()));
-                } catch (RuntimeException e) {
-                    // M8（V10 前置）：单个 Bean 销毁失败不得中断其余销毁——
-                    // 关闭链上一个炸全链停，会掩盖后续 Bean（如连接池）的释放
-                    System.err.println("销毁 Bean[" + entry.getKey() + "]失败: " + e);
-                }
+        // N4：按创建逆序销毁——先创建的 Bean（往往是底层依赖，如 DataSource）最后销毁，
+        // 使用者先于依赖释放；此前按 beanDefinitionMap（ConcurrentHashMap）无序遍历，
+        // 连接池可能先于还在用它的 Service 被销毁。
+        List<String> reversed = new ArrayList<>(singletonCreationOrder);
+        Collections.reverse(reversed);
+        for (String beanName : reversed) {
+            try {
+                destroyBean(beanName, singletonObjects.get(beanName));
+            } catch (RuntimeException e) {
+                // M8（V10 前置）：单个 Bean 销毁失败不得中断其余销毁——
+                // 关闭链上一个炸全链停，会掩盖后续 Bean（如连接池）的释放
+                System.err.println("销毁 Bean[" + beanName + "]失败: " + e);
             }
         }
         singletonObjects.clear();
         earlySingletonObjects.clear();
         singletonFactories.clear();
+        singletonCreationOrder.clear();
     }
 
     @Override

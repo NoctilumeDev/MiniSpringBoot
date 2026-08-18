@@ -28,8 +28,10 @@ public final class JsonSerializer {
             writeString(sb, (String) value);
         } else if (value instanceof Character || value instanceof CharSequence) {
             writeString(sb, value.toString());
-        } else if (value instanceof Boolean || value instanceof Number) {
+        } else if (value instanceof Boolean) {
             sb.append(value);
+        } else if (value instanceof Number) {
+            writeNumber(sb, (Number) value);
         } else if (value instanceof Enum) {
             writeString(sb, ((Enum<?>) value).name());
         } else if (value instanceof JsonNode) {
@@ -43,6 +45,16 @@ public final class JsonSerializer {
         } else {
             writeObject(sb, value);
         }
+    }
+
+    /** N7（M0-M9 复审）：NaN/Infinity 不是合法 JSON（自家解析器都读不回）——显式报错而非输出裸字面量。 */
+    private void writeNumber(StringBuilder sb, Number number) {
+        double d = number.doubleValue();
+        if (!Double.isFinite(d)) {
+            throw new IllegalStateException("无法序列化为 JSON 的数字: " + number
+                    + "（NaN/Infinity 不在 JSON 规范内，请检查计算链路）");
+        }
+        sb.append(number);
     }
 
     private void writeObject(StringBuilder sb, Object obj) {
@@ -113,7 +125,12 @@ public final class JsonSerializer {
                 break;
             case NUMBER:
                 // B-1：数字节点输出原文，不加引号（原与 STRING 共用 writeString 会把 42 写成 "42"）
-                sb.append(node.asString());
+                // N7：原文须能落到有限 double（1e999 溢出为 Infinity 同样非法），否则显式报错
+                String text = node.asString();
+                if (!Double.isFinite(Double.parseDouble(text))) {
+                    throw new IllegalStateException("无法序列化为 JSON 的数字: " + text + "（溢出为 Infinity）");
+                }
+                sb.append(text);
                 break;
             case STRING:
                 writeString(sb, node.asString());

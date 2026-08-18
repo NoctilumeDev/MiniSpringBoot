@@ -60,7 +60,9 @@ public class DispatcherServlet implements HttpHandler, BeanFactoryAware, Initial
                 return;
             }
             writeNotFound(response);
-        } catch (Exception e) {
+        } catch (Throwable e) {
+            // P0-1：不能用 catch(Exception)——JSON 深嵌套等场景抛 StackOverflowError（Error 非 Exception），
+            // 会绕过这里导致连接层无 HTTP 响应；Throwable 一并兜底为 500。
             writeError(response, e);
         }
     }
@@ -71,7 +73,7 @@ public class DispatcherServlet implements HttpHandler, BeanFactoryAware, Initial
         response.write("404 Not Found");
     }
 
-    private void writeError(HttpResponse response, Exception e) {
+    private void writeError(HttpResponse response, Throwable e) {
         response.setStatus(500);
         response.setContentType("text/plain; charset=utf-8");
         response.write("500 Internal Server Error: " + e.getMessage());

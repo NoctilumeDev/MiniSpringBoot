@@ -55,8 +55,10 @@ public class RequestMappingHandlerMapping implements HandlerMapping, BeanFactory
     private void registerController(Object controller, Class<?> clazz) {
         String basePath = "";
         RequestMapping classMapping = clazz.getAnnotation(RequestMapping.class);
-        if (classMapping != null && !classMapping.value().isEmpty()) {
-            basePath = classMapping.value();
+        // N2（M0-M9 复审）：类级与方法级对称——value/path 互为别名，此前类级只读 value()，
+        // @RequestMapping(path = "/x") 的前缀静默丢失
+        if (classMapping != null) {
+            basePath = !classMapping.value().isEmpty() ? classMapping.value() : classMapping.path();
         }
         for (Method method : clazz.getDeclaredMethods()) {
             String path = null;
@@ -83,9 +85,41 @@ public class RequestMappingHandlerMapping implements HandlerMapping, BeanFactory
             if (path == null) {
                 continue;
             }
-            registrations.add(new MappingRegistration(httpMethods, combine(basePath, path),
+            String fullPath = combine(basePath, path);
+            detectAmbiguous(httpMethods, fullPath, method);
+            registrations.add(new MappingRegistration(httpMethods, fullPath,
                     new HandlerMethod(controller, method)));
         }
+    }
+
+    /**
+     * N1（M0-M9 复审）：同一「方法 + 路径」重复映射启动即报，不再静默取第一个
+     * （此前注册顺序依赖 ConcurrentHashMap 遍历序，跨运行不稳定；Spring 启动即抛 Ambiguous mapping）。
+     */
+    private void detectAmbiguous(HttpMethod[] httpMethods, String fullPath, Method method) {
+        for (MappingRegistration r : registrations) {
+            if (!r.path.equals(fullPath) || !methodsOverlap(r.httpMethods, httpMethods)) {
+                continue;
+            }
+            throw new IllegalStateException("重复的映射: [" + method + "] 与 [" + r.handlerMethod
+                    + "] 都映射到 " + (httpMethods == null || httpMethods.length == 0 ? "任意方法 " : "")
+                    + fullPath + "（Ambiguous mapping）");
+        }
+    }
+
+    /** 两组 HTTP 方法是否存在交集；任一组为 null/空（不限方法）则视为与任何集合有交集。 */
+    private boolean methodsOverlap(HttpMethod[] a, HttpMethod[] b) {
+        if (a == null || a.length == 0 || b == null || b.length == 0) {
+            return true;
+        }
+        for (HttpMethod ma : a) {
+            for (HttpMethod mb : b) {
+                if (ma == mb) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     /** 读取派生映射注解（如 {@code @PutMapping}）的 {@code value()}；注解没有 String value 属性则视为无路径。 */

@@ -8,6 +8,9 @@ package com.minispring.web.json;
  */
 public final class JsonParser {
 
+    /** 最大嵌套深度：超过即报错，防恶意深嵌套 JSON 把递归下降打到 StackOverflowError（P0-1）。 */
+    static final int MAX_DEPTH = 512;
+
     private final String text;
     private int pos = 0;
 
@@ -16,7 +19,7 @@ public final class JsonParser {
     }
 
     public JsonNode parse() {
-        JsonNode node = parseValue();
+        JsonNode node = parseValue(0);
         skipWhitespace();
         if (pos < text.length()) {
             throw error("JSON 结尾有多余字符");
@@ -24,7 +27,10 @@ public final class JsonParser {
         return node;
     }
 
-    private JsonNode parseValue() {
+    private JsonNode parseValue(int depth) {
+        if (depth > MAX_DEPTH) {
+            throw error("JSON 嵌套深度超过上限 " + MAX_DEPTH);
+        }
         skipWhitespace();
         if (pos >= text.length()) {
             throw error("预期一个 JSON 值");
@@ -32,9 +38,9 @@ public final class JsonParser {
         char c = text.charAt(pos);
         switch (c) {
             case '{':
-                return parseObject();
+                return parseObject(depth);
             case '[':
-                return parseArray();
+                return parseArray(depth);
             case '"':
                 return JsonNode.ofString(parseString());
             case 't':
@@ -54,7 +60,7 @@ public final class JsonParser {
         }
     }
 
-    private JsonNode parseObject() {
+    private JsonNode parseObject(int depth) {
         expect('{');
         JsonNode object = JsonNode.object();
         skipWhitespace();
@@ -67,7 +73,7 @@ public final class JsonParser {
             String key = parseString();
             skipWhitespace();
             expect(':');
-            object.put(key, parseValue());
+            object.put(key, parseValue(depth + 1));
             skipWhitespace();
             char c = peek();
             if (c == ',') {
@@ -81,7 +87,7 @@ public final class JsonParser {
         }
     }
 
-    private JsonNode parseArray() {
+    private JsonNode parseArray(int depth) {
         expect('[');
         JsonNode array = JsonNode.array();
         skipWhitespace();
@@ -90,7 +96,7 @@ public final class JsonParser {
             return array;
         }
         while (true) {
-            array.add(parseValue());
+            array.add(parseValue(depth + 1));
             skipWhitespace();
             char c = peek();
             if (c == ',') {
