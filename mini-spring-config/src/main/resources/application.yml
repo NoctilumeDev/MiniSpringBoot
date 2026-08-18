@@ -1,13 +1,13 @@
 # MiniSpringBoot 默认配置
 app:
-  name: MiniSpringBoot
+  name: "MiniSpringBoot"
   timeout: 30
   features:
     - ioc
     - aop
   pointer: name
 server:
-  port: 8080
+  port: "8080"
 smtp:
   host: localhost
   port: 25

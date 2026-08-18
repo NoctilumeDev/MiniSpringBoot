@@ -1,4 +1,4 @@
-package com.minispring.demo;
+package com.minispring.core.demo;
 
 import com.minispring.core.BeanDefinition;
 import com.minispring.core.BeanPostProcessor;

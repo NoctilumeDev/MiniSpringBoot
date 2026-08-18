@@ -1,4 +1,4 @@
-package com.minispring.demo;
+package com.minispring.context.demo;
 
 /** 用于验证 @Scope("prototype") 的简单计数器。 */
 public class Counter {

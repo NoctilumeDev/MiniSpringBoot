@@ -51,10 +51,22 @@ public class YamlPropertySourceLoader {
                 // 空值 = 映射节点，压栈等待它的子项
                 stack.add(new Frame(line.indent, fullKey));
             } else {
-                flat.put(fullKey, value);
+                flat.put(fullKey, stripQuotes(value));
             }
         }
         return flat;
+    }
+
+    /** 剥离标量首尾成对的引号（`"8080"` → `8080`），否则引号会被带进值、拖垮类型转换。 */
+    private String stripQuotes(String value) {
+        if (value.length() >= 2) {
+            char first = value.charAt(0);
+            char last = value.charAt(value.length() - 1);
+            if ((first == '"' && last == '"') || (first == '\'' && last == '\'')) {
+                return value.substring(1, value.length() - 1);
+            }
+        }
+        return value;
     }
 
     private void handleListItem(Map<String, Object> flat, List<Frame> stack, String content) {
@@ -63,7 +75,7 @@ public class YamlPropertySourceLoader {
         }
         Frame parent = stack.get(stack.size() - 1);
         String item = content.equals("-") ? "" : content.substring(2).trim();
-        flat.put(parent.path + "[" + parent.listIndex++ + "]", item);
+        flat.put(parent.path + "[" + parent.listIndex++ + "]", stripQuotes(item));
     }
 
     private List<Line> readLines(InputStream in) {

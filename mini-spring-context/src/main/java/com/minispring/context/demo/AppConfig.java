@@ -1,4 +1,4 @@
-package com.minispring.demo;
+package com.minispring.context.demo;
 
 import com.minispring.context.annotation.Bean;
 import com.minispring.context.annotation.ComponentScan;
