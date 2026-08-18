@@ -18,6 +18,7 @@
         <module>mini-spring-context</module>
         <module>mini-spring-aop</module>
         <module>mini-spring-config</module>
+        <module>mini-spring-web</module>
     </modules>
 
     <properties>

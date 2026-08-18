@@ -1,0 +1,235 @@
+package com.minispring.web.json;
+
+/**
+ * 极简 JSON 解析器：递归下降，把 JSON 文本解析成 {@link JsonNode} 树。
+ *
+ * <p>支持 object / array / string（含常用转义、Unicode 转义）/ number / true / false / null。
+ * 教学子集：不校验重复键、不保证超大整数的精度、不处理 Unicode 代理对等边角，文档如实标注。
+ */
+public final class JsonParser {
+
+    private final String text;
+    private int pos = 0;
+
+    public JsonParser(String text) {
+        this.text = text == null ? "" : text;
+    }
+
+    public JsonNode parse() {
+        JsonNode node = parseValue();
+        skipWhitespace();
+        if (pos < text.length()) {
+            throw error("JSON 结尾有多余字符");
+        }
+        return node;
+    }
+
+    private JsonNode parseValue() {
+        skipWhitespace();
+        if (pos >= text.length()) {
+            throw error("预期一个 JSON 值");
+        }
+        char c = text.charAt(pos);
+        switch (c) {
+            case '{':
+                return parseObject();
+            case '[':
+                return parseArray();
+            case '"':
+                return JsonNode.ofString(parseString());
+            case 't':
+                expect("true");
+                return JsonNode.ofBoolean(true);
+            case 'f':
+                expect("false");
+                return JsonNode.ofBoolean(false);
+            case 'n':
+                expect("null");
+                return JsonNode.ofNull();
+            default:
+                if (c == '-' || (c >= '0' && c <= '9')) {
+                    return parseNumber();
+                }
+                throw error("无法识别的字符 '" + c + "'");
+        }
+    }
+
+    private JsonNode parseObject() {
+        expect('{');
+        JsonNode object = JsonNode.object();
+        skipWhitespace();
+        if (peek() == '}') {
+            pos++;
+            return object;
+        }
+        while (true) {
+            skipWhitespace();
+            String key = parseString();
+            skipWhitespace();
+            expect(':');
+            object.put(key, parseValue());
+            skipWhitespace();
+            char c = peek();
+            if (c == ',') {
+                pos++;
+            } else if (c == '}') {
+                pos++;
+                return object;
+            } else {
+                throw error("对象内预期 ',' 或 '}'");
+            }
+        }
+    }
+
+    private JsonNode parseArray() {
+        expect('[');
+        JsonNode array = JsonNode.array();
+        skipWhitespace();
+        if (peek() == ']') {
+            pos++;
+            return array;
+        }
+        while (true) {
+            array.add(parseValue());
+            skipWhitespace();
+            char c = peek();
+            if (c == ',') {
+                pos++;
+            } else if (c == ']') {
+                pos++;
+                return array;
+            } else {
+                throw error("数组内预期 ',' 或 ']'");
+            }
+        }
+    }
+
+    private String parseString() {
+        expect('"');
+        StringBuilder sb = new StringBuilder();
+        while (true) {
+            if (pos >= text.length()) {
+                throw error("字符串未闭合");
+            }
+            char c = text.charAt(pos++);
+            if (c == '"') {
+                return sb.toString();
+            }
+            if (c == '\\') {
+                if (pos >= text.length()) {
+                    throw error("转义不完整");
+                }
+                char e = text.charAt(pos++);
+                switch (e) {
+                    case '"':
+                        sb.append('"');
+                        break;
+                    case '\\':
+                        sb.append('\\');
+                        break;
+                    case '/':
+                        sb.append('/');
+                        break;
+                    case 'b':
+                        sb.append('\b');
+                        break;
+                    case 'f':
+                        sb.append('\f');
+                        break;
+                    case 'n':
+                        sb.append('\n');
+                        break;
+                    case 'r':
+                        sb.append('\r');
+                        break;
+                    case 't':
+                        sb.append('\t');
+                        break;
+                    case 'u':
+                        sb.append(parseUnicode());
+                        break;
+                    default:
+                        throw error("未知转义 '\\" + e + "'");
+                }
+            } else {
+                sb.append(c);
+            }
+        }
+    }
+
+    private char parseUnicode() {
+        if (pos + 4 > text.length()) {
+            throw error("\\u 转义不完整");
+        }
+        String hex = text.substring(pos, pos + 4);
+        pos += 4;
+        try {
+            return (char) Integer.parseInt(hex, 16);
+        } catch (NumberFormatException e) {
+            throw error("非法 \\u 编码");
+        }
+    }
+
+    private JsonNode parseNumber() {
+        int start = pos;
+        if (peek() == '-') {
+            pos++;
+        }
+        while (pos < text.length() && Character.isDigit(text.charAt(pos))) {
+            pos++;
+        }
+        if (pos < text.length() && text.charAt(pos) == '.') {
+            pos++;
+            while (pos < text.length() && Character.isDigit(text.charAt(pos))) {
+                pos++;
+            }
+        }
+        if (pos < text.length() && (text.charAt(pos) == 'e' || text.charAt(pos) == 'E')) {
+            pos++;
+            if (pos < text.length() && (text.charAt(pos) == '+' || text.charAt(pos) == '-')) {
+                pos++;
+            }
+            while (pos < text.length() && Character.isDigit(text.charAt(pos))) {
+                pos++;
+            }
+        }
+        String num = text.substring(start, pos);
+        if (num.isEmpty() || "-".equals(num)) {
+            throw error("非法数字");
+        }
+        return JsonNode.ofNumber(num);
+    }
+
+    // ----- 基础助手 -----
+
+    private void expect(char c) {
+        if (pos >= text.length() || text.charAt(pos) != c) {
+            throw error("预期字符 '" + c + "'");
+        }
+        pos++;
+    }
+
+    private void expect(String literal) {
+        if (!text.startsWith(literal, pos)) {
+            throw error("预期 '" + literal + "'");
+        }
+        pos += literal.length();
+    }
+
+    private char peek() {
+        if (pos >= text.length()) {
+            throw error("意外到达文本结尾");
+        }
+        return text.charAt(pos);
+    }
+
+    private void skipWhitespace() {
+        while (pos < text.length() && Character.isWhitespace(text.charAt(pos))) {
+            pos++;
+        }
+    }
+
+    private IllegalArgumentException error(String message) {
+        return new IllegalArgumentException("JSON 解析失败（位置 " + pos + "）: " + message);
+    }
+}

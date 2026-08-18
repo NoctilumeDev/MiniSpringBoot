@@ -70,8 +70,9 @@
 
 ### M5 · Web 与 MVC
 
-- **产出**：`WebServer` SPI + `SunHttpServer`、前端控制器、`HandlerMapping/HandlerAdapter`、参数绑定、自写 JSON、静态资源托管。
-- **落地证据**：**浏览器真实打开** `GET /hello`、`GET /users/{id}`、`POST /users`，F12 Network 真实看到请求/响应。
+- **产出**：`WebServer` SPI + `SunHttpServer`、前端控制器（`DispatcherServlet`）、`HandlerMapping/HandlerAdapter`、参数绑定（`ArgumentResolver` 策略链）、自写 JSON（`JsonParser`/`JsonSerializer`/`JsonObjectMapper`）、类型转换（`Converter`/`TypeConversionService`）、静态资源托管。
+- **落地证据**：**浏览器真实打开** `GET /hello`、`GET /hello?name=World`、`GET /users/{id}`、`POST /users`（`@RequestBody` JSON）、`GET /`（静态首页），F12 Network 真实看到请求/响应；异常路径（`GET /users/999` → 500 原始异常、未知路径 → 404）真实返回。
+- **落地边界（显式技术债）**：JSON 反序列化仅扁平 POJO；参数绑定依赖注解显式 `value()`（未启用 `-parameters`）；业务异常统一 500、无状态码映射；`SunHttpServer` 每请求一线程（无 NIO/线程池）——详见 §7 的 D14–D17。M5 不引入 AOP（`web` 不依赖 `aop`；AOP 计时已于 M3 验证，Controller 无接口无法被 JDK 代理，见 D8，M7 收口）。
 
 ### M6 · 自动配置 + Starter
 
@@ -147,5 +148,9 @@
 | D11 | YAML 解析为「教学子集」：无 anchor、多行字符串（`|`/`>`）、flow style（`{k:v}`/`[a,b]`）、list-of-map 嵌套；值内 `#` 被当作注释截断（无法转义） | 配置用到这些语法 | 按需扩展 `YamlPropertySourceLoader` |
 | D12 | `@Value` 不支持 SpEL（`#{...}`）；类型转换仅 String + 基本/包装类型（无 List/Map/枚举） | 注入复杂类型或 SpEL 表达式 | M5 参数绑定时一并评估，或收窄标注 |
 | D13 | 配置文件仅 classpath 根 `application.*`，不支持 `config/` 子目录、命令行参数覆盖 | 外部部署自定义配置位置 | M10 部署规范统一约定 |
+| D14 | JSON 反序列化仅支持扁平 POJO 与 `List<String>`，不支持 `List<POJO>` / 嵌套集合 | POST 请求体含对象数组时 | M8/M9 数据接入、前端联调发复杂结构前，扩展 `JsonObjectMapper.mapToObject` |
+| D15 | `@PathVariable`/`@RequestParam` 依赖注解显式 `value()`，未启用 `-parameters`（参数名未编译保留），省略 value 会解析失败 | 按参数名隐式绑定时 | 需要时启用 `-parameters` 编译，或补参数名解析 |
+| D16 | 错误处理简化：业务异常统一 500，无 `@ExceptionHandler`/`@ResponseStatus`（无法区分 404/400） | 需要按异常类型返回不同状态码时 | M8/M9 细化错误响应时补异常解析器 |
+| D17 | `SunHttpServer` 每请求一线程（默认执行器），无 NIO/Reactor 与线程池调优 | 高并发压测时吞吐受限 | M10 3 实例 + Nginx 分摊（教学项目可接受），必要时换实现或配线程池 |
 
 > 注：B1（ITE 拆包）、B3（Object 方法过滤）为已发布 M3 代码的真实 bug，已单独修复并回归，不列入本表；B2（AOP×循环依赖）已在 M3「落地边界」登记。
