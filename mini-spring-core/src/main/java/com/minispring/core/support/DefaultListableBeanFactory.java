@@ -181,8 +181,6 @@ public class DefaultListableBeanFactory implements ListableBeanFactory, BeanDefi
     // ---------- 创建主流程 ----------
 
     private Object createBean(String beanName, BeanDefinition bd) {
-        // TEMP-PROBE（M8 调试用，验收后撤）
-        System.out.println("[createBean] " + beanName + " inCreation=" + currentlyInCreation);
         // 同名单例折返（构造器注入循环）或同名 prototype 循环：提前暴露救不了，直接给出可读错误而非 StackOverflow
         if (!currentlyInCreation.add(beanName)) {
             throw new BeansException("检测到无法提前暴露的循环依赖（构造器注入或 prototype 作用域）: " + beanName

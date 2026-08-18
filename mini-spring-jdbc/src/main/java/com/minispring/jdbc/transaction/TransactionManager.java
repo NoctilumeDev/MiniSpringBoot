@@ -12,7 +12,8 @@ import java.sql.SQLException;
  * <p>语义子集（教学项目显式约定）：
  * <ul>
  *   <li>传播行为只有 <b>REQUIRED</b> 一种——当前线程已在事务中则加入（复用同一连接）；</li>
- *   <li>回滚规则：回调抛任何异常（RuntimeException 或受检）都回滚；</li>
+ *   <li>回滚规则：回调抛任何异常（RuntimeException、受检异常乃至 Error——未到达 commit
+ *       的路径在 finally 统一回滚）都回滚；</li>
  *   <li>隔离级别用数据源默认（MySQL RR），不做定制。</li>
  * </ul>
  */
@@ -36,18 +37,27 @@ public class TransactionManager {
             }
         }
         Connection connection = null;
+        boolean committed = false;
         try {
             connection = dataSource.getConnection();
             connection.setAutoCommit(false);
             TransactionContext.bind(connection);
             T result = action.doInTransaction();
             connection.commit();
+            committed = true;
             return result;
         } catch (Exception e) {
-            rollbackQuietly(connection);
             throw (e instanceof RuntimeException) ? (RuntimeException) e
                     : new DataAccessException("事务执行失败（受检异常触发回滚）: " + e.getMessage(), e);
         } finally {
+            // 回滚收敛到唯一位置：任何未到达 commit 的路径（Exception、Error 乃至其他
+            // Throwable——catch(Exception) 拦不住 Error）都必须先终结半开事务再归还连接。
+            // 否则 closeQuietly 的 setAutoCommit(true) 按 JDBC 规范构成<b>隐式提交</b>
+            // （「事务进行中切换 auto-commit 会先提交」），扣款半途的转账会被静默提交
+            // 而非回滚——审查修复（M9 复审 I2），与 Spring 对 Error 同样回滚的语义对齐。
+            if (!committed) {
+                rollbackQuietly(connection);
+            }
             // 线程池复用纪律：clear 必须在 finally（见 TransactionContext 的 javadoc）
             TransactionContext.clear();
             closeQuietly(connection);

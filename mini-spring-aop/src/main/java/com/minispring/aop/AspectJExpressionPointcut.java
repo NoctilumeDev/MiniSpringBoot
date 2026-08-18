@@ -19,6 +19,8 @@ public class AspectJExpressionPointcut implements Pointcut {
     private String classPattern;
     private String methodPattern;
     private String annotationName;
+    /** @annotation 切点的注解类（解析期加载一次缓存——matches 是每次代理调用的热路径，不做重复 Class.forName）。 */
+    private Class<? extends java.lang.annotation.Annotation> annotationClass;
 
     public AspectJExpressionPointcut(String expression) {
         this.expression = expression;
@@ -34,6 +36,9 @@ public class AspectJExpressionPointcut implements Pointcut {
             if (annotationName.isEmpty() || !annotationName.contains(".")) {
                 throw new IllegalArgumentException("@annotation 切点需要注解全限定名: " + expression);
             }
+            // 解析期即加载（审查修复 M9 I4）：注解名写错在切点构造时失败（启动期），
+            // 而非留到第一次 matches 才炸；同时缓存避免热路径重复 Class.forName
+            this.annotationClass = loadAnnotation();
             return;
         }
         if (!trimmed.startsWith("execution(") || !trimmed.endsWith(")")) {
@@ -83,14 +88,20 @@ public class AspectJExpressionPointcut implements Pointcut {
     }
 
     private boolean isAnnotationPresent(Method method) {
-        return method.isAnnotationPresent(loadAnnotation());
+        return method.isAnnotationPresent(annotationClass);
     }
 
     @SuppressWarnings("unchecked")
     private Class<? extends java.lang.annotation.Annotation> loadAnnotation() {
+        // TCCL 为 null 的启动器场景兜底用本类加载器（否则落到 bootstrap loader，
+        // 应用注解必然找不到，报出误导性的「注解不存在」）
+        ClassLoader loader = Thread.currentThread().getContextClassLoader();
+        if (loader == null) {
+            loader = AspectJExpressionPointcut.class.getClassLoader();
+        }
         try {
             return (Class<? extends java.lang.annotation.Annotation>)
-                    Class.forName(annotationName, false, Thread.currentThread().getContextClassLoader());
+                    Class.forName(annotationName, false, loader);
         } catch (ClassNotFoundException e) {
             throw new IllegalArgumentException("@annotation 切点引用的注解不存在: " + annotationName, e);
         }

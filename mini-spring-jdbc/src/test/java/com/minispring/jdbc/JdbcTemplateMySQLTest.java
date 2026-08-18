@@ -84,6 +84,21 @@ class JdbcTemplateMySQLTest {
                 "抛异常的事务必须回滚，数据不得落库");
     }
 
+    /**
+     * 审查修复（M9 复审 I2）的约束用例：Error 不被 catch(Exception) 拦截，回滚只能靠
+     * finally 的统一兜底——修复前该路径经 closeQuietly 的 setAutoCommit(true) 构成
+     * <b>隐式提交</b>（JDBC 规范），本测试会因查到脏数据而失败。
+     */
+    @Test
+    void transactionRollsBackOnError() {
+        assertThrows(AssertionError.class, () -> txManager.execute(() -> {
+            jdbc.update("INSERT INTO users(name, email) VALUES (?, ?)", "错误者", "error@jdbc-test");
+            throw new AssertionError("boom-error");
+        }));
+        assertNull(jdbc.queryOne("SELECT id FROM users WHERE email = ?", CONNECTION_ID, "error@jdbc-test"),
+                "Error 路径同样必须回滚，不得隐式提交");
+    }
+
     @Test
     void statementsInsideOneTransactionShareConnection() {
         // 同一事务内两次查询的 CONNECTION_ID() 必须一致（事务连接复用的唯一事实证据）

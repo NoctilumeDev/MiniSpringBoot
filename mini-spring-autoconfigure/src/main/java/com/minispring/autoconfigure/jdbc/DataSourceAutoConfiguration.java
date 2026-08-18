@@ -60,8 +60,16 @@ public class DataSourceAutoConfiguration implements EnvironmentAware {
         return new HikariDataSource(config);
     }
 
+    /** 整数配置读取：缺省用默认值；配了但非数字时抛带属性名的可读错误（审查修复 M9 I5——裸 NumberFormatException 无从定位是哪个属性配错）。 */
     private int intProperty(String suffix, int defaultValue) {
         String value = environment.getProperty(PREFIX + suffix);
-        return (value == null || value.isEmpty()) ? defaultValue : Integer.parseInt(value.trim());
+        if (value == null || value.isEmpty()) {
+            return defaultValue;
+        }
+        try {
+            return Integer.parseInt(value.trim());
+        } catch (NumberFormatException e) {
+            throw new IllegalStateException("配置 " + PREFIX + suffix + "=\"" + value + "\" 不是合法整数", e);
+        }
     }
 }

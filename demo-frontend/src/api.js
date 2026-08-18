@@ -23,10 +23,11 @@ export const api = {
   createUser: (user) => request('POST', '/api/users', user),
   updateUser: (id, user) => request('PUT', `/api/users/${id}`, user),
   deleteUser: (id) => request('DELETE', `/api/users/${id}`),
-  // accounts（MySQL accounts 表，转账事务）
+  // accounts（MySQL accounts 表，转账事务）。query 一律 encodeURIComponent——
+  // 审查修复（M9 复审 I3）：裸拼会因 '&'/'#' 破坏参数结构，且让非法输入直达后端
   transfer: (from, to, amount) =>
-    request('POST', `/api/accounts/transfer?from=${from}&to=${to}&amount=${amount}`),
+    request('POST', `/api/accounts/transfer?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}&amount=${encodeURIComponent(amount)}`),
   transferFail: (from, to, amount) =>
-    request('POST', `/api/accounts/transfer-fail?from=${from}&to=${to}&amount=${amount}`),
+    request('POST', `/api/accounts/transfer-fail?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}&amount=${encodeURIComponent(amount)}`),
   balance: (id) => request('GET', `/api/accounts/${id}`),
 };

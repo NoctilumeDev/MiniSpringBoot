@@ -31,7 +31,10 @@ export default function TransferPage({ onError, onNotice }) {
   }, []);
 
   const run = async (kind) => {
-    if (Number(amount) <= 0) {
+    // 审查修复（M9 复审 I3）：Number.isFinite 先行——NaN<=0 在 JS 中为 false，
+    // 此前非数字 amount（如 'abc'）会绕过校验原样进 URL
+    const value = Number(amount);
+    if (!Number.isFinite(value) || value <= 0) {
       onError('amount 必须为正数');
       return;
     }
