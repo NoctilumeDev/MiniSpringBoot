@@ -16,6 +16,7 @@
     <modules>
         <module>mini-spring-core</module>
         <module>mini-spring-context</module>
+        <module>mini-spring-aop</module>
     </modules>
 
     <properties>

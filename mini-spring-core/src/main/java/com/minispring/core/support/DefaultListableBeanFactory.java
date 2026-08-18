@@ -2,6 +2,7 @@ package com.minispring.core.support;
 
 import com.minispring.core.BeanDefinition;
 import com.minispring.core.BeanDefinitionRegistry;
+import com.minispring.core.BeanFactoryAware;
 import com.minispring.core.BeanPostProcessor;
 import com.minispring.core.BeansException;
 import com.minispring.core.DisposableBean;
@@ -148,6 +149,11 @@ public class DefaultListableBeanFactory implements ListableBeanFactory, BeanDefi
         populateBean(beanName, bd, bean);
         bean = initializeBean(beanName, bd, bean);
 
+        // 把「BeanPostProcessor 类型的 Bean」自动注册进后处理器链——AOP 代理器就靠这个机制生效
+        if (bean instanceof BeanPostProcessor) {
+            addBeanPostProcessor((BeanPostProcessor) bean);
+        }
+
         if (bd.isSingleton()) {
             singletonObjects.put(beanName, bean);
             earlySingletonObjects.remove(beanName);
@@ -222,8 +228,11 @@ public class DefaultListableBeanFactory implements ListableBeanFactory, BeanDefi
         return null;
     }
 
-    /** 初始化：before → InitializingBean / initMethod → after。 */
+    /** 初始化：注入 Aware → before → InitializingBean / initMethod → after。 */
     private Object initializeBean(String beanName, BeanDefinition bd, Object bean) {
+        if (bean instanceof BeanFactoryAware) {
+            ((BeanFactoryAware) bean).setBeanFactory(this);
+        }
         for (BeanPostProcessor processor : beanPostProcessors) {
             bean = processor.postProcessBeforeInitialization(bean, beanName);
         }

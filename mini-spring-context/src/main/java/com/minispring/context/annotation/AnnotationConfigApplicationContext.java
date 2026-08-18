@@ -2,6 +2,7 @@ package com.minispring.context.annotation;
 
 import com.minispring.context.ApplicationContext;
 import com.minispring.core.BeanDefinition;
+import com.minispring.core.BeanPostProcessor;
 import com.minispring.core.support.DefaultListableBeanFactory;
 
 /**
@@ -63,8 +64,16 @@ public class AnnotationConfigApplicationContext implements ApplicationContext {
         return beanName;
     }
 
-    /** 把容器里所有单例提前创建好（懒加载原型 Bean 保持按需创建）。 */
+    /** 刷新：先把基础设施（BeanPostProcessor）就位，再预实例化其余单例，顺序不能颠倒。 */
     private void refresh() {
+        // 1) BeanPostProcessor 必须先实例化并注册生效（AOP 代理器等基础设施）
+        for (String name : beanFactory.getBeanDefinitionNames()) {
+            Class<?> beanClass = beanFactory.getBeanDefinition(name).getBeanClass();
+            if (BeanPostProcessor.class.isAssignableFrom(beanClass)) {
+                beanFactory.getBean(name);
+            }
+        }
+        // 2) 再预实例化其余单例
         for (String name : beanFactory.getBeanDefinitionNames()) {
             if (beanFactory.getBeanDefinition(name).isSingleton()) {
                 beanFactory.getBean(name);
