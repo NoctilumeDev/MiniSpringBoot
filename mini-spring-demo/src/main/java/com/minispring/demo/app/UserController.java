@@ -1,48 +1,72 @@
 package com.minispring.demo.app;
 
+import com.minispring.context.annotation.Autowired;
+import com.minispring.jdbc.JdbcTemplate;
+import com.minispring.web.mvc.annotation.DeleteMapping;
 import com.minispring.web.mvc.annotation.GetMapping;
 import com.minispring.web.mvc.annotation.PathVariable;
 import com.minispring.web.mvc.annotation.PostMapping;
+import com.minispring.web.mvc.annotation.PutMapping;
 import com.minispring.web.mvc.annotation.RequestBody;
 import com.minispring.web.mvc.annotation.RequestMapping;
 import com.minispring.web.mvc.annotation.RestController;
 
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicLong;
+import java.util.List;
 
 /**
- * 用户接口：演示路径参数绑定、@RequestBody 反序列化、@ResponseBody 序列化。
+ * 用户接口（M8 起真实落库 MySQL）：CRUD 全链路走 {@code JdbcTemplate}，
+ * 写库后可由 {@code docker exec minispring-mysql mysql ...} 直查取证（V1/V2 验收）。
  */
 @RestController
 @RequestMapping("/users")
 public class UserController {
 
-    private final Map<Long, User> store = new ConcurrentHashMap<>();
-    private final AtomicLong sequence = new AtomicLong(0);
+    private final JdbcTemplate jdbc;
 
-    public UserController() {
-        User alice = new User();
-        alice.setId(1L);
-        alice.setName("Alice");
-        alice.setEmail("alice@example.com");
-        store.put(1L, alice);
+    @Autowired
+    public UserController(JdbcTemplate jdbc) {
+        this.jdbc = jdbc;
     }
 
     @GetMapping("/{id}")
     public User getUser(@PathVariable("id") Long id) {
-        User user = store.get(id);
+        User user = jdbc.queryOne("SELECT id, name, email FROM users WHERE id = ?",
+                UserController::mapUser, id);
         if (user == null) {
             throw new IllegalArgumentException("用户不存在: " + id);
         }
         return user;
     }
 
+    @GetMapping
+    public List<User> listUsers() {
+        return jdbc.query("SELECT id, name, email FROM users ORDER BY id", UserController::mapUser);
+    }
+
     @PostMapping
     public User createUser(@RequestBody User user) {
-        long id = sequence.incrementAndGet() + 1; // +1 让首个新建用户从 id=2 开始，避开预置数据
+        long id = jdbc.insertAndReturnKey("INSERT INTO users(name, email) VALUES (?, ?)",
+                user.getName(), user.getEmail());
         user.setId(id);
-        store.put(id, user);
+        return user;
+    }
+
+    @PutMapping("/{id}")
+    public int updateUser(@PathVariable("id") Long id, @RequestBody User user) {
+        return jdbc.update("UPDATE users SET name = ?, email = ? WHERE id = ?",
+                user.getName(), user.getEmail(), id);
+    }
+
+    @DeleteMapping("/{id}")
+    public int deleteUser(@PathVariable("id") Long id) {
+        return jdbc.update("DELETE FROM users WHERE id = ?", id);
+    }
+
+    private static User mapUser(java.sql.ResultSet rs) throws java.sql.SQLException {
+        User user = new User();
+        user.setId(rs.getLong("id"));
+        user.setName(rs.getString("name"));
+        user.setEmail(rs.getString("email"));
         return user;
     }
 }

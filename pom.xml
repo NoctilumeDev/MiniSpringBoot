@@ -19,6 +19,7 @@
         <module>mini-spring-autoconfigure</module>
         <module>mini-spring-config</module>
         <module>mini-spring-aop</module>
+        <module>mini-spring-jdbc</module>
         <module>mini-spring-web</module>
         <module>mini-spring-starter-demo</module>
         <module>mini-spring-boot</module>

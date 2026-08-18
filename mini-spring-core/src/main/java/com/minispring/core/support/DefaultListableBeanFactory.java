@@ -181,6 +181,8 @@ public class DefaultListableBeanFactory implements ListableBeanFactory, BeanDefi
     // ---------- 创建主流程 ----------
 
     private Object createBean(String beanName, BeanDefinition bd) {
+        // TEMP-PROBE（M8 调试用，验收后撤）
+        System.out.println("[createBean] " + beanName + " inCreation=" + currentlyInCreation);
         // 同名单例折返（构造器注入循环）或同名 prototype 循环：提前暴露救不了，直接给出可读错误而非 StackOverflow
         if (!currentlyInCreation.add(beanName)) {
             throw new BeansException("检测到无法提前暴露的循环依赖（构造器注入或 prototype 作用域）: " + beanName
@@ -326,7 +328,7 @@ public class DefaultListableBeanFactory implements ListableBeanFactory, BeanDefi
         return resolveArgs(method.getParameters(), null);
     }
 
-    /** 构造器 / @Bean 工厂方法共用的参数解析：@Qualifier 名 → 唯一类型 → @Primary；支持参数级 @Autowired(required=false)。 */
+    /** 构造器 / @Bean 工厂方法共用的参数解析：@Qualifier 限定名 → beanName → 唯一类型 → @Primary；支持参数级 @Autowired(required=false)。 */
     private Object[] resolveArgs(Parameter[] parameters, String beanName) {
         Object[] args = new Object[parameters.length];
         for (int i = 0; i < parameters.length; i++) {
@@ -337,8 +339,10 @@ public class DefaultListableBeanFactory implements ListableBeanFactory, BeanDefi
 
     private Object resolveArg(Parameter parameter, String beanName) {
         String qualifier = findQualifierValue(parameter);
-        if (qualifier != null && !qualifier.isEmpty() && containsBean(qualifier)) {
-            return getBean(qualifier);
+        if (qualifier != null && !qualifier.isEmpty()) {
+            // D34（M8 收口，与 AutowiredAnnotationBeanPostProcessor.resolveByQualifier 对称）：
+            // 限定名匹配 BeanDefinition.qualifier（限定名 ≠ beanName 也认）→ 回退 beanName
+            return resolveArgByQualifier(qualifier, parameter.getType(), beanName);
         }
         Class<?> type = parameter.getType();
         String[] candidates = getBeanNamesForType(type);
@@ -360,6 +364,27 @@ public class DefaultListableBeanFactory implements ListableBeanFactory, BeanDefi
         }
         String where = (beanName == null ? "工厂方法" : "Bean[" + beanName + "]构造器");
         throw new BeansException(where + "的参数类型[" + type.getName() + "]找不到可用 Bean");
+    }
+
+    /** D34：参数的限定名裁决——匹配 qualifier 字段优先，回退 beanName，两层都空给可读错误。 */
+    private Object resolveArgByQualifier(String qualifier, Class<?> type, String beanName) {
+        String where = (beanName == null ? "工厂方法" : "Bean[" + beanName + "]构造器");
+        String matched = null;
+        for (String name : getBeanNamesForType(type)) {
+            if (qualifier.equals(getBeanDefinition(name).getQualifier())) {
+                if (matched != null) {
+                    throw new BeansException(where + "参数 qualifier=\"" + qualifier + "\" 命中多个 Bean（" + matched + ", " + name + "）");
+                }
+                matched = name;
+            }
+        }
+        if (matched != null) {
+            return getBean(matched);
+        }
+        if (containsBean(qualifier)) {
+            return getBean(qualifier);
+        }
+        throw new BeansException(where + "参数找不到 qualifier=\"" + qualifier + "\"（既无此限定名，也无此 beanName），类型 " + type.getName());
     }
 
     /** 反射判断参数是否标了 @Autowired(required=false)（按全限定名，避免 core 反向依赖 context 注解）。 */
@@ -488,7 +513,13 @@ public class DefaultListableBeanFactory implements ListableBeanFactory, BeanDefi
     public void destroySingletons() {
         for (Map.Entry<String, BeanDefinition> entry : beanDefinitionMap.entrySet()) {
             if (entry.getValue().isSingleton()) {
-                destroyBean(entry.getKey(), singletonObjects.get(entry.getKey()));
+                try {
+                    destroyBean(entry.getKey(), singletonObjects.get(entry.getKey()));
+                } catch (RuntimeException e) {
+                    // M8（V10 前置）：单个 Bean 销毁失败不得中断其余销毁——
+                    // 关闭链上一个炸全链停，会掩盖后续 Bean（如连接池）的释放
+                    System.err.println("销毁 Bean[" + entry.getKey() + "]失败: " + e);
+                }
             }
         }
         singletonObjects.clear();

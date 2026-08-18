@@ -78,6 +78,7 @@ MiniSpringBoot 采用与 Spring 对齐的分层设计。下面是**框架内核*
 | `context` | spring-context | 注解扫描、配置类解析、`@ComponentScan`、事件广播、`Lifecycle` |
 | `aop` | spring-aop | 切点匹配、通知执行、JDK 动态代理、自动代理创建器 |
 | `web` | spring-webmvc + 内嵌容器 | HTTP 服务器、路由、参数绑定、响应序列化、静态资源 |
+| `jdbc` | spring-jdbc + tx | JdbcTemplate、RowMapper、DataAccessException、编程式/声明式事务（纯 `java.sql.*`） |
 | `autoconfigure` | spring-boot-autoconfigure | `@Conditional` 派生、SPI 装配、框架自动配置类归位（optional + name 探测） |
 | `boot` | spring-boot | 启动入口（Lifecycle 驱动内嵌服务器）、事件、Banner |
 
@@ -134,30 +135,30 @@ MiniSpringBoot
 ├── mini-spring-context/       # 注解扫描 / 配置类解析 / 事件
 ├── mini-spring-aop/           # AOP（JDK 动态代理，零第三方）
 ├── mini-spring-web/           # Web/MVC + 内嵌服务器 + 自写 JSON
+├── mini-spring-jdbc/          # JDBC（JdbcTemplate / 事务，纯 java.sql.*）
 ├── mini-spring-autoconfigure/ # 自动配置（框架自动配置类统一归位于此）
 ├── mini-spring-boot/          # 启动器（run 自动起服务器 + 关闭钩子）
 ├── mini-spring-starter-demo/  # Starter 验证（引入依赖即自动装配）
 ├── mini-spring-demo/          # 后端 demo 收口（全链路能力验证）
-└── deploy/                    # （规划）Nginx 配置、3 实例启动与压测脚本
+└── deploy/                    # 部署物（mysql：M8 数据库容器 compose + 建表 SQL；Nginx/压测 M10）
 ```
 
-> demo 前端与 MySQL 接入在 M8/M9 落地后补充。
+> demo 前端（React）在 M9 落地后补充；MySQL 已于 M8 接入（`deploy/mysql/`）。
 
 ---
 
 ## 构建与运行
 
 ```bash
-# 全量构建 + 测试（JDK 17）
+# 全量构建 + 测试（JDK 17；mini-spring-jdbc 单测真连 MySQL，需先起容器）
+docker compose -f deploy/mysql/docker-compose.yml up -d   # MySQL 8（宿主 13306）
 mvn clean test
 
-# 启动后端 demo（一条 run() 拉起：自动配置 + AOP + 事件 + 内嵌服务器 9090 端口）
-mvn -pl mini-spring-demo exec:java -Dexec.mainClass=com.minispring.demo.app.DemoApplication
-# 或直接 java 运行
-java -cp <classpath> com.minispring.demo.app.DemoApplication
+# 启动后端 demo（一条 run() 拉起：自动配置 + AOP + 事件 + 数据源 + 内嵌服务器 9090 端口）
+mvn -pl mini-spring-demo exec:java "-Dexec.mainClass=com.minispring.demo.app.DemoApplication"
 ```
 
-验证：浏览器访问 `http://localhost:9090/hello`、`http://localhost:9090/capability/aop/order` 等接口。
+验证：浏览器访问 `http://localhost:9090/hello`、`http://localhost:9090/users`（CRUD 落 MySQL）、`http://localhost:9090/accounts/1`（转账事务：`POST /accounts/transfer?from=1&to=2&amount=100`，`POST /accounts/transfer-fail` 回滚取证）等接口。
 
 ---
 
@@ -173,7 +174,7 @@ java -cp <classpath> com.minispring.demo.app.DemoApplication
 - **M5** ✅：Web/MVC + 内嵌服务器
 - **M6** ✅：自动配置与 Starter
 - **M7** ✅：启动器（run 自动起服务器）、事件机制、后端 demo 收口
-- **M8**：数据库接入（MySQL + 连接池）
+- **M8** ✅：数据库接入（MySQL + HikariCP + JdbcTemplate + 声明式事务；V1~V10 唯一事实验收）
 - **M9**：React 前端 + 前后端联调
 - **M10**：3 实例高可用 + 全链路终验
 

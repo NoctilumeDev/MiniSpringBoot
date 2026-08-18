@@ -110,12 +110,19 @@ public class AutowiredAnnotationBeanPostProcessor implements InstantiationAwareB
         }
     }
 
-    /** 字段 / 方法参数共用的依赖解析：@Qualifier 名 → 唯一类型 → @Primary；required=false 允许返回 null。 */
+    /**
+     * 字段 / 方法参数共用的依赖解析：@Qualifier 限定名 → beanName → 唯一类型 → @Primary；
+     * required=false 允许返回 null。
+     *
+     * <p>D34（M8 收口）：@Qualifier(v) 不再只当 beanName 用——先在候选类型里匹配
+     * {@code BeanDefinition.qualifier}（支持「限定名 ≠ beanName」，多数据源场景的关键），
+     * 匹配不到再回退按 beanName。
+     */
     private Object resolveDependency(Class<?> requiredType, String qualifier, boolean required,
                                      String beanName, String description) {
-        // 1. @Qualifier 指名道姓，直接按名拿
+        // 1. @Qualifier 指名道姓：限定名 → beanName 两层匹配
         if (qualifier != null && !qualifier.isEmpty()) {
-            return beanFactory.getBean(qualifier);
+            return resolveByQualifier(qualifier, requiredType, description);
         }
         // 2. 按类型匹配
         String[] candidates = beanFactory.getBeanNamesForType(requiredType);
@@ -130,6 +137,30 @@ public class AutowiredAnnotationBeanPostProcessor implements InstantiationAwareB
             throw new BeansException("注入[" + description + "]失败：找不到类型 " + requiredType.getName() + " 的 Bean");
         }
         return null;
+    }
+
+    /** D34：限定名裁决——先匹配候选的 BeanDefinition.qualifier，再回退 beanName，两层都空给可读错误。 */
+    private Object resolveByQualifier(String qualifier, Class<?> requiredType, String description) {
+        String matched = null;
+        for (String name : beanFactory.getBeanNamesForType(requiredType)) {
+            BeanDefinition bd = registry.getBeanDefinition(name);
+            if (qualifier.equals(bd.getQualifier())) {
+                if (matched != null) {
+                    throw new BeansException("注入[" + description + "]失败：限定名 " + qualifier
+                            + " 命中多个 Bean（" + matched + ", " + name + "）");
+                }
+                matched = name;
+            }
+        }
+        if (matched != null) {
+            return beanFactory.getBean(matched);
+        }
+        // 回退：限定名当 beanName 用（与 Spring 的 @Qualifier("beanName") 语义一致）
+        if (beanFactory.containsBean(qualifier)) {
+            return beanFactory.getBean(qualifier);
+        }
+        throw new BeansException("注入[" + description + "]失败：找不到 qualifier=\"" + qualifier
+                + "\"（既无此限定名，也无此 beanName），类型 " + requiredType.getName());
     }
 
     private String qualifierOf(Qualifier qualifier) {

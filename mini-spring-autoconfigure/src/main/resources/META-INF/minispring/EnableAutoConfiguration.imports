@@ -2,3 +2,6 @@
 com.minispring.autoconfigure.config.ValueAutoConfiguration
 com.minispring.autoconfigure.aop.AopAutoConfiguration
 com.minispring.autoconfigure.web.WebMvcAutoConfiguration
+# M8：数据源 / JDBC 模板与事务（D45 模式：optional + name 探测 + @ConditionalOnProperty）
+com.minispring.autoconfigure.jdbc.DataSourceAutoConfiguration
+com.minispring.autoconfigure.jdbc.JdbcAutoConfiguration

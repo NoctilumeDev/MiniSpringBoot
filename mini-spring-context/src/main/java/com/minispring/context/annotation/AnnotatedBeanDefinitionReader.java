@@ -55,6 +55,15 @@ public class AnnotatedBeanDefinitionReader {
                     bd.setQualifier(qualifier);
                 }
             }
+            // D2（M8 收口）：initMethod / destroyMethod 留存——生命周期回调的注解入口
+            // （BeanDefinition 的回调字段与执行链 M1 就有，此前只缺这个注解读取）。
+            // 方法不存在时不在此校验：初始化/销毁阶段统一抛可读错误（invokeNoArgMethod）。
+            if (!bean.initMethod().isEmpty()) {
+                bd.setInitMethodName(bean.initMethod());
+            }
+            if (!bean.destroyMethod().isEmpty()) {
+                bd.setDestroyMethodName(bean.destroyMethod());
+            }
             registry.registerBeanDefinition(beanName, bd);
         }
     }

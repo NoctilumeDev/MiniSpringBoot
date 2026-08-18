@@ -5,9 +5,11 @@ import com.minispring.core.BeansException;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.AnnotatedElement;
 import java.lang.reflect.Method;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -104,6 +106,37 @@ final class SimpleAnnotationMetadata implements AnnotatedTypeMetadata {
             }
         }
         return null;
+    }
+
+    /**
+     * 在 {@code element} 上（含元注解，递归）查找<b>全部</b> {@code annotationType} 实例。
+     * 与 {@link #findAnnotation}（只取第一个命中）互补：多个派生注解各自携带的
+     * {@code @Conditional} 都要参与条件 AND（M8 修复）。
+     */
+    @Override
+    public List<Annotation> findAnnotations(Class<? extends Annotation> annotationType) {
+        List<Annotation> found = new ArrayList<>();
+        collectAnnotations(element, annotationType, found, new HashSet<>());
+        return found;
+    }
+
+    private void collectAnnotations(AnnotatedElement source, Class<? extends Annotation> annotationType,
+                                    List<Annotation> found, Set<Class<? extends Annotation>> visiting) {
+        for (Annotation present : source.getDeclaredAnnotations()) {
+            Class<? extends Annotation> presentType = present.annotationType();
+            if (presentType == annotationType) {
+                found.add(present);
+            }
+            // 内置元注解（@Target/@Retention/@Documented/@Inherited）不参与语义查找
+            if (presentType.getName().startsWith("java.lang.annotation.")) {
+                continue;
+            }
+            if (!visiting.add(presentType)) {
+                continue; // 循环元注解防护（与 findAnnotation 同款）
+            }
+            collectAnnotations(presentType, annotationType, found, visiting);
+            visiting.remove(presentType);
+        }
     }
 
     @Override

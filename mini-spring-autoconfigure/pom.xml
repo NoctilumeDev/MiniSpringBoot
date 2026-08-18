@@ -43,6 +43,20 @@
             <version>0.1.0-SNAPSHOT</version>
             <optional>true</optional>
         </dependency>
+        <!-- M8（D45 模式延续）：jdbc 模板与 HikariCP 均 optional——编译期可见、运行期不传递；
+             裁掉任一依赖，对应自动配置经 @ConditionalOnClass(name) 安全跳过 -->
+        <dependency>
+            <groupId>com.minispring</groupId>
+            <artifactId>mini-spring-jdbc</artifactId>
+            <version>0.1.0-SNAPSHOT</version>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>com.zaxxer</groupId>
+            <artifactId>HikariCP</artifactId>
+            <version>5.1.0</version>
+            <optional>true</optional>
+        </dependency>
         <!-- 仅测试期依赖；运行时保持零第三方依赖 -->
         <dependency>
             <groupId>org.junit.jupiter</groupId>

@@ -22,7 +22,8 @@ public class DemoApplication {
         DemoEventListener listener = context.getBean("demoEventListener", DemoEventListener.class);
         System.out.println("  [event] 已收到事件: " + listener.getRecordedEvents());
 
-        System.out.println("  [http] 接口: GET /hello | GET /users/{id} | POST /users | GET /void | GET /sleep | GET /（静态资源）");
+        System.out.println("  [http] 接口: GET /hello | /users CRUD（GET 列表/单查, POST, PUT, DELETE /users）| GET /void | GET /sleep | GET /（静态资源）");
+        System.out.println("  [http] 事务: POST /accounts/transfer?from=1&to=2&amount=100 | POST /accounts/transfer-fail（回滚取证）| GET /accounts/{id}");
         System.out.println("  [http] 全链路能力: GET /capability/aop/order | GET /capability/aop/fail | GET /capability/autoconfig | GET /capability/starter/format");
     }
 }

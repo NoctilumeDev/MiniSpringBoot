@@ -35,5 +35,21 @@
             <artifactId>mini-spring-starter-demo</artifactId>
             <version>0.1.0-SNAPSHOT</version>
         </dependency>
+        <!-- M8（双轨制：demo 层可引真实依赖）-->
+        <dependency>
+            <groupId>com.minispring</groupId>
+            <artifactId>mini-spring-jdbc</artifactId>
+            <version>0.1.0-SNAPSHOT</version>
+        </dependency>
+        <dependency>
+            <groupId>com.zaxxer</groupId>
+            <artifactId>HikariCP</artifactId>
+            <version>5.1.0</version>
+        </dependency>
+        <dependency>
+            <groupId>com.mysql</groupId>
+            <artifactId>mysql-connector-j</artifactId>
+            <version>8.4.0</version>
+        </dependency>
     </dependencies>
 </project>

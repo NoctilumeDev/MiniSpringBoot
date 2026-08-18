@@ -22,12 +22,20 @@ class JdkProxyAdviceTest {
 
     interface Greeter {
         String hello(String who);
+
+        String unplanned();
     }
 
     static class GreeterImpl implements Greeter {
         @Override
         public String hello(String who) {
             return "hi " + who;
+        }
+
+        /** 不被任何切点命中（M8：等价「经代理但无 @Transactional 的方法」常态路径）。 */
+        @Override
+        public String unplanned() {
+            throw new IllegalStateException("unplanned-failure");
         }
     }
 
@@ -104,5 +112,23 @@ class JdkProxyAdviceTest {
         IllegalStateException ex = assertThrows(IllegalStateException.class, proxy::boom);
         assertEquals("target-failure", ex.getMessage());
         assertTrue(aspect.trace.contains("after"), "@After 是 finally 语义：目标抛异常后仍必须执行");
+    }
+
+    /**
+     * M8 修复的约束用例（对称层：不命中切点的直通路径）。
+     * 修复前：{@code method.invoke} 抛 InvocationTargetException（message=null）直达调用方，
+     * 业务异常类型与消息全部丢失（demo 实证「500 Internal Server Error: null」）。
+     * 若本测试通过，说明直通路径与拦截路径（上一用例）的 ITE 拆包语义一致。
+     */
+    @Test
+    void unmatchedMethodFailureKeepsOriginalException() {
+        TracingAspect aspect = new TracingAspect();
+        List<Advisor> advisors = new AspectJAdvisorFactory(aspect).getAdvisors();
+        Greeter proxy = (Greeter) new JdkDynamicAopProxy(new GreeterImpl(), advisors).getProxy();
+
+        IllegalStateException ex = assertThrows(IllegalStateException.class, proxy::unplanned);
+        assertEquals("unplanned-failure", ex.getMessage());
+        // 切点不命中：通知不得执行（证明该方法确实走了「空链直通」分支）
+        assertTrue(aspect.calls.isEmpty());
     }
 }

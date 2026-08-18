@@ -110,8 +110,26 @@
 
 ### M8 · 数据库接入
 
-- **产出**：轻量 JDBC 封装（JdbcTemplate 等价物）、MySQL 8（Docker）+ HikariCP、建表脚本。
-- **落地证据**：**MySQL 表里真实查到数据**（SQL 客户端验证）、CRUD 真实落库；并发下连接池无泄漏、无脏读。
+- **产出**：`mini-spring-jdbc` 模块（JdbcTemplate / RowMapper / DataAccessException 体系 / 编程式 TransactionManager + 声明式 @Transactional+AOP 切面，纯 `java.sql.*` 零第三方）、`DataSourceAutoConfiguration` + `JdbcAutoConfiguration`（D45 模式：optional 依赖 + `@ConditionalOnClass(name)` 探测 + `@ConditionalOnProperty`）、MySQL 8 容器（`deploy/mysql/`，mem 512M、宿主 13306）+ 建表脚本、demo 层 UserRepository / AccountService（接口化，D8 约束）/ AccountController。
+- **落地证据（V1~V10 唯一事实，docker exec 直查 MySQL / 真实 HTTP）**：
+  - V1 CRUD 落库：POST /users → 响应 `{id:39}`，`docker exec` 直查同 email 同 id 同 name；V2 自增回填：响应 id=39 = DB 行 id，AUTO_INCREMENT=40 一致；
+  - V3 事务回滚：`transfer-fail`（扣款后刻意抛异常）→ HTTP 500 + docker exec 直查两账户余额 900.00/1100.00 分文未动（无半扣半入）；V4 事务提交：`transfer` → 850.00/1150.00，变动精确等于 amount；
+  - V5 无脏读（RR）：CLI 事务 A `UPDATE balance=999` 未提交时应用读 850（旧值），COMMIT 后读 999——未提交不可见、提交后可见双向实证；
+  - V6 池无泄漏：100 并发（50 并行）全部 200，MySQL 侧连接 11 条 = 10（max-pool-size 上限）+ 1（CLI 自身），无膨胀；
+  - V7 断连自愈（**揪出 B9 后复验**）：`docker stop mysql` → 请求 30s（Hikari connectionTimeout 默认值，有限阻塞非挂死）后 500「SQL 执行失败: SELECT balance FROM accounts WHERE id = ?」（原始异常可读，修复前是 ITE 包装的「null」）；`docker start` 后 86ms 恢复 200；
+  - V8 SQL 负例：重复 email 唯一键冲突 → 500（DuplicateKeyException 翻译），后续请求 200、连接仍 11 条（归还正常）；
+  - V9 模块裁剪（D45 延续）：classpath 裁掉 mini-spring-jdbc/HikariCP/mysql 驱动——**application.yml 明明配置了 `minispring.datasource.url`** 但类不在，应用照常启动、服务器正常起、dataSource/jdbcTemplate/transactionManager 三个 Bean 全部不存在、exit 0（「配置在、类不在 → 安全跳过」锚定）；
+  - V10 关闭钩子（D2 生效）：`System.exit(0)`（与 Ctrl+C 同一 JVM shutdown 序列）→ `ContextClosedEvent` 发布 → MySQL 侧池连接 4→1（仅 CLI 残留，`@Bean(destroyMethod="close")` 真实释放）→ 9090 端口释放 → exit 0。
+- **M8 期间揪出并修复**：①TransactionAspect 构造注入 TransactionManager 与 dataSource 初始化互为依赖死结（纯自动配置应用必炸）→ 改 BeanFactoryAware 运行期懒解析（对齐 Spring TransactionInterceptor）；②`JdkDynamicAopProxy` 不命中切点的直通路径无 ITE 拆包（M3 对称遗漏，V7「500 null」根因）→ 修复 + 约束用例；③`ConditionEvaluator` 多个 `@Conditional` 派生注解只求值第一个（AND 语义破坏）→ `findAnnotations` 全收集逐一求值；④`RequestMappingHandlerMapping` 派生映射注解硬编码 Get/Post → 元注解统一处理（新增 @PutMapping/@DeleteMapping）；⑤`@annotation` 切点支持实现类方法命中（声明式事务前置）。
+- **落地边界（显式技术债）**：事务仅 REQUIRED 传播 / 无隔离级别定制（MySQL 默认 RR）；HikariCP 仅 max-pool-size 可配（connection-timeout 等维持默认 30s，登记 D47）；JdbcTemplate 为教学子集（无批量/命名参数/分页）；D1（JAR 扫描）维持 M10。
+
+#### M8 三次质量审查记录（按 §1.6 门闩）
+
+| 审查 | 时间 | 结论与证据 |
+| --- | --- | --- |
+| ① 回顾审查（回归/契约/依赖方向） | 2026-08-19 | 依赖方向保持 `boot > autoconfigure > {web, jdbc} > aop > context > core` 单向无环（jdbc 仅依赖 aop，纯 JDBC 部分零模块依赖）；全量单测 44 个（M7 的 28 → 44，含 D2 生命周期负例、D34 双数据源裁决、多条件 AND、AOP 直通路径对称用例）全部通过；M0~M7 demo 接口回归通过；V9 分离 classpath 复证 D45 模式对 jdbc/HikariCP 成立。 |
+| ② 当前审查（异常/边界/null 全路径） | 2026-08-19 | V1~V10 全部以 docker exec / 真实 HTTP 唯一事实跑通（见上）；揪出三处：B9（JdkDynamicAopProxy ITE 对称遗漏——M8 接口化 Service + 部分方法 @Transactional 使「经代理不命中切点」成常态路径，激活 M3 遗留缺陷，V7 实证 500 消息为 null）、TransactionAspect 死结、ConditionEvaluator AND 语义——全部修复且复验（V7 null→可读 SQL 消息）；负例实测：唯一键冲突 500 + 连接归还、断库 30s 有限阻塞 + 自愈、`../secret` 等既有负例保持。 |
+| ③ 前瞻审查（反例驱动，假设会在何时被打破） | 2026-08-19 | 反例①「配置了 datasource.url 但裁掉驱动」→ V9 实证安全跳过（无 NoClassDefFoundError）；反例②「池内连接全死后的第一请求」→ V7 实证 Hikari evict + 30s 有限阻塞 + restart 自愈（86ms）；反例③「线程池复用串事务」→ TransactionContext 的 clear 在 finally（V6 并发 100 无脏事务佐证）；反例④「切面收集期依赖」→ 死结已按 Spring 同构机制（Aware 懒解析）消除，启动序列实证 transactionAspect 先于 dataSource 创建；登记 D47（Hikari 高级参数不可配）。M9 风险预置：CORS 未实现（浏览器跨源联调需前端代理或 M9 补）；JSON 日期/长整型精度边界。 |
 
 ### M9 · React 前端 + 联调
 
@@ -160,7 +178,7 @@
 | 编号 | 局限 / 技术债 | 触发条件 | 接上时机 / 做法 |
 | --- | --- | --- | --- |
 | D1 | 类路径扫描仅支持文件目录，不支持 JAR | 打成可执行 JAR 部署时 `jar:` 协议 URL 无法 `toURI()` 遍历 | M10 部署前补 `JarURLConnection` 分支，或改用 exploded classes |
-| D2 | `@Bean` 不支持 `initMethod/destroyMethod` | 需要方法级生命周期回调时 | M4/M7 生命周期收口时给 `@Bean` 加属性并在 reader 读取 |
+| D2 | ~~`@Bean` 不支持 `initMethod/destroyMethod`~~ 已修于 M8：`@Bean(initMethod/…, destroyMethod/…)` 双属性落地（`AnnotatedBeanDefinitionReader` 读取 → BeanDefinition 已有字段），生命周期回调与「方法不存在时报错」负例均有单测；V10 实证 `HikariDataSource.close()`（destroyMethod）在 shutdown hook 里真实执行（MySQL 连接归零） | 需要方法级生命周期回调时 | 已关闭 |
 | D3 | ~~`@Autowired` 声明支持构造器/方法/参数注入，实际只实现字段注入~~ 已修于 M7 终审（A-4）：构造器注入（BPP `determineCandidateConstructors` 选构造器、容器解析参数、多个 `@Autowired` 构造器报错）、方法注入（字段注入后调用，`required=false` 依赖缺失仅跳过该方法）、参数级 `@Autowired(required=false)`（缺省注入 null）全部落地；构造器/prototype 循环依赖改为可读错误而非 StackOverflow | 需要构造或方法注入时 | 已关闭 |
 | D4 | ~~`@After` 注释写「正常返回后」，实现为 finally 语义~~ 已修于 M7（D42 + A 系终审）：注释订正、异常 suppressed 附加，拦截器更名为 `AfterAdviceInterceptor`（名称与 finally 语义一致） | 目标方法抛异常时后置仍会执行 | 已关闭 |
 | D5 | 无通知排序（`@Order`） | 多切面命中同一方法时顺序不确定 | M6/M7 多切面场景补 `Ordered` 优先级 |
@@ -192,7 +210,7 @@
 | D31 | Controller 被代理后 `HandlerMethod` 调用失败 | `HandlerMethod` 存原始类 `Method`，`method.invoke(代理实例)` 抛 IllegalArgumentException；因 D8 当前 Controller 无接口不会被 JDK 代理故暂不触发 | 与 D8 一起在 M7 评估（CGLIB / 接口化） |
 | D32 | `@Configuration` 无 CGLIB 增强 | `@Bean` 方法互相调用直接 new、破坏单例语义 | 明确为「教学子集」边界（保持零依赖不引 CGLIB），M7 文档化 |
 | D33 | autoconfigure / config 框架模块自带 application.yml | 与用户应用同名文件在 classpath 上冲突 | 已修于 M7：demo 归位 `mini-spring-demo`，框架模块移除自带 `application.*` |
-| D34 | `@Qualifier` 半截：`BeanDefinition.qualifier` 被 set 但 `getQualifier()` 从未被注入裁决读取，注入端 `@Qualifier(v)` 仍直接按 beanName `getBean`，不支持「限定名 ≠ beanName」的按名匹配 | 需要按限定名（而非 beanName）解析多候选注入时 | M8 完善注入裁决：优先按 qualifier 字段匹配，再回退按 beanName |
+| D34 | ~~`@Qualifier` 半截：`BeanDefinition.qualifier` 被 set 但 `getQualifier()` 从未被注入裁决读取，注入端 `@Qualifier(v)` 仍直接按 beanName `getBean`，不支持「限定名 ≠ beanName」的按名匹配~~ 已修于 M8：注入裁决完整链「限定名（BeanDefinition.qualifier）→ beanName → 类型唯一 → @Primary」落地，双数据源（限定名 ≠ beanName）用例锚定；连带修复 `ConditionEvaluator` 多 `@Conditional` 派生注解只求值第一个的 AND 语义破坏 | 需要按限定名（而非 beanName）解析多候选注入时 | 已关闭 |
 | D35 | ~~`ApplicationListener` 在单例预实例化之后才收集注册（`refresh()` 第 3 步），Bean 初始化期间发布的事件丢失~~ 已修于 M7 终审（A-6）：监听器收集提前到「BPP 就位后、其余单例预实例化前」；同时补齐 `ApplicationEventPublisherAware`（初始化回调前注入发布器），初始化期事件端到端可达（单测覆盖） | Bean 初始化期间发布事件时 | 已关闭 |
 | D36 | web 框架模块自带 `static/index.html`（M5 demo 遗留），与 demo 静态资源在 classpath 上冲突，`ClassLoader.getResourceAsStream` 按 classpath 顺序命中 web 模块那份 | 真实全链路（demo 依赖 web）访问 `/` 时 | 已修于 M7：删除 web 模块自带静态资源，静态资源归位 `mini-spring-demo` |
 | D37 | `ConfigFilePropertySourceLoader` 默认文件与 profile 文件的 properties/yml 优先级均与注释相反：默认层先 `addLast` properties 再 yml、profile 层先 `addBefore` properties 再 yml，都导致 properties 覆盖 yml；注释与 Spring 语义为 yml 覆盖 properties | 同 key 同时出现在 properties 与 yml 时 | 已修于 M7：默认层与 profile 层均改为「yml 在前、properties 在后」，各配同名 key 用例 |
@@ -205,7 +223,9 @@
 | D44 | A-5（D30 残余）：切面收集期内被提前创建的业务 Bean，D30 补偿会把代理回填容器缓存，但收集期已注入给其他 Bean 的引用仍是裸对象——容器缓存与早期引用不一致 | 切面 `@Autowired` 了被自己（或同期切面）切点命中的业务 Bean 时 | 已如实标注：补偿时打警告日志（与 Spring「not eligible for auto-proxying」同源语义）；规避方式：切面不依赖被自己切点命中的 Bean。若 M8 需要，可评估「按 BeanDefinition 元数据构建 Advisor（不实例化切面）」的深修 |
 | D45 | ~~A-1 归位的已知边界：autoconfigure 聚合依赖 web/aop/config，「裁掉某能力模块、自动配置随之消失」的模块级隔离不成立~~ **已修于 M7 终审第三轮（方案 B，与 Spring 实证结构一致）**。事实核查：Spring Boot 3.2 的 spring-boot-autoconfigure 发布 pom 对下游仅传递 spring-boot 本体一个 compile 依赖，spring-web 等全部 optional（初版 D45 写「与 Spring 同构」不成立，Spring 恰恰相反）。修法：①autoconfigure 对 web/aop/config 全部 `<optional>`；②三个自动配置类级条件改 `@ConditionalOnClass(name="…")` 字符串形式——注解若含类字面量，jar 缺失时注解代理解析即抛 NoClassDefFoundError（HotSpot 平台行为，已实测），name 形式只碰字符串；③boot 不再依赖 web：新增 context 层 `Lifecycle` 接口，内嵌服务器由 `WebMvcAutoConfiguration.EmbeddedServerBootstrap`（Lifecycle 实现）装配，run() 只驱动接口（与 spring-boot 只认 Lifecycle 不认 Tomcat 同构）。**分离 classpath 实测（唯一事实）**：裁掉 aop+web → 启动正常、三类 Web/AOP Bean 不存在、无服务器、退出 0；只裁 aop → 服务器起（probe=404）、AOP 自动配置安全跳过。M8 的 DataSource/HikariCP 自动配置即按此模式（optional + name 探测），内核保持零第三方依赖 | 想做「裁剪某能力模块、自动配置随之消失」的精细化装配时 | 已关闭（模式成为 M8 前置） |
 | D46 | M7 终审第三轮实测发现：`registerSingleton` 注册的运行期单例（如 webServer）可见性不对称——`getBean` 能取（前轮已修），但 `containsBean` 只查 BeanDefinition、`getBeanNamesForType` 只遍历 BeanDefinition，对运行期单例全部返回「不存在」（分离 classpath 实测 webServer=true 已注册但 containsBean=false 实证）。已修：containsBean 同查一级缓存；getBeanNamesForType 补查「无定义的手动单例」按实例类型匹配（与 Spring 的 ManualSingletonNames 语义对齐） | 业务按类型/存在性查询运行期注册的单例时 | 已修于 M7 终审第三轮（分离 classpath 复测通过） |
+| D47 | HikariCP 仅 `minispring.datasource.max-pool-size` 可配，connection-timeout / minimum-idle / keepalive 等维持库默认（connectionTimeout=30s：DB 断连时请求有限阻塞 30 秒才返回 500，V7 实证——非挂死但体验欠佳） | 生产部署需要快速失败 / 池参数调优时 | M10 部署前评估：按需透传 `minispring.datasource.connection-timeout` 等参数；教学子集暂显式不做 |
 
 > 注：B1（ITE 拆包）、B3（Object 方法过滤）为已发布 M3 代码的真实 bug，已单独修复并回归，不列入本表；B2（AOP×循环依赖）已在 M3「落地边界」登记。M6 后审查又修掉 B4（void/null 空响应断连）、B5（内嵌服务器未设线程池导致单线程串行）两个 M5 代码真实 bug，均已修复并回归。M7 审查再修掉 B6（`processComponentScan` 对未标 `@ComponentScan` 的 `@Configuration` 隐式扫描所在包）。M7「极端边界」复合审查又修掉 B7（`SunHttpRequest.decode` 非法百分号编码兜底）、B8（`JsonNode.asInt/asLong/asDouble` null 防护）。M7 终审第一轮（外审 B-1~B-8）修掉：B-1 `JsonSerializer` NUMBER 节点误加引号、B-2 元注解循环递归补齐另两处（见 D38）、B-3 prototype BPP 重复注册、B-4 监听器异常阻断广播链、B-6 List 元素一律 asString（D14 随之关闭）、B-7 `asBoolean` 无类型防护；B-8 即 D29 关闭；B-5 即 D28 误报撤销。
 > M7 终审第二轮（外审 A-1~A-6，架构与契约层）修掉：A-1 三个 AutoConfiguration 归位 autoconfigure 模块、依赖方向恢复单向 `boot > autoconfigure > web > aop > context > core`（config 落回 core 之上，聚合边界见 D45）；A-2 框架模块 demo 清零（D19 补齐 web/aop/core）；A-3 `run()` 自动探测 DispatcherServlet 并启动内嵌服务器 + 关闭钩子（连带修复 JDK HttpServer dispatcher 线程继承 daemon 属性导致的保活不确定性）；A-4 `@Autowired` 构造器/方法/参数注入全落地（D3/D26 关闭）；A-5 补偿代理不一致如实标注为 D44；A-6 监听器先注册 + `ApplicationEventPublisherAware`（D35 关闭）；`AfterReturningAdviceInterceptor` 更名 `AfterAdviceInterceptor`。测试从 5 个增至 28 个（core/context/aop/autoconfigure/boot/web 六模块），含负例与边界用例。
 > M7 终审第三轮（D45 方案 B）：optional 依赖 + `@ConditionalOnClass(name)` 字符串探测 + context 层 `Lifecycle`（boot 摘除 web 依赖，服务器启动归位 web 自动配置），模块级「裁剪即消失」经分离 classpath 真实启动实证（裁 aop+web / 只裁 aop 两场景）；实测顺带揪出并修复 D46（运行期单例可见性不对称）。至此 M0~M7 三轮外审 + 自审全部闭环，唯一残留 D44（已如实标注 + 警告日志）。
+> M8 审查（V1~V10 唯一事实验收）修掉：B9（`JdkDynamicAopProxy` 不命中切点的直通路径无 ITE 拆包——M3 修 B1 时只覆盖拦截链路，直通路径为对称遗漏；M8 接口化 Service + 仅部分方法 @Transactional 使该路径成为常态，V7 断连实测「500 Internal Server Error: null」暴露后修复，加对称约束用例）、TransactionAspect 构造依赖死结（改 BeanFactoryAware 懒解析，启动序列实证切面先于 dataSource 创建）、`ConditionEvaluator` 多条件 AND 语义（`findAnnotations` 全收集）、`RequestMappingHandlerMapping` 派生注解元注解化（@PutMapping/@DeleteMapping 落地）。D2/D34 按 M8 计划关闭；新登记 D47（Hikari 参数面）。测试 28→44。

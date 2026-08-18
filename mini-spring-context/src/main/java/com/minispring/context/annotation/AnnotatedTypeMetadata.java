@@ -1,6 +1,7 @@
 package com.minispring.context.annotation;
 
 import java.lang.annotation.Annotation;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -20,6 +21,16 @@ public interface AnnotatedTypeMetadata {
      * 属性值通过注解实例反射取值（{@code String[]} / {@code Class[]} / {@code boolean} 等原样保留）。
      */
     Map<String, Object> getAnnotationAttributes(Class<? extends Annotation> annotationType);
+
+    /**
+     * 返回元素（含元注解，递归）上标注的<b>全部</b> {@code annotationType} 实例。
+     *
+     * <p>与 {@link #getAnnotationAttributes}（只取第一个命中）的分工：条件求值需要
+     * 「一个元素上多个派生注解各自携带的 {@code @Conditional}」全部参与 AND——
+     * 例如 {@code @ConditionalOnClass} + {@code @ConditionalOnBean} 同标一个类时，
+     * 两个条件都必须求值（M8 实测修复：此前只求值第一个，第二个被静默忽略）。
+     */
+    List<Annotation> findAnnotations(Class<? extends Annotation> annotationType);
 
     /**
      * 被判定元素所属的类：类级元素即该类自身，方法级元素即其声明类。

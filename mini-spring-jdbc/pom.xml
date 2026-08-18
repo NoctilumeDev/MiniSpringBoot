@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.minispring</groupId>
+        <artifactId>minispring-parent</artifactId>
+        <version>0.1.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>mini-spring-jdbc</artifactId>
+    <name>mini-spring-jdbc</name>
+    <description>JDBC：JdbcTemplate / RowMapper / DataAccessException + 编程式·声明式事务（纯 java.sql.*，零第三方）</description>
+
+    <dependencies>
+        <!-- 声明式事务（@Transactional 切面）复用 M3 的 AOP；传递 context/core，方向单向无环 -->
+        <dependency>
+            <groupId>com.minispring</groupId>
+            <artifactId>mini-spring-aop</artifactId>
+            <version>0.1.0-SNAPSHOT</version>
+        </dependency>
+        <!-- 仅测试期依赖；运行时零第三方。注意：本模块单测【真连 MySQL】，
+             需先启动 deploy/mysql 容器：docker compose -f deploy/mysql/docker-compose.yml up -d（端口 13306） -->
+        <dependency>
+            <groupId>com.mysql</groupId>
+            <artifactId>mysql-connector-j</artifactId>
+            <version>8.4.0</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <version>5.10.2</version>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>3.2.5</version>
+            </plugin>
+        </plugins>
+    </build>
+</project>

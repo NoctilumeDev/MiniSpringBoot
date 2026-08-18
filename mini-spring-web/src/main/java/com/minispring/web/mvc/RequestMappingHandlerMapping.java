@@ -8,11 +8,10 @@ import com.minispring.core.ListableBeanFactory;
 import com.minispring.web.http.HttpMethod;
 import com.minispring.web.http.HttpRequest;
 import com.minispring.web.mvc.annotation.Controller;
-import com.minispring.web.mvc.annotation.GetMapping;
-import com.minispring.web.mvc.annotation.PostMapping;
 import com.minispring.web.mvc.annotation.RequestMapping;
 import com.minispring.web.mvc.annotation.RestController;
 
+import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -62,21 +61,23 @@ public class RequestMappingHandlerMapping implements HandlerMapping, BeanFactory
         for (Method method : clazz.getDeclaredMethods()) {
             String path = null;
             HttpMethod[] httpMethods = null;
+            // 1) 直接标注 @RequestMapping
             RequestMapping rm = method.getAnnotation(RequestMapping.class);
             if (rm != null) {
                 path = !rm.value().isEmpty() ? rm.value() : rm.path();
                 httpMethods = rm.method();
             } else {
-                GetMapping gm = method.getAnnotation(GetMapping.class);
-                if (gm != null) {
-                    path = gm.value();
-                    httpMethods = new HttpMethod[]{HttpMethod.GET};
-                } else {
-                    PostMapping pm = method.getAnnotation(PostMapping.class);
-                    if (pm != null) {
-                        path = pm.value();
-                        httpMethods = new HttpMethod[]{HttpMethod.POST};
+                // 2) 派生映射注解（M8 修复：不再硬编码枚举 Get/PostMapping——Put/Delete 及自定义
+                //    @XxxMapping 统一走「注解自身携带元 @RequestMapping」路径：路径取派生注解的
+                //    value()，HTTP 方法取元 @RequestMapping 的 method()）
+                for (Annotation ann : method.getAnnotations()) {
+                    RequestMapping meta = ann.annotationType().getAnnotation(RequestMapping.class);
+                    if (meta == null) {
+                        continue;
                     }
+                    path = derivedMappingValue(ann);
+                    httpMethods = meta.method();
+                    break;
                 }
             }
             if (path == null) {
@@ -84,6 +85,16 @@ public class RequestMappingHandlerMapping implements HandlerMapping, BeanFactory
             }
             registrations.add(new MappingRegistration(httpMethods, combine(basePath, path),
                     new HandlerMethod(controller, method)));
+        }
+    }
+
+    /** 读取派生映射注解（如 {@code @PutMapping}）的 {@code value()}；注解没有 String value 属性则视为无路径。 */
+    private String derivedMappingValue(Annotation annotation) {
+        try {
+            Object value = annotation.annotationType().getMethod("value").invoke(annotation);
+            return (value instanceof String) ? (String) value : null;
+        } catch (ReflectiveOperationException | ClassCastException ignored) {
+            return null;
         }
     }
 

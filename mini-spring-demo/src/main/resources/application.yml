@@ -16,3 +16,10 @@ smtp:
 feature:
   optional:
     enabled: "true"
+# M8 数据源（决策点 A：minispring.datasource.* 前缀；容器 deploy/mysql，宿主 13306）
+minispring:
+  datasource:
+    url: "jdbc:mysql://localhost:13306/minispring_demo?useSSL=false&allowPublicKeyRetrieval=true"
+    username: "minispring"
+    password: "minispring_123"
+    max-pool-size: 10
