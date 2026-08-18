@@ -26,6 +26,7 @@ public class ResponseBodyReturnValueHandler implements ReturnValueHandler {
     public void handleReturnValue(Object returnValue, Method method, HttpRequest request, HttpResponse response) {
         if (returnValue == null) {
             response.setContentType("application/json; charset=utf-8");
+            response.write(new byte[0]); // 空响应也需提交响应头，否则客户端断连（BUG-1 修复）
             return;
         }
         if (returnValue instanceof String) {

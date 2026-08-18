@@ -7,6 +7,7 @@ import com.sun.net.httpserver.HttpServer;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.util.concurrent.Executors;
 
 /**
  * 基于 JDK 内置 {@link HttpServer} 的内嵌服务器。
@@ -47,6 +48,8 @@ public class SunHttpServer implements WebServer {
                 exchange.close();
             }
         });
+        // 显式给线程池：JDK HttpServer 不设 executor 时默认单线程串行处理请求（BUG-2 修复）
+        this.server.setExecutor(Executors.newCachedThreadPool());
         this.server.start();
     }
 
