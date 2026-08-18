@@ -188,5 +188,10 @@
 | D35 | `ApplicationListener` 在单例预实例化之后才收集注册（`refresh()` 第 3 步） | Bean 初始化期间（如 `@PostConstruct`）发布的事件会丢失 | M8 事件收口：监听器收集提前到 BPP 实例化后、其余单例预实例化前 |
 | D36 | web 框架模块自带 `static/index.html`（M5 demo 遗留），与 demo 静态资源在 classpath 上冲突，`ClassLoader.getResourceAsStream` 按 classpath 顺序命中 web 模块那份 | 真实全链路（demo 依赖 web）访问 `/` 时 | 已修于 M7：删除 web 模块自带静态资源，静态资源归位 `mini-spring-demo` |
 | D37 | `ConfigFilePropertySourceLoader` 默认文件与 profile 文件的 properties/yml 优先级均与注释相反：默认层先 `addLast` properties 再 yml、profile 层先 `addBefore` properties 再 yml，都导致 properties 覆盖 yml；注释与 Spring 语义为 yml 覆盖 properties | 同 key 同时出现在 properties 与 yml 时 | 已修于 M7：默认层与 profile 层均改为「yml 在前、properties 在后」，各配同名 key 用例 |
+| D38 | `SimpleAnnotationMetadata.findAnnotation` 循环元注解（A→@B、B→@A）无防护 → 无限递归 StackOverflow | 用户自定义互相标注的语义注解级联被查时 | 已修于 M7：递归携带 visiting 集合，命中的注解类型跳过 |
+| D39 | `SimpleApplicationEventMulticaster.resolveEventType` 只反解本体实现的泛型，不认父类固化泛型（`class Foo extends BaseListener` 且 BaseListener implements ApplicationListener\<MyEvent\>）→ 退化成接收所有事件 | 监听器经父类声明监听类型时 | 已修于 M7：沿 getSuperclass 向上遍历接口泛型 |
+| D40 | `ClassPathScanningCandidateComponentProvider.loadClass` `catch (Throwable) return null` 吞掉顶级类的真实加载失败（依赖缺失/静态初始化崩溃） | 扫描包内某个顶级类初始化失败时 | 已修于 M7：仅静默忽略内部类/匿名类（名字含 `$`），顶级类失败上抛 |
+| D41 | `JsonParser.parseNumber` 对 `1.` / `1e` / `1e+` 等非法数字放行（延迟到 asDouble 才报错） | POST body 含非法数字字面量时 | 已修于 M7：严格校验整数/小数/指数部分都必须有数字 |
+| D42 | `@After` 注释写「正常返回后」但实现是 finally 语义（D4）；且 finally 内 afterMethod 自身抛异常会覆盖目标异常 | @After 通知自身抛异常时 | 已修于 M7：注释订正为 finally 语义 + afterMethod 异常用 addSuppressed 附加到目标异常 |
 
 > 注：B1（ITE 拆包）、B3（Object 方法过滤）为已发布 M3 代码的真实 bug，已单独修复并回归，不列入本表；B2（AOP×循环依赖）已在 M3「落地边界」登记。M6 后审查又修掉 B4（void/null 空响应断连）、B5（内嵌服务器未设线程池导致单线程串行）两个 M5 代码真实 bug，均已修复并回归。M7 审查再修掉 B6（`processComponentScan` 对未标 `@ComponentScan` 的 `@Configuration` 隐式扫描所在包）。M7「极端边界」复合审查又修掉 B7（`SunHttpRequest.decode` 对非法百分号编码 try-catch 兜底，避免坏 query 让 decode 致命——JDK HttpServer 已在 URI 层 400 拦截，属 defense-in-depth）、B8（`JsonNode.asInt/asLong/asDouble` 无 null 防护，JSON 字段类型不匹配如 int 字段给 boolean 导致 NPE→500 null，已修为友好 IllegalArgumentException）两个 web 层真实 bug，不列入本表。

@@ -6,8 +6,10 @@ import java.lang.annotation.Annotation;
 import java.lang.reflect.AnnotatedElement;
 import java.lang.reflect.Method;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * {@link AnnotatedTypeMetadata} 的默认真实实现：统一包装「类」与「方法」。
@@ -73,6 +75,11 @@ final class SimpleAnnotationMetadata implements AnnotatedTypeMetadata {
      * 在 {@code element} 上（含元注解，递归）查找 {@code annotationType}；找不到返回 {@code null}。
      */
     static <A extends Annotation> A findAnnotation(AnnotatedElement element, Class<A> annotationType) {
+        return findAnnotation(element, annotationType, new HashSet<>());
+    }
+
+    private static <A extends Annotation> A findAnnotation(AnnotatedElement element, Class<A> annotationType,
+                                                           Set<Class<? extends Annotation>> visiting) {
         A direct = element.getDeclaredAnnotation(annotationType);
         if (direct != null) {
             return direct;
@@ -86,7 +93,12 @@ final class SimpleAnnotationMetadata implements AnnotatedTypeMetadata {
             if (presentType.getName().startsWith("java.lang.annotation.")) {
                 continue;
             }
-            A found = findAnnotation(presentType, annotationType);
+            // P1：循环元注解（A→@B、B→@A）防护，正在访问的注解类型跳过，避免无限递归 StackOverflow
+            if (!visiting.add(presentType)) {
+                continue;
+            }
+            A found = findAnnotation(presentType, annotationType, visiting);
+            visiting.remove(presentType);
             if (found != null) {
                 return found;
             }

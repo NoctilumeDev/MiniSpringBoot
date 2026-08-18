@@ -7,7 +7,8 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * 后置通知：在目标方法「正常返回之后」运行。
+ * 后置通知：与 Spring 的 {@code @After} 一致，为 finally 语义——
+ * 无论目标方法正常返回还是抛出异常，本通知都会执行（D4 修正注释）。
  */
 @Target(ElementType.METHOD)
 @Retention(RetentionPolicy.RUNTIME)

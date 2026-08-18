@@ -52,8 +52,11 @@ public class ClassPathScanningCandidateComponentProvider {
         try {
             return Thread.currentThread().getContextClassLoader().loadClass(className);
         } catch (Throwable e) {
-            // 内部类 / 匿名类等加载失败的一律忽略
-            return null;
+            // P3：只静默吞掉内部类/匿名类（文件名含 $）的加载失败；顶级类加载失败是真实故障，必须上抛
+            if (className.contains("$")) {
+                return null;
+            }
+            throw new IllegalStateException("加载扫描到的类失败: " + className, e);
         }
     }
 

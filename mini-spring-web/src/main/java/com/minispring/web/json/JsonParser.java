@@ -175,13 +175,22 @@ public final class JsonParser {
         if (peek() == '-') {
             pos++;
         }
+        int intStart = pos;
         while (pos < text.length() && Character.isDigit(text.charAt(pos))) {
             pos++;
         }
+        if (pos == intStart) {
+            throw error("非法数字");
+        }
         if (pos < text.length() && text.charAt(pos) == '.') {
             pos++;
+            int fracStart = pos;
             while (pos < text.length() && Character.isDigit(text.charAt(pos))) {
                 pos++;
+            }
+            // P4：小数点后必须至少一位数字，`1.` 非法
+            if (pos == fracStart) {
+                throw error("小数点后缺少数字");
             }
         }
         if (pos < text.length() && (text.charAt(pos) == 'e' || text.charAt(pos) == 'E')) {
@@ -189,15 +198,16 @@ public final class JsonParser {
             if (pos < text.length() && (text.charAt(pos) == '+' || text.charAt(pos) == '-')) {
                 pos++;
             }
+            int expStart = pos;
             while (pos < text.length() && Character.isDigit(text.charAt(pos))) {
                 pos++;
             }
+            // P4：指数后必须至少一位数字，`1e` / `1e+` 非法
+            if (pos == expStart) {
+                throw error("指数后缺少数字");
+            }
         }
-        String num = text.substring(start, pos);
-        if (num.isEmpty() || "-".equals(num)) {
-            throw error("非法数字");
-        }
-        return JsonNode.ofNumber(num);
+        return JsonNode.ofNumber(text.substring(start, pos));
     }
 
     // ----- 基础助手 -----
