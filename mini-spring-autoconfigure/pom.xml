@@ -20,22 +20,28 @@
             <artifactId>mini-spring-context</artifactId>
             <version>0.1.0-SNAPSHOT</version>
         </dependency>
-        <!-- A-1：自动配置类从框架模块迁入本模块（与 spring-boot-autoconfigure 同构），
-             autoconfigure 位于 web/aop/config 之上，依赖方向恢复单向 -->
+        <!-- A-1/D45：自动配置类从框架模块迁入本模块。三个框架依赖全部 optional——
+             编译期可见（本模块要写 @Bean 方法），但绝不向下游传递：
+             应用按需引 web/aop/config，缺失时对应自动配置经 @ConditionalOnClass(name) 安全跳过。
+             事实核查（2026-08-19）：Spring Boot 3.2 的 spring-boot-autoconfigure 发布 pom 对下游
+             仅传递 spring-boot 本体一个 compile 依赖，spring-web 等全部 optional，本结构与其一致 -->
         <dependency>
             <groupId>com.minispring</groupId>
             <artifactId>mini-spring-config</artifactId>
             <version>0.1.0-SNAPSHOT</version>
+            <optional>true</optional>
         </dependency>
         <dependency>
             <groupId>com.minispring</groupId>
             <artifactId>mini-spring-aop</artifactId>
             <version>0.1.0-SNAPSHOT</version>
+            <optional>true</optional>
         </dependency>
         <dependency>
             <groupId>com.minispring</groupId>
             <artifactId>mini-spring-web</artifactId>
             <version>0.1.0-SNAPSHOT</version>
+            <optional>true</optional>
         </dependency>
         <!-- 仅测试期依赖；运行时保持零第三方依赖 -->
         <dependency>

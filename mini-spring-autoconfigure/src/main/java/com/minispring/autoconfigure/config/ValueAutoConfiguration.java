@@ -9,10 +9,11 @@ import com.minispring.context.annotation.Configuration;
 /**
  * 外部化配置自动配置：classpath 上有 {@code mini-spring-config} 时，自动把 {@code @Value} 注入处理器装配进容器。
  *
- * <p>A-1 归位：自动配置类统一放在 autoconfigure 模块，config 框架模块不再反向依赖 autoconfigure/context。
+ * <p>A-1 归位 + D45 收口：类级条件用 {@code name} 字符串形式（理由见 {@link AopAutoConfiguration}），
+ * config jar 缺失时注解解析不碰类字面量，条件安全返回 false → 整个配置类跳过。
  */
 @Configuration
-@ConditionalOnClass(ValueAnnotationBeanPostProcessor.class)
+@ConditionalOnClass(name = "com.minispring.config.annotation.ValueAnnotationBeanPostProcessor")
 public class ValueAutoConfiguration {
 
     @Bean

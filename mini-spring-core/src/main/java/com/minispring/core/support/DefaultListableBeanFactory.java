@@ -147,7 +147,8 @@ public class DefaultListableBeanFactory implements ListableBeanFactory, BeanDefi
 
     @Override
     public boolean containsBean(String name) {
-        return containsBeanDefinition(name);
+        // 运行期手动注册的单例（registerSingleton，如 webServer）没有 BeanDefinition，须同时查一级缓存
+        return singletonObjects.containsKey(name) || containsBeanDefinition(name);
     }
 
     @Override
@@ -155,7 +156,14 @@ public class DefaultListableBeanFactory implements ListableBeanFactory, BeanDefi
         List<String> matched = new ArrayList<>();
         for (Map.Entry<String, BeanDefinition> entry : beanDefinitionMap.entrySet()) {
             Class<?> beanClass = entry.getValue().getBeanClass();
-            if (type.isAssignableFrom(beanClass)) {
+            if (beanClass != null && type.isAssignableFrom(beanClass)) {
+                matched.add(entry.getKey());
+            }
+        }
+        // 运行期手动注册的单例（registerSingleton）无 BeanDefinition，按实例类型补查（与 containsBean 对称）
+        for (Map.Entry<String, Object> entry : singletonObjects.entrySet()) {
+            if (!beanDefinitionMap.containsKey(entry.getKey()) && entry.getValue() != null
+                    && type.isAssignableFrom(entry.getValue().getClass())) {
                 matched.add(entry.getKey());
             }
         }

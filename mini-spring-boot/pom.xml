@@ -26,17 +26,20 @@
             <artifactId>mini-spring-config</artifactId>
             <version>0.1.0-SNAPSHOT</version>
         </dependency>
-        <!-- A-3：run() 探测到 DispatcherServlet Bean 时自动启动内嵌 WebServer -->
-        <dependency>
-            <groupId>com.minispring</groupId>
-            <artifactId>mini-spring-web</artifactId>
-            <version>0.1.0-SNAPSHOT</version>
-        </dependency>
+        <!-- D45：boot 不依赖 web——服务器启动经 context 层 Lifecycle 接口驱动（web 存在时由
+             WebMvcAutoConfiguration 装配 Lifecycle 实现；缺失时自动跳过），与 spring-boot 同构 -->
         <!-- 仅测试期依赖；运行时保持零第三方依赖 -->
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter</artifactId>
             <version>5.10.2</version>
+            <scope>test</scope>
+        </dependency>
+        <!-- 仅测试期：run() 起 web 服务器的用例需要 WebServer 接口做停服清理（运行期 boot 不依赖 web） -->
+        <dependency>
+            <groupId>com.minispring</groupId>
+            <artifactId>mini-spring-web</artifactId>
+            <version>0.1.0-SNAPSHOT</version>
             <scope>test</scope>
         </dependency>
     </dependencies>

@@ -46,19 +46,20 @@ MiniSpringBoot 采用与 Spring 对齐的分层设计。下面是**框架内核*
 
 ```
 ┌────────────────────────────────────────────────────────────────┐
-│  boot          MiniSpringApplication.run() / 内嵌服务器启动 /   │
-│                关闭钩子 / Banner / StartedEvent                 │
+│  boot          MiniSpringApplication.run() / Lifecycle 驱动 /   │
+│                关闭钩子 / Banner / StartedEvent（不依赖 web）   │
 ├────────────────────────────────────────────────────────────────┤
-│  autoconfigure @Conditional / AutoConfigurationImportSelector  │
-│                / SPI 读取 + 框架自动配置类（与                 │
-│                spring-boot-autoconfigure 同构）                 │
+│  autoconfigure @Conditional / SPI 读取 + 框架自动配置类归位     │
+│                （web/aop/config 均 optional：裁掉即消失，       │
+│                与 spring-boot-autoconfigure 实证结构一致）      │
 ├────────────────────────────────────────────────────────────────┤
 │  web           DispatcherServlet / HandlerMapping / 参数绑定    │
-│                （内嵌 HTTP 服务器，零第三方依赖）               │
+│                （内嵌 HTTP 服务器，零第三方依赖；经 Lifecycle   │
+│                由 boot 启动）                                   │
 ├────────────────────────────────────────────────────────────────┤
 │  aop           Pointcut / Advice / 动态代理 / 自动代理创建器    │
 ├────────────────────────────────────────────────────────────────┤
-│  context       注解扫描 / @Configuration·@Bean / 事件 / 三级缓存│
+│  context       注解扫描 / @Configuration·@Bean / 事件 / Lifecycle│
 ├────────────────────────────────────────────────────────────────┤
 │  config        Environment / PropertySource / @Value            │
 ├────────────────────────────────────────────────────────────────┤
@@ -74,11 +75,11 @@ MiniSpringBoot 采用与 Spring 对齐的分层设计。下面是**框架内核*
 | --- | --- | --- |
 | `core` | spring-beans | Bean 定义、实例化、依赖注入、生命周期、循环依赖（三级缓存） |
 | `config` | Environment / Binder | 配置文件解析（properties/yaml/Profile）、`@Value`、属性绑定 |
-| `context` | spring-context | 注解扫描、配置类解析、`@ComponentScan`、事件广播 |
+| `context` | spring-context | 注解扫描、配置类解析、`@ComponentScan`、事件广播、`Lifecycle` |
 | `aop` | spring-aop | 切点匹配、通知执行、JDK 动态代理、自动代理创建器 |
 | `web` | spring-webmvc + 内嵌容器 | HTTP 服务器、路由、参数绑定、响应序列化、静态资源 |
-| `autoconfigure` | spring-boot-autoconfigure | `@Conditional` 派生、SPI 装配、框架自动配置类归位 |
-| `boot` | spring-boot | 启动入口（run 自动起 Web 服务器）、事件、Banner |
+| `autoconfigure` | spring-boot-autoconfigure | `@Conditional` 派生、SPI 装配、框架自动配置类归位（optional + name 探测） |
+| `boot` | spring-boot | 启动入口（Lifecycle 驱动内嵌服务器）、事件、Banner |
 
 > **双轨制**：上表是**框架内核**（零第三方依赖，用于教学）。在它之上还有一条「demo 应用」轨道——业务代码 + React 前端 + MySQL + Nginx，用它证明内核「真能用」，并跑通全链路、3 实例高可用。详见 [docs/architecture.md](docs/architecture.md)。
 
