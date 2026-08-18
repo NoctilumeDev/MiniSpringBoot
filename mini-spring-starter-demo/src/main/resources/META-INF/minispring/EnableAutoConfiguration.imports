@@ -1,0 +1,2 @@
+# starter 的自动配置 SPI：引入本 starter 即可被 @EnableAutoConfiguration 发现
+com.minispring.starter.demo.FormatAutoConfiguration

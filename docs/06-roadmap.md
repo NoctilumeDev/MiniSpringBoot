@@ -81,8 +81,12 @@
 
 ### M6 · 自动配置 + Starter
 
-- **产出**：`@Conditional` 派生、`AutoConfigurationImportSelector`、SPI 读取、演示 Starter。
-- **落地证据**：引入 starter 后容器真实启用对应 Bean；缺依赖时真实跳过（运行期可观察）。
+- **产出**：
+  - context：条件装配内核——`@Conditional` + `Condition/ConditionContext/AnnotatedTypeMetadata`（含元注解查找）+ `ConditionEvaluator`（AND 语义）；`@Import` + `ImportSelector` + `DeferredImportSelector`（延迟导入，保证「用户优先、自动兜底」）。
+  - autoconfigure：`@EnableAutoConfiguration` + `AutoConfigurationImportSelector` + `AutoConfigurationLoader`（读 classpath 上所有 `META-INF/minispring/EnableAutoConfiguration.imports`）；`@ConditionalOnClass/@ConditionalOnBean/@ConditionalOnMissingBean/@ConditionalOnProperty` 及对应三个 `Condition` 实现。
+  - starter-demo：`FormatService` + `FormatAutoConfiguration` + SPI 文件，演示「引入 starter → 自动装配」。
+- **落地证据**：`AutoConfigDemo` 真实 `main` 启动并逐一断言——依赖存在（`@ConditionalOnClass`）装配、依赖缺失跳过、配置开关（`@ConditionalOnProperty`，`feature.optional.enabled=true`）装配、`@ConditionalOnMissingBean` 兜底默认实现与用户覆盖；`StarterDemo` 未显式注册任何 Bean、纯靠 starter 的 SPI 自动装配出 `FormatService`（转大写）。全部运行期真实通过。
+- **落地边界（显式技术债）**：D19–D21，详见 §7。
 
 ### M7 · 启动器 + 事件 + 后端 demo 收口
 
@@ -157,5 +161,9 @@
 | D15 | `@PathVariable`/`@RequestParam` 依赖注解显式 `value()`，未启用 `-parameters`（参数名未编译保留），省略 value 会解析失败 | 按参数名隐式绑定时 | 需要时启用 `-parameters` 编译，或补参数名解析 |
 | D16 | 错误处理简化：业务异常统一 500，无 `@ExceptionHandler`/`@ResponseStatus`（无法区分 404/400） | 需要按异常类型返回不同状态码时 | M8/M9 细化错误响应时补异常解析器 |
 | D17 | `SunHttpServer` 每请求一线程（默认执行器），无 NIO/Reactor 与线程池调优 | 高并发压测时吞吐受限 | M10 3 实例 + Nginx 分摊（教学项目可接受），必要时换实现或配线程池 |
+| D18 | 静态资源 `"static" + path` 拼接未显式拒绝 `..` | 直觉上担心路径穿越，但 JDK HttpServer `URI.getPath()` 已规范化、`ClassLoader.getResourceAsStream` 不逃逸 classpath 根，当前不构成漏洞 | 属 defense-in-depth，M6/M7 补显式 `..` 拒绝时顺手加一层 |
+| D19 | `mini-spring-autoconfigure` 的 `main` 源集混入 demo 自动配置类，且其 SPI 文件列举这些演示类；下游（如 starter-demo）经传递依赖会顺带装配 Greeting/Naming/Present 等演示 Bean | 任何模块依赖 `mini-spring-autoconfigure` 并开启自动配置时 | 把 demo 移入 `src/test` 或独立 `demo-autoconfigure` 模块，kernel 源集零 demo；连带移除 autoconfigure 对 config 的「仅 demo 用」依赖 |
+| D20 | `AutoConfigurationLoader.load` 不去重、不排序：候选顺序 = classpath 上 SPI 文件遍历序 + 文件内行序；重复类名靠 `registerComponent` 的 `containsBeanDefinition` 去重兜底，自动配置类之间无 `@Order/@AutoConfigureOrder` 排序保证 | 多 starter 重复列举同一自动配置；自动配置类 A 依赖 B 提供的 Bean（跨配置的 `@ConditionalOnBean`/`@ConditionalOnMissingBean`）而 B 恰在 A 之后加载时误判 | M7 启动器收口时如需多 starter 组合再补去重 + 排序（`@Order`/`@AutoConfigureOrder`） |
+| D21 | 条件注解仅 AND 语义，无 OR/NOT 组合与嵌套条件（Spring 的 `AllNestedConditions`/`AnyNestedCondition`） | 需要「A 或 B」这类复合条件时 | 按需扩展 `ConditionEvaluator` 支持嵌套条件，或新增 `@ConditionalOnAny` |
 
 > 注：B1（ITE 拆包）、B3（Object 方法过滤）为已发布 M3 代码的真实 bug，已单独修复并回归，不列入本表；B2（AOP×循环依赖）已在 M3「落地边界」登记。

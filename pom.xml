@@ -19,6 +19,8 @@
         <module>mini-spring-aop</module>
         <module>mini-spring-config</module>
         <module>mini-spring-web</module>
+        <module>mini-spring-autoconfigure</module>
+        <module>mini-spring-starter-demo</module>
     </modules>
 
     <properties>
