@@ -170,6 +170,14 @@
 - `ApplicationEvent` / `ApplicationListener`：事件总线
 - `Banner`：启动横幅
 
+### 4.8 `mini-spring-jdbc` —— 数据访问与事务（M8 新增）
+
+- `JdbcTemplate` / `RowMapper<T>`：JDBC 样板收敛（查询/更新/自增主键回填），纯 `java.sql.*`，零第三方
+- `DataAccessException` 体系：`SQLException` 统一翻译（约束冲突转 `DuplicateKeyException`），包装消息携带根因
+- `TransactionManager`（编程式）+ `@Transactional`（声明式，AOP 切面驱动）：REQUIRED 传播，异常/Error 一律回滚
+- `TransactionContext`：ThreadLocal 绑定活动事务连接，同一事务内 SQL 复用同一物理连接
+- 依赖方向：`jdbc` 仅依赖 `aop`（复用切面），与 `web` 并列，单向无环
+
 ---
 
 ## 5. Bean 的完整生命周期（贯穿全项目的「主旋律」）

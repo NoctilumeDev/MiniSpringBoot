@@ -3,7 +3,14 @@
 > 假如这个世界上没有 Spring Boot，我们该怎么办？
 > —— 那就从零把它造出来，把所有底层和内核拆开、摊平、写透。
 
-MiniSpringBoot 是一个 **从零手写** 的 Spring Boot 内核复刻项目。框架内核不依赖 Spring、不依赖任何第三方运行时库，只用 JDK 重新实现 Spring 家族最核心的那几块「魔法」：IoC 容器、AOP、Web/MVC、自动配置、外部化配置。
+![JDK](https://img.shields.io/badge/JDK-17-2c3e50?logo=java&logoColor=white)
+![Maven](https://img.shields.io/badge/Maven-3.9-2c3e50?logo=apachemaven&logoColor=white)
+![内核依赖](https://img.shields.io/badge/内核-零第三方运行时依赖-2e7d32)
+![里程碑](https://img.shields.io/badge/M0~M9-落地验收通过-2e7d32)
+![数据库](https://img.shields.io/badge/MySQL-8%2FHikariCP-2c3e50?logo=mysql&logoColor=white)
+![前端](https://img.shields.io/badge/React-18%2FVite-61dafb?logo=react&logoColor=black)
+
+MiniSpringBoot 是一个 **从零手写** 的 Spring Boot 内核复刻项目。框架内核不依赖 Spring、不依赖任何第三方运行时库，只用 JDK 重新实现 Spring 家族最核心的那几块「魔法」：IoC 容器、AOP、Web/MVC、自动配置、外部化配置、JDBC 与声明式事务。
 
 ---
 
@@ -57,6 +64,9 @@ MiniSpringBoot 采用与 Spring 对齐的分层设计。下面是**框架内核*
 │                （内嵌 HTTP 服务器，零第三方依赖；经 Lifecycle   │
 │                由 boot 启动）                                   │
 ├────────────────────────────────────────────────────────────────┤
+│  jdbc          JdbcTemplate / RowMapper / DataAccessException / │
+│                编程式·声明式事务（@Transactional，纯 java.sql.*）│
+├────────────────────────────────────────────────────────────────┤
 │  aop           Pointcut / Advice / 动态代理 / 自动代理创建器    │
 ├────────────────────────────────────────────────────────────────┤
 │  context       注解扫描 / @Configuration·@Bean / 事件 / Lifecycle│
@@ -69,6 +79,7 @@ MiniSpringBoot 采用与 Spring 对齐的分层设计。下面是**框架内核*
      —— 内核全部基于 JDK 17，零第三方运行时依赖 ——
 
   demo 轨道：mini-spring-demo（后端收口）/ mini-spring-starter-demo（Starter 验证）
+           / demo-frontend（React 前端）/ deploy（MySQL 容器）
 ```
 
 | 模块 | 对应 Spring 的概念 | 责任 |
@@ -83,6 +94,24 @@ MiniSpringBoot 采用与 Spring 对齐的分层设计。下面是**框架内核*
 | `boot` | spring-boot | 启动入口（Lifecycle 驱动内嵌服务器）、事件、Banner |
 
 > **双轨制**：上表是**框架内核**（零第三方依赖，用于教学）。在它之上还有一条「demo 应用」轨道——业务代码 + React 前端 + MySQL + Nginx，用它证明内核「真能用」，并跑通全链路、3 实例高可用。详见 [docs/architecture.md](docs/architecture.md)。
+
+---
+
+## 真能跑 —— 联调实拍
+
+下面每一张都是浏览器真实打开后的截图（M9 验收实拍，对应章节见 [docs/09-frontend.md](docs/09-frontend.md)）；页面上的每条数据都能在 MySQL 里直查到（`docker exec` 对照），每一次写操作都真实落库。
+
+**用户管理页**：对 MySQL `users` 表真实 CRUD（新建 / 编辑 / 删除），写后列表即库。
+
+![用户管理页](docs/screenshots/users-page.png)
+
+**转账演示页**：两个余额卡 + 「正常转账（提交）」/「中途失败转账（回滚）」双按钮——前者验证事务提交（余额精确变动），后者验证回滚（先扣款后抛异常，两账户分文不动）。
+
+![转账演示页](docs/screenshots/transfer-page.png)
+
+**错误链路到 UI**：数据库断连时，红色横幅逐字透出后端异常根因（M8 B9 / M9 B10 修复后的可读错误，含连接池状态 `Connection is not available, request timed out…`），而非笼统的 500。
+
+![错误横幅](docs/screenshots/error-banner.png)
 
 ---
 
@@ -128,8 +157,11 @@ MiniSpringBoot
 │   ├── 03-web-mvc.md          # Web 与 MVC
 │   ├── 04-auto-configuration.md # 自动配置与 Starter
 │   ├── 05-externalized-configuration.md # 外部化配置
+│   ├── 06-roadmap.md          # 路线图、技术债与验收标准
 │   ├── 07-boot.md             # 启动器
-│   └── 06-roadmap.md          # 路线图、技术债与验收标准
+│   ├── 08-jdbc.md             # JDBC 与事务
+│   ├── 09-frontend.md         # React 前端与联调
+│   └── screenshots/           # 联调验收实拍（README 引用）
 ├── mini-spring-core/          # 核心容器（三级缓存 / 生命周期 / BPP）
 ├── mini-spring-config/        # 配置系统（properties/yaml/Profile/@Value）
 ├── mini-spring-context/       # 注解扫描 / 配置类解析 / 事件
@@ -167,6 +199,23 @@ cd demo-frontend && npm install && npm run dev
 ```
 
 验证：浏览器打开 `http://localhost:9010`——用户管理页对 MySQL 真实 CRUD、转账页可视化事务提交/回滚；F12 Network 可见 `/api/*` 全链路请求。
+
+---
+
+## 能力一览（造了什么）
+
+| 能力 | 教学实现（对标 Spring） | 落地状态 |
+| --- | --- | --- |
+| IoC 容器 | 三级缓存循环依赖、构造器/字段/方法注入、BeanPostProcessor、生命周期回调 | ✅ 真实 `run()` 拉起 |
+| 外部化配置 | properties/yaml/Profile、`@Value`、占位符、同名 key 优先级 | ✅ 真实生效 |
+| 注解扫描 | `@ComponentScan`、`@Configuration`/`@Bean`、复合/元注解递归 | ✅ 真实扫描 |
+| 事件机制 | `ApplicationEvent`、`@EventListener` 泛型解析、初始化期事件 | ✅ 真实按序触发 |
+| AOP | JDK 动态代理、execution/`@annotation` 切点、Before/After/Around | ✅ 真实织入（事务/日志） |
+| Web/MVC | 自写 HTTP 服务器 + JSON、`@RequestMapping` 及派生注解、路径模板 | ✅ 浏览器真实请求 |
+| 自动配置 | `@Conditional` 派生、SPI 装配、optional 依赖裁剪即消失 | ✅ 分离 classpath 实证 |
+| 启动器 | `MiniSpringApplication.run()`、Lifecycle 驱动、关闭钩子、Banner | ✅ 一条命令拉起全栈 |
+| JDBC/事务 | JdbcTemplate、`DataAccessException` 体系、编程式 + `@Transactional` | ✅ 真连 MySQL 落库 |
+| 前端联调 | React + Vite、proxy 同源、错误链路到 UI | ✅ 浏览器实拍（见上） |
 
 ---
 
