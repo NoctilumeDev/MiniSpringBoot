@@ -12,7 +12,7 @@
 
     <artifactId>mini-spring-autoconfigure</artifactId>
     <name>mini-spring-autoconfigure</name>
-    <description>自动配置：@Conditional 派生 + AutoConfigurationImportSelector + SPI 读取</description>
+    <description>自动配置：@Conditional 派生 + AutoConfigurationImportSelector + SPI 读取 + 框架自动配置类归位（A-1）</description>
 
     <dependencies>
         <dependency>
@@ -20,5 +20,39 @@
             <artifactId>mini-spring-context</artifactId>
             <version>0.1.0-SNAPSHOT</version>
         </dependency>
+        <!-- A-1：自动配置类从框架模块迁入本模块（与 spring-boot-autoconfigure 同构），
+             autoconfigure 位于 web/aop/config 之上，依赖方向恢复单向 -->
+        <dependency>
+            <groupId>com.minispring</groupId>
+            <artifactId>mini-spring-config</artifactId>
+            <version>0.1.0-SNAPSHOT</version>
+        </dependency>
+        <dependency>
+            <groupId>com.minispring</groupId>
+            <artifactId>mini-spring-aop</artifactId>
+            <version>0.1.0-SNAPSHOT</version>
+        </dependency>
+        <dependency>
+            <groupId>com.minispring</groupId>
+            <artifactId>mini-spring-web</artifactId>
+            <version>0.1.0-SNAPSHOT</version>
+        </dependency>
+        <!-- 仅测试期依赖；运行时保持零第三方依赖 -->
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <version>5.10.2</version>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>3.2.5</version>
+            </plugin>
+        </plugins>
+    </build>
 </project>

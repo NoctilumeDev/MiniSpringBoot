@@ -96,9 +96,17 @@
 ### M7 · 启动器 + 事件 + 后端 demo 收口
 
 - **设计**：详见 [07-boot.md](./07-boot.md)。
-- **产出**：`mini-spring-boot` 模块——`MiniSpringApplication.run`、`@MiniSpringBootApplication` 复合注解、事件总线（`ApplicationEvent`/`Publisher`/`Multicaster`/`Listener`）、`Banner`；自动装配归位（`WebMvcAutoConfiguration`/`AopAutoConfiguration`/`ValueAutoConfiguration` + SPI）；AOP 收口（B2 提前暴露代理、D30 收集期漏代理、D5 通知排序）；后端 demo 迁到 `run()` 一键启动（`mini-spring-demo`）。
-- **落地证据**：一条 `run()` 真实启动后端 demo（curl/浏览器访问接口 + 事件按序触发 + banner 打印 + 三大件/`@Value` 自动装配生效）；负向/边界：B4/B5 回归、B2 收口（循环依赖注入的是代理）、D30 收口、D27 收口、M6 回归，均有运行期实测。
-- **落地边界（显式技术债）**：D8/D31（维持 JDK 代理、不引 CGLIB）、D32（无 CGLIB 教学边界）、D26（prototype 循环标注不支持）——详见 §7；D2/D14/D28/D16 延后。
+- **产出**：`mini-spring-boot` 模块——`MiniSpringApplication.run`（A-3 收口后：自动探测 `DispatcherServlet` → 启动内嵌服务器 + 注册关闭钩子，一条 `run()` 无样板）、`@MiniSpringBootApplication` 复合注解、事件总线（`ApplicationEvent`/`Publisher`/`Multicaster`/`Listener` + `ApplicationEventPublisherAware`）、`Banner`；自动配置类归位 autoconfigure 模块（A-1，与 spring-boot-autoconfigure 同构）；AOP 收口（B2 提前暴露代理、D30 收集期漏代理补偿、D5 通知排序）；后端 demo 迁到 `run()` 一键启动（`mini-spring-demo`）。
+- **落地证据**：一条 `run()` 真实启动后端 demo（curl 实测 `/hello`、`/users/1`、POST `/users`（中文）、`/void`、`/capability/aop/order`（proxied=true）、`/capability/aop/fail`（500）、`/capability/autoconfig`、`/capability/starter/format`、静态资源 `/`，负向 `/../secret` 不泄露）；事件按序触发（含初始化期事件，A-6）；banner 打印；三大件/`@Value` 自动装配生效；`java -cp` 直启进程保活（服务器线程非守护）。回归：M1~M6 demo 全部通过；单测 28 个（6 模块，含负例/边界）。
+- **落地边界（显式技术债）**：D8/D31（维持 JDK 代理、不引 CGLIB）、D32（无 CGLIB 教学边界）、D44（切面收集期注入引用与容器缓存不一致，已打警告）、D45（autoconfigure 聚合依赖的按需装配边界）——详见 §7；D2/D16 等延后项见 §7。
+
+#### M7 三次质量审查记录（按 §1.6 门闩补档）
+
+| 审查 | 时间 | 结论与证据 |
+| --- | --- | --- |
+| ① 回顾审查（回归/契约/依赖方向） | 2026-08-19 | M1~M6 demo 全量重跑通过；**发现并修复 A-1**：aop/config/web 反向依赖 autoconfigure（违反 §1.5 单向依赖），三个 AutoConfiguration 归位后恢复 `boot > autoconfigure > web > aop > context > core`；A-2 框架模块 demo 清零（web 5 类 + aop 5 类 + core 1 类）。 |
+| ② 当前审查（异常/边界/null 全路径） | 2026-08-19 | 外审两轮共 14 项（B-1~B-8、A-1~A-6）全部实证复现并修复：JSON 数字加引号/元注解三处递归/prototype BPP 膨胀/监听器异常阻断/List 泛型擦除/asBoolean 静默 false/多次 write/误报 D28 撤销/run 不起服务器/@Target 撒谎（A-4 构造器+方法注入落地）/D30 残余（D44）/初始化期事件丢失（D35）；负例实测：`/../secret` 403/404、`/void` 200、构造器循环依赖可读错误。测试 5→28。 |
+| ③ 前瞻审查（反例驱动，假设会在何时被打破） | 2026-08-19 | 反例①「`mvn exec:java` 启动服务器静默死亡」→ 实证 JDK HttpServer dispatcher 继承创建线程 daemon 属性 → 修复为非守护线程确定性保活；反例②「切面依赖被自己切点命中的 Bean」→ 登记为 D44（与 Spring 早期创建限制同源，打警告）；反例③「裁剪能力模块后自动配置仍装配」→ 登记为 D45。M8 风险预置：D34（@Qualifier 裁决）在多数据源场景必现，M8 第一批修。 |
 
 ### M8 · 数据库接入
 
@@ -153,8 +161,8 @@
 | --- | --- | --- | --- |
 | D1 | 类路径扫描仅支持文件目录，不支持 JAR | 打成可执行 JAR 部署时 `jar:` 协议 URL 无法 `toURI()` 遍历 | M10 部署前补 `JarURLConnection` 分支，或改用 exploded classes |
 | D2 | `@Bean` 不支持 `initMethod/destroyMethod` | 需要方法级生命周期回调时 | M4/M7 生命周期收口时给 `@Bean` 加属性并在 reader 读取 |
-| D3 | `@Autowired` 声明支持构造器/方法/参数注入，实际只实现字段注入 | 需要构造或方法注入时 | M5 参数绑定时一并评估，或收窄 `@Target` |
-| D4 | `@After` 注释写「正常返回后」，实现为 finally 语义 | 目标方法抛异常时后置仍会执行 | 改注释，或拆成 `@AfterReturning`/`@AfterThrowing` |
+| D3 | ~~`@Autowired` 声明支持构造器/方法/参数注入，实际只实现字段注入~~ 已修于 M7 终审（A-4）：构造器注入（BPP `determineCandidateConstructors` 选构造器、容器解析参数、多个 `@Autowired` 构造器报错）、方法注入（字段注入后调用，`required=false` 依赖缺失仅跳过该方法）、参数级 `@Autowired(required=false)`（缺省注入 null）全部落地；构造器/prototype 循环依赖改为可读错误而非 StackOverflow | 需要构造或方法注入时 | 已关闭 |
+| D4 | ~~`@After` 注释写「正常返回后」，实现为 finally 语义~~ 已修于 M7（D42 + A 系终审）：注释订正、异常 suppressed 附加，拦截器更名为 `AfterAdviceInterceptor`（名称与 finally 语义一致） | 目标方法抛异常时后置仍会执行 | 已关闭 |
 | D5 | 无通知排序（`@Order`） | 多切面命中同一方法时顺序不确定 | M6/M7 多切面场景补 `Ordered` 优先级 |
 | D6 | `getBeanNamesForType` 不感知 JDK 代理，按具体类注入会 ClassCastException | 按具体类而非接口注入被代理 Bean | 保持「按接口注入」约定（JDK 代理固有限制，与 Spring 一致） |
 | D7 | 单例创建无线程安全保护 | 运行时懒加载/动态注册单例时存在竞态 | 单例 refresh 预实例化 + 服务器其后启动即安全；未来懒加载再加锁 |
@@ -169,23 +177,23 @@
 | D16 | 错误处理简化：业务异常统一 500，无 `@ExceptionHandler`/`@ResponseStatus`（无法区分 404/400） | 需要按异常类型返回不同状态码时 | M8/M9 细化错误响应时补异常解析器 |
 | D17 | `SunHttpServer` 仅 cached 线程池（每请求一线程），无 NIO/Reactor、无线程池上限控制 | 高并发压测时线程数无上限、吞吐受限 | M10 3 实例 + Nginx 分摊（教学项目可接受），必要时配固定线程池或换实现 |
 | D18 | 静态资源 `"static" + path` 拼接未显式拒绝 `..` | 直觉上担心路径穿越，但 JDK HttpServer `URI.getPath()` 已规范化、`ClassLoader.getResourceAsStream` 不逃逸 classpath 根，当前不构成漏洞 | 已修于 M7：`StaticResourceHandler.handle` 入口显式拒绝 `..` → 403 |
-| D19 | `mini-spring-autoconfigure` 的 `main` 源集混入 demo 自动配置类，且其 SPI 文件列举这些演示类；下游（如 starter-demo）经传递依赖会顺带装配 Greeting/Naming/Present 等演示 Bean | 任何模块依赖 `mini-spring-autoconfigure` 并开启自动配置时 | 已修于 M7：demo 归位 `mini-spring-demo`，autoconfigure 内核零 demo、移除对 config 依赖 |
+| D19 | ~~`mini-spring-autoconfigure` 的 `main` 源集混入 demo 自动配置类~~ 已修于 M7；M7 终审（A-2）补齐同类残留：web（WebDemo/WebConfig/HelloController/UserController/User）、aop（AopConfig/AopDemo/LoggingAspect/OrderService/OrderServiceImpl）、core（IocDemo）的框架模块 demo 类全部清除，四个框架模块 `main` 源集零 demo | 任何模块依赖 `mini-spring-autoconfigure` 并开启自动配置时 | 已关闭 |
 | D20 | `AutoConfigurationLoader.load` 不去重、不排序：候选顺序 = classpath 上 SPI 文件遍历序 + 文件内行序；重复类名靠 `registerComponent` 的 `containsBeanDefinition` 去重兜底，自动配置类之间无 `@Order/@AutoConfigureOrder` 排序保证 | 多 starter 重复列举同一自动配置；自动配置类 A 依赖 B 提供的 Bean（跨配置的 `@ConditionalOnBean`/`@ConditionalOnMissingBean`）而 B 恰在 A 之后加载时误判 | 已修于 M7：`AutoConfigurationImportSelector` 去重 + `@Order`/`@AutoConfigureOrder` 排序 |
 | D21 | 条件注解仅 AND 语义，无 OR/NOT 组合与嵌套条件（Spring 的 `AllNestedConditions`/`AnyNestedCondition`） | 需要「A 或 B」这类复合条件时 | 按需扩展 `ConditionEvaluator` 支持嵌套条件，或新增 `@ConditionalOnAny` |
 | D22 | `@Bean` 方法不支持参数注入 | `instantiateUsingFactoryMethod` 硬调 `getMethod(name)` 只找无参，带参 `@Bean` 抛 `NoSuchMethodException` | 已修于 M7：`@Bean` 工厂方法参数按类型/名字从容器解析 |
 | D23 | `@Bean` 方法上的 `@Primary`/`@Qualifier` 不生效 | `resolveByPrimary` 读 `bd.getBeanClass()`（=返回类型），读不到方法上的注解 | 已修于 M7：`@Bean` 方法注解留存到 `BeanDefinition`；`@Primary` 完整生效，`@Qualifier` 残留「存而不用」半截 → 见 D34 |
 | D24 | `@Controller("name")`/`@RestController("name")` 显式 beanName 无效 | `AnnotationBeanNameGenerator.explicitName` 未查 Controller/RestController | 已修于 M7：识别 `@Controller` 等元注解显式名 |
 | D25 | `@ComponentScan` 扫到的 `@Configuration` 不处理其 `@Bean` | `processComponentScan` 只 `registerComponent` 不递归 | 已修于 M7：扫描器识别 `@Configuration` 后回调 `registerBeanMethods` |
-| D26 | prototype 循环依赖无防护 | 直接递归创建 → StackOverflow，无 `BeanCurrentlyInCreationException` | 已标注于 M7：prototype 不支持循环依赖（教学子集，不实现） |
+| D26 | ~~prototype 循环依赖无防护（StackOverflow）~~ 已修于 M7 终审（A-4 连带）：`createBean` 加 `currentlyInCreation` 防护，prototype/构造器循环依赖抛可读错误「检测到无法提前暴露的循环依赖」 | prototype 相互注入 / 构造器互注时 | 已关闭（教学子集仍不支持解开，但错误可读） |
 | D27 | 占位符循环引用防护不完整 | `doResolve` 的 `visiting.remove(key)` 在取 value 前移除，`${a}` 自引用 / `a↔b` 会 StackOverflow | 已修于 M7：try-finally 整段解析完成才移出 `visiting` |
 | D28 | ~~`@PathVariable` 不做 URL 解码~~ **误报撤销**：`SunHttpRequest` 用 `exchange.getRequestURI().getPath()`，Java `URI.getPath()` 本身即解码百分号编码，中文路径参数拿到的是原文（`/users/%E5%BC%A0%E4%B8%89` → `张三`）。登记时未查证平台默认行为，违反本表第 8 条纪律，留此行为鉴 | 无 | 无需修复；M8 起「平台默认行为先查证再登记」 |
 | D29 | ~~`SunHttpResponse.write()` 多次调用会失败~~ 已修于 M7（B-8）：首次 write 改用 chunked（length=0），流不自关、交给 `exchange.close()` 终结，支持任意多次 write；空 body 仍用 -1 | 响应需多次/流式写（如文件下载）时 | 已关闭 |
-| D30 | AOP：收集切面期间创建的业务 Bean 不会被代理 | `getAdvisors` 用 `buildingAdvisors` 防递归、期间返回空列表且不重试，切面 Bean 有依赖时命中 | 已修于 M7：收集期缓存 deferredProxyTargets，完成后补代理并更新单例 |
+| D30 | AOP：收集切面期间创建的业务 Bean 不会被代理 | `getAdvisors` 用 `buildingAdvisors` 防递归、期间返回空列表且不重试，切面 Bean 有依赖时命中 | 已修于 M7：收集期缓存 deferredProxyTargets，完成后补代理并更新单例；已知残余见 D44 |
 | D31 | Controller 被代理后 `HandlerMethod` 调用失败 | `HandlerMethod` 存原始类 `Method`，`method.invoke(代理实例)` 抛 IllegalArgumentException；因 D8 当前 Controller 无接口不会被 JDK 代理故暂不触发 | 与 D8 一起在 M7 评估（CGLIB / 接口化） |
 | D32 | `@Configuration` 无 CGLIB 增强 | `@Bean` 方法互相调用直接 new、破坏单例语义 | 明确为「教学子集」边界（保持零依赖不引 CGLIB），M7 文档化 |
 | D33 | autoconfigure / config 框架模块自带 application.yml | 与用户应用同名文件在 classpath 上冲突 | 已修于 M7：demo 归位 `mini-spring-demo`，框架模块移除自带 `application.*` |
 | D34 | `@Qualifier` 半截：`BeanDefinition.qualifier` 被 set 但 `getQualifier()` 从未被注入裁决读取，注入端 `@Qualifier(v)` 仍直接按 beanName `getBean`，不支持「限定名 ≠ beanName」的按名匹配 | 需要按限定名（而非 beanName）解析多候选注入时 | M8 完善注入裁决：优先按 qualifier 字段匹配，再回退按 beanName |
-| D35 | `ApplicationListener` 在单例预实例化之后才收集注册（`refresh()` 第 3 步） | Bean 初始化期间（如 `@PostConstruct`）发布的事件会丢失 | M8 事件收口：监听器收集提前到 BPP 实例化后、其余单例预实例化前 |
+| D35 | ~~`ApplicationListener` 在单例预实例化之后才收集注册（`refresh()` 第 3 步），Bean 初始化期间发布的事件丢失~~ 已修于 M7 终审（A-6）：监听器收集提前到「BPP 就位后、其余单例预实例化前」；同时补齐 `ApplicationEventPublisherAware`（初始化回调前注入发布器），初始化期事件端到端可达（单测覆盖） | Bean 初始化期间发布事件时 | 已关闭 |
 | D36 | web 框架模块自带 `static/index.html`（M5 demo 遗留），与 demo 静态资源在 classpath 上冲突，`ClassLoader.getResourceAsStream` 按 classpath 顺序命中 web 模块那份 | 真实全链路（demo 依赖 web）访问 `/` 时 | 已修于 M7：删除 web 模块自带静态资源，静态资源归位 `mini-spring-demo` |
 | D37 | `ConfigFilePropertySourceLoader` 默认文件与 profile 文件的 properties/yml 优先级均与注释相反：默认层先 `addLast` properties 再 yml、profile 层先 `addBefore` properties 再 yml，都导致 properties 覆盖 yml；注释与 Spring 语义为 yml 覆盖 properties | 同 key 同时出现在 properties 与 yml 时 | 已修于 M7：默认层与 profile 层均改为「yml 在前、properties 在后」，各配同名 key 用例 |
 | D38 | `SimpleAnnotationMetadata.findAnnotation` 循环元注解（A→@B、B→@A）无防护 → 无限递归 StackOverflow；同型递归另有两处：`AnnotationBeanNameGenerator.isComponentAnnotation`、`ClassPathScanningCandidateComponentProvider.hasComponentAnnotation`（初修只覆盖第一处，M7 终审补齐全部三处并全局确认无第四处） | 用户自定义互相标注的语义注解级联被查时 | 已修于 M7：三处递归均携带 visiting 集合 |
@@ -194,5 +202,8 @@
 | D41 | `JsonParser.parseNumber` 对 `1.` / `1e` / `1e+` 等非法数字放行（延迟到 asDouble 才报错） | POST body 含非法数字字面量时 | 已修于 M7：严格校验整数/小数/指数部分都必须有数字 |
 | D42 | `@After` 注释写「正常返回后」但实现是 finally 语义（D4）；且 finally 内 afterMethod 自身抛异常会覆盖目标异常 | @After 通知自身抛异常时 | 已修于 M7：注释订正为 finally 语义 + afterMethod 异常用 addSuppressed 附加到目标异常 |
 | D43 | 注册与实例化的可见性不对称：注册侧（`registerBeanMethods`/`getDeclaredMethods`）接受非 public，实例化侧三处只认 public——① `instantiate` 构造器无 `setAccessible`（包私有配置类直接 IllegalAccessException）；② `findFactoryMethod` 用 `getMethods()`（包私有 @Bean 注册成功但解析必炸「工厂方法不存在」）；③ `invokeNoArgMethod` 用 `getMethod()`（非 public init/destroy 回调找不到） | 用户写包私有配置类 / 包私有 @Bean 方法 / 非 public 生命周期回调时（TempRepro 复现实证：注册成功、启动即炸） | 已修于 M7：三处补 setAccessible + getDeclaredMethods 优先；复现用例重跑通过（bean=ok） |
+| D44 | A-5（D30 残余）：切面收集期内被提前创建的业务 Bean，D30 补偿会把代理回填容器缓存，但收集期已注入给其他 Bean 的引用仍是裸对象——容器缓存与早期引用不一致 | 切面 `@Autowired` 了被自己（或同期切面）切点命中的业务 Bean 时 | 已如实标注：补偿时打警告日志（与 Spring「not eligible for auto-proxying」同源语义）；规避方式：切面不依赖被自己切点命中的 Bean。若 M8 需要，可评估「按 BeanDefinition 元数据构建 Advisor（不实例化切面）」的深修 |
+| D45 | A-1 归位的已知边界：`mini-spring-autoconfigure` 聚合依赖 web/aop/config（与 spring-boot-autoconfigure 同构），「只引 aop 才装配 AOP」的模块级 classpath 隔离不再成立——按需装配下沉为 `@ConditionalOnClass` 的类级判断（类一定在，因为 jar 一定在） | 想做「裁剪某能力模块、自动配置随之消失」的精细化装配时 | 教学项目接受；M8+ 如需，可拆分为 per-module 的 autoconfigure 子模块或改为 optional 依赖 + 运行期探测 |
 
-> 注：B1（ITE 拆包）、B3（Object 方法过滤）为已发布 M3 代码的真实 bug，已单独修复并回归，不列入本表；B2（AOP×循环依赖）已在 M3「落地边界」登记。M6 后审查又修掉 B4（void/null 空响应断连）、B5（内嵌服务器未设线程池导致单线程串行）两个 M5 代码真实 bug，均已修复并回归。M7 审查再修掉 B6（`processComponentScan` 对未标 `@ComponentScan` 的 `@Configuration` 隐式扫描所在包）。M7「极端边界」复合审查又修掉 B7（`SunHttpRequest.decode` 非法百分号编码兜底）、B8（`JsonNode.asInt/asLong/asDouble` null 防护）。M7 终审（外审 B-1~B-8）修掉：B-1 `JsonSerializer` NUMBER 节点误加引号、B-2 元注解循环递归补齐另两处（见 D38）、B-3 prototype BPP 重复注册、B-4 监听器异常阻断广播链、B-6 List 元素一律 asString（D14 随之关闭）、B-7 `asBoolean` 无类型防护；B-8 即 D29 关闭；B-5 即 D28 误报撤销。
+> 注：B1（ITE 拆包）、B3（Object 方法过滤）为已发布 M3 代码的真实 bug，已单独修复并回归，不列入本表；B2（AOP×循环依赖）已在 M3「落地边界」登记。M6 后审查又修掉 B4（void/null 空响应断连）、B5（内嵌服务器未设线程池导致单线程串行）两个 M5 代码真实 bug，均已修复并回归。M7 审查再修掉 B6（`processComponentScan` 对未标 `@ComponentScan` 的 `@Configuration` 隐式扫描所在包）。M7「极端边界」复合审查又修掉 B7（`SunHttpRequest.decode` 非法百分号编码兜底）、B8（`JsonNode.asInt/asLong/asDouble` null 防护）。M7 终审第一轮（外审 B-1~B-8）修掉：B-1 `JsonSerializer` NUMBER 节点误加引号、B-2 元注解循环递归补齐另两处（见 D38）、B-3 prototype BPP 重复注册、B-4 监听器异常阻断广播链、B-6 List 元素一律 asString（D14 随之关闭）、B-7 `asBoolean` 无类型防护；B-8 即 D29 关闭；B-5 即 D28 误报撤销。
+> M7 终审第二轮（外审 A-1~A-6，架构与契约层）修掉：A-1 三个 AutoConfiguration 归位 autoconfigure 模块、依赖方向恢复单向 `boot > autoconfigure > web > aop > context > core`（config 落回 core 之上，聚合边界见 D45）；A-2 框架模块 demo 清零（D19 补齐 web/aop/core）；A-3 `run()` 自动探测 DispatcherServlet 并启动内嵌服务器 + 关闭钩子（连带修复 JDK HttpServer dispatcher 线程继承 daemon 属性导致的保活不确定性）；A-4 `@Autowired` 构造器/方法/参数注入全落地（D3/D26 关闭）；A-5 补偿代理不一致如实标注为 D44；A-6 监听器先注册 + `ApplicationEventPublisherAware`（D35 关闭）；`AfterReturningAdviceInterceptor` 更名 `AfterAdviceInterceptor`。测试从 5 个增至 28 个（core/context/aop/autoconfigure/boot/web 六模块），含负例与边界用例。

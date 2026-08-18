@@ -6,6 +6,7 @@ import com.minispring.context.ApplicationEventPublisher;
 import com.minispring.context.ApplicationListener;
 import com.minispring.context.event.ContextClosedEvent;
 import com.minispring.context.event.ContextRefreshedEvent;
+import com.minispring.context.event.EventPublisherAwareProcessor;
 import com.minispring.context.event.SimpleApplicationEventMulticaster;
 import com.minispring.core.BeanDefinition;
 import com.minispring.core.BeanDefinitionRegistry;
@@ -72,6 +73,8 @@ public class AnnotationConfigApplicationContext implements ApplicationContext {
 
         // 内置：@Autowired 注入处理器
         beanFactory.addBeanPostProcessor(new AutowiredAnnotationBeanPostProcessor(beanFactory, beanFactory));
+        // 内置：事件发布器注入（A-6）：Bean 在初始化回调里即可发布事件，且此时监听器已先注册（见 refresh）
+        beanFactory.addBeanPostProcessor(new EventPublisherAwareProcessor(eventMulticaster));
 
         // 注册入口配置类（会递归处理 @Bean 与 @ComponentScan 与 @Import）
         for (Class<?> source : primarySources) {
@@ -199,7 +202,7 @@ public class AnnotationConfigApplicationContext implements ApplicationContext {
         return beanName;
     }
 
-    /** 刷新：先把基础设施（BeanPostProcessor）就位，再预实例化其余单例，顺序不能颠倒。 */
+    /** 刷新：先把基础设施（BeanPostProcessor）就位，再登记监听器，最后预实例化其余单例，顺序不能颠倒。 */
     private void refresh() {
         // 1) BeanPostProcessor 必须先实例化并注册生效（AOP 代理器等基础设施）
         for (String name : beanFactory.getBeanDefinitionNames()) {
@@ -208,15 +211,18 @@ public class AnnotationConfigApplicationContext implements ApplicationContext {
                 beanFactory.getBean(name);
             }
         }
-        // 2) 再预实例化其余单例
+        // 2) A-6（D35 收口）：监听器先于业务单例实例化并登记进广播器——
+        //    否则 Bean 在初始化回调（afterPropertiesSet/initMethod）里发布的事件无人接收。
+        //    注意：本框架无 @PostConstruct，等价的初始化期发布点就是 InitializingBean/initMethod。
+        for (String name : beanFactory.getBeanNamesForType(ApplicationListener.class)) {
+            ApplicationListener<?> listener = (ApplicationListener<?>) beanFactory.getBean(name);
+            eventMulticaster.addApplicationListener(listener);
+        }
+        // 3) 再预实例化其余单例（监听器已在第 2 步创建，getBean 直接命中缓存）
         for (String name : beanFactory.getBeanDefinitionNames()) {
             if (beanFactory.getBeanDefinition(name).isSingleton()) {
                 beanFactory.getBean(name);
             }
-        }
-        // 3) 所有单例就绪后，把容器里的 ApplicationListener 登记进广播器
-        for (String name : beanFactory.getBeanNamesForType(ApplicationListener.class)) {
-            eventMulticaster.addApplicationListener((ApplicationListener<?>) beanFactory.getBean(name));
         }
         // 4) 广播「刷新完成」
         publishEvent(new ContextRefreshedEvent(this));
@@ -247,6 +253,11 @@ public class AnnotationConfigApplicationContext implements ApplicationContext {
     @Override
     public void publishEvent(ApplicationEvent event) {
         eventMulticaster.multicastEvent(event);
+    }
+
+    /** 覆盖或新增一个单例（委托底层工厂）：供启动器等外层组件把运行期对象（如内嵌 WebServer）放进容器。 */
+    public void registerSingleton(String beanName, Object singletonObject) {
+        beanFactory.registerSingleton(beanName, singletonObject);
     }
 
     @Override

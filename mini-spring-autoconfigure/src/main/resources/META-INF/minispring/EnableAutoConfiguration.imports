@@ -1,0 +1,4 @@
+# 框架自带自动配置 SPI（A-1 归位：统一从各框架模块迁入本模块）
+com.minispring.autoconfigure.config.ValueAutoConfiguration
+com.minispring.autoconfigure.aop.AopAutoConfiguration
+com.minispring.autoconfigure.web.WebMvcAutoConfiguration

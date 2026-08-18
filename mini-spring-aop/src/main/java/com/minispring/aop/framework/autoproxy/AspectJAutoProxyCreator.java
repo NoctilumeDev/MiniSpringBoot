@@ -120,13 +120,18 @@ public class AspectJAutoProxyCreator implements SmartInstantiationAwareBeanPostP
             return collected;
         } finally {
             buildingAdvisors = false;
-            // D30 补偿：仅当收集成功（advisors 已就绪）后，才补一次代理判定，命中则回填一级缓存
+            // D30 补偿：仅当收集成功（advisors 已就绪）后，才补一次代理判定，命中则回填一级缓存。
+            // A-5（D44 如实标注）：收集期间已把裸对象注入给其他 Bean（如切面自身 @Autowired 的业务 Bean）的
+            // 那些引用不会被更新——它们持有裸对象、容器缓存是代理。与 Spring「早期创建的 Bean 不参与自动代理」
+            // 同源（Spring 会打 "not eligible for auto-proxying" 警告）。规避：切面不要依赖被自己切点命中的 Bean。
             if (advisors != null) {
                 for (Map.Entry<String, Object> entry : deferredProxyTargets.entrySet()) {
                     String beanName = entry.getKey();
                     Object rawBean = entry.getValue();
                     Object proxy = wrapIfNecessary(rawBean, beanName);
                     if (proxy != rawBean) {
+                        System.err.println("  [aop] 警告: Bean[" + beanName + "] 在切面收集期被提前创建，已补代理回填容器缓存；"
+                                + "但此前注入给其他 Bean 的仍是裸对象（切面不应依赖被自己切点命中的 Bean）");
                         singletonRegistry.registerSingleton(beanName, proxy);
                     }
                 }

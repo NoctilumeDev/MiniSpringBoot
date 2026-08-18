@@ -15,15 +15,11 @@
     <description>Web/MVC：WebServer SPI + 内嵌服务器 + 前端控制器 + 参数绑定 + 自写 JSON + 静态资源</description>
 
     <dependencies>
+        <!-- A-1/A-2：WebMvcAutoConfiguration 迁走、demo 残留清除后，
+             web 仅依赖 context（@Controller 派生自 @Component；core 由 context 传递），不再依赖 config/autoconfigure -->
         <dependency>
             <groupId>com.minispring</groupId>
-            <artifactId>mini-spring-config</artifactId>
-            <version>0.1.0-SNAPSHOT</version>
-        </dependency>
-        <!-- 自动配置归位：WebMvcAutoConfiguration 需要 @ConditionalOnClass/@ConditionalOnMissingBean 注解 -->
-        <dependency>
-            <groupId>com.minispring</groupId>
-            <artifactId>mini-spring-autoconfigure</artifactId>
+            <artifactId>mini-spring-context</artifactId>
             <version>0.1.0-SNAPSHOT</version>
         </dependency>
         <!-- 仅测试期依赖；运行时保持零第三方依赖 -->

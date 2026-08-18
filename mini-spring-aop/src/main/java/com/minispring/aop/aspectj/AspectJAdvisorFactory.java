@@ -6,7 +6,7 @@ import com.minispring.aop.PointcutAdvisor;
 import com.minispring.aop.annotation.After;
 import com.minispring.aop.annotation.Around;
 import com.minispring.aop.annotation.Before;
-import com.minispring.aop.interceptor.AfterReturningAdviceInterceptor;
+import com.minispring.aop.interceptor.AfterAdviceInterceptor;
 import com.minispring.aop.interceptor.AspectJAroundAdvice;
 import com.minispring.aop.interceptor.MethodBeforeAdviceInterceptor;
 import com.minispring.core.Ordered;
@@ -39,7 +39,7 @@ public class AspectJAdvisorFactory {
             } else if (method.isAnnotationPresent(After.class)) {
                 advisors.add(new PointcutAdvisor(
                         new AspectJExpressionPointcut(method.getAnnotation(After.class).value()),
-                        new AfterReturningAdviceInterceptor(aspectInstance, method), order));
+                        new AfterAdviceInterceptor(aspectInstance, method), order));
             } else if (method.isAnnotationPresent(Around.class)) {
                 advisors.add(new PointcutAdvisor(
                         new AspectJExpressionPointcut(method.getAnnotation(Around.class).value()),

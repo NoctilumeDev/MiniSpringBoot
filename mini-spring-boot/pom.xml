@@ -26,5 +26,28 @@
             <artifactId>mini-spring-config</artifactId>
             <version>0.1.0-SNAPSHOT</version>
         </dependency>
+        <!-- A-3：run() 探测到 DispatcherServlet Bean 时自动启动内嵌 WebServer -->
+        <dependency>
+            <groupId>com.minispring</groupId>
+            <artifactId>mini-spring-web</artifactId>
+            <version>0.1.0-SNAPSHOT</version>
+        </dependency>
+        <!-- 仅测试期依赖；运行时保持零第三方依赖 -->
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <version>5.10.2</version>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>3.2.5</version>
+            </plugin>
+        </plugins>
+    </build>
 </project>

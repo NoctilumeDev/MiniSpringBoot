@@ -42,36 +42,43 @@ MiniSpringBoot 是一个 **从零手写** 的 Spring Boot 内核复刻项目。�
 
 ## 架构总览
 
-MiniSpringBoot 采用与 Spring 对齐的分层设计。下面是**框架内核**的分层（从下到上）：
+MiniSpringBoot 采用与 Spring 对齐的分层设计。下面是**框架内核**的分层（从上到下，依赖方向严格单向，上层依赖下层）：
 
 ```
 ┌────────────────────────────────────────────────────────────────┐
-│  boot          MiniSpringApplication.run() / 事件 / 启动流程   │
+│  boot          MiniSpringApplication.run() / 内嵌服务器启动 /   │
+│                关闭钩子 / Banner / StartedEvent                 │
 ├────────────────────────────────────────────────────────────────┤
-│  autoconfigure @Conditional / Starter / SPI 自动装配          │
+│  autoconfigure @Conditional / AutoConfigurationImportSelector  │
+│                / SPI 读取 + 框架自动配置类（与                 │
+│                spring-boot-autoconfigure 同构）                 │
 ├────────────────────────────────────────────────────────────────┤
-│  web           DispatcherServlet / HandlerMapping / 参数绑定   │
+│  web           DispatcherServlet / HandlerMapping / 参数绑定    │
 │                （内嵌 HTTP 服务器，零第三方依赖）               │
 ├────────────────────────────────────────────────────────────────┤
-│  aop           Pointcut / Advice / 动态代理                    │
+│  aop           Pointcut / Advice / 动态代理 / 自动代理创建器    │
 ├────────────────────────────────────────────────────────────────┤
-│  core          ApplicationContext / BeanFactory / Bean 生命周期│
-│                BeanPostProcessor / 三级缓存循环依赖            │
+│  context       注解扫描 / @Configuration·@Bean / 事件 / 三级缓存│
 ├────────────────────────────────────────────────────────────────┤
-│  config        Environment / PropertySource / @Value           │
+│  config        Environment / PropertySource / @Value            │
+├────────────────────────────────────────────────────────────────┤
+│  core          BeanFactory / BeanDefinition / Bean 生命周期     │
+│                BeanPostProcessor                                │
 └────────────────────────────────────────────────────────────────┘
-                   —— 内核全部基于 JDK 17，零第三方运行时依赖 ——
+     —— 内核全部基于 JDK 17，零第三方运行时依赖 ——
+
+  demo 轨道：mini-spring-demo（后端收口）/ mini-spring-starter-demo（Starter 验证）
 ```
 
 | 模块 | 对应 Spring 的概念 | 责任 |
 | --- | --- | --- |
-| `core` | IoC 容器 | Bean 定义、实例化、依赖注入、生命周期、循环依赖 |
-| `context` | ApplicationContext | 注解扫描、配置类解析、`@ComponentScan` |
-| `aop` | Spring AOP | 切点匹配、通知执行、动态代理 |
-| `web` | Spring MVC + 内嵌容器 | HTTP 服务器、路由、参数绑定、响应序列化 |
-| `config` | Environment / Binder | 配置文件解析、`@Value`、属性绑定 |
-| `autoconfigure` | Spring Boot 自动配置 | `@Conditional`、Starter、SPI 装配 |
-| `boot` | SpringApplication | 启动入口、事件机制、Banner |
+| `core` | spring-beans | Bean 定义、实例化、依赖注入、生命周期、循环依赖（三级缓存） |
+| `config` | Environment / Binder | 配置文件解析（properties/yaml/Profile）、`@Value`、属性绑定 |
+| `context` | spring-context | 注解扫描、配置类解析、`@ComponentScan`、事件广播 |
+| `aop` | spring-aop | 切点匹配、通知执行、JDK 动态代理、自动代理创建器 |
+| `web` | spring-webmvc + 内嵌容器 | HTTP 服务器、路由、参数绑定、响应序列化、静态资源 |
+| `autoconfigure` | spring-boot-autoconfigure | `@Conditional` 派生、SPI 装配、框架自动配置类归位 |
+| `boot` | spring-boot | 启动入口（run 自动起 Web 服务器）、事件、Banner |
 
 > **双轨制**：上表是**框架内核**（零第三方依赖，用于教学）。在它之上还有一条「demo 应用」轨道——业务代码 + React 前端 + MySQL + Nginx，用它证明内核「真能用」，并跑通全链路、3 实例高可用。详见 [docs/architecture.md](docs/architecture.md)。
 
@@ -107,7 +114,7 @@ MiniSpringBoot 采用与 Spring 对齐的分层设计。下面是**框架内核*
 
 ---
 
-## 目录结构（规划）
+## 目录结构
 
 ```
 MiniSpringBoot
@@ -119,26 +126,37 @@ MiniSpringBoot
 │   ├── 03-web-mvc.md          # Web 与 MVC
 │   ├── 04-auto-configuration.md # 自动配置与 Starter
 │   ├── 05-externalized-configuration.md # 外部化配置
-│   └── 06-roadmap.md          # 路线图与验收标准
-├── mini-spring-core/          # 核心容器
-├── mini-spring-context/       # 上下文与扫描
-├── mini-spring-aop/           # AOP
-├── mini-spring-web/           # Web/MVC + 内嵌服务器
-├── mini-spring-config/        # 配置系统
-├── mini-spring-autoconfigure/ # 自动配置
-├── mini-spring-boot/          # 启动器
-├── demo/                      # 示例应用（后端，基于内核 + MySQL）
-├── demo-frontend/             # 示例应用前端（React）
-└── deploy/                    # Nginx 配置、3 实例启动与压测脚本
+│   ├── 07-boot.md             # 启动器
+│   └── 06-roadmap.md          # 路线图、技术债与验收标准
+├── mini-spring-core/          # 核心容器（三级缓存 / 生命周期 / BPP）
+├── mini-spring-config/        # 配置系统（properties/yaml/Profile/@Value）
+├── mini-spring-context/       # 注解扫描 / 配置类解析 / 事件
+├── mini-spring-aop/           # AOP（JDK 动态代理，零第三方）
+├── mini-spring-web/           # Web/MVC + 内嵌服务器 + 自写 JSON
+├── mini-spring-autoconfigure/ # 自动配置（框架自动配置类统一归位于此）
+├── mini-spring-boot/          # 启动器（run 自动起服务器 + 关闭钩子）
+├── mini-spring-starter-demo/  # Starter 验证（引入依赖即自动装配）
+├── mini-spring-demo/          # 后端 demo 收口（全链路能力验证）
+└── deploy/                    # （规划）Nginx 配置、3 实例启动与压测脚本
 ```
 
-> 目录结构会随里程碑推进逐步落地，以实际编码为准。
+> demo 前端与 MySQL 接入在 M8/M9 落地后补充。
 
 ---
 
-## 构建与运行（规划中）
+## 构建与运行
 
-技术选型见 [docs/architecture.md](docs/architecture.md)，当前阶段尚未进入编码，目录与构建脚本将随里程碑逐步添加。
+```bash
+# 全量构建 + 测试（JDK 17）
+mvn clean test
+
+# 启动后端 demo（一条 run() 拉起：自动配置 + AOP + 事件 + 内嵌服务器 9090 端口）
+mvn -pl mini-spring-demo exec:java -Dexec.mainClass=com.minispring.demo.app.DemoApplication
+# 或直接 java 运行
+java -cp <classpath> com.minispring.demo.app.DemoApplication
+```
+
+验证：浏览器访问 `http://localhost:9090/hello`、`http://localhost:9090/capability/aop/order` 等接口。
 
 ---
 
@@ -146,15 +164,15 @@ MiniSpringBoot
 
 完整里程碑见 [docs/06-roadmap.md](docs/06-roadmap.md)，概要如下：
 
-- **M0**：环境就绪 + 规矩冻结 + 方案审批
-- **M1**：IoC 容器（Bean 定义 → 实例化 → 注入 → 生命周期）
-- **M2**：注解与类路径扫描
-- **M3**：AOP（切点 + 通知 + 动态代理）
-- **M4**：外部化配置（`application.properties` / `application.yml` / `@Value`）
-- **M5**：Web/MVC + 内嵌服务器
-- **M6**：自动配置与 Starter
-- **M7**：启动器、事件机制、后端 demo 收口
-- **M8**：数据库接入（MySQL + HikariCP）
+- **M0** ✅：环境就绪 + 规矩冻结 + 方案审批
+- **M1** ✅：IoC 容器（Bean 定义 → 实例化 → 注入 → 生命周期）
+- **M2** ✅：注解与类路径扫描
+- **M3** ✅：AOP（切点 + 通知 + 动态代理）
+- **M4** ✅：外部化配置（`application.properties` / `application.yml` / `@Value`）
+- **M5** ✅：Web/MVC + 内嵌服务器
+- **M6** ✅：自动配置与 Starter
+- **M7** ✅：启动器（run 自动起服务器）、事件机制、后端 demo 收口
+- **M8**：数据库接入（MySQL + 连接池）
 - **M9**：React 前端 + 前后端联调
 - **M10**：3 实例高可用 + 全链路终验
 

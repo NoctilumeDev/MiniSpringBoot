@@ -15,15 +15,11 @@
     <description>外部化配置：Environment / PropertySource / properties·yaml 解析 / @Value / Profile</description>
 
     <dependencies>
+        <!-- A-1：ValueAutoConfiguration 迁走后，config 只依赖 core（Environment/PropertySource/BPP 接口），
+             回到 context 下层，不再反向依赖 autoconfigure/context -->
         <dependency>
             <groupId>com.minispring</groupId>
-            <artifactId>mini-spring-context</artifactId>
-            <version>0.1.0-SNAPSHOT</version>
-        </dependency>
-        <!-- 自动配置归位：ValueAutoConfiguration 需要 @ConditionalOnClass/@ConditionalOnMissingBean 注解 -->
-        <dependency>
-            <groupId>com.minispring</groupId>
-            <artifactId>mini-spring-autoconfigure</artifactId>
+            <artifactId>mini-spring-core</artifactId>
             <version>0.1.0-SNAPSHOT</version>
         </dependency>
     </dependencies>

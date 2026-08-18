@@ -136,21 +136,22 @@ public final class JsonNode {
     }
 
     public int asInt() {
-        if (stringValue == null) {
+        // 类型防护按节点形态判（与 asBoolean 对称）：STRING "42" 不静默转数字，必须显式报错
+        if (type != Type.NUMBER) {
             throw new IllegalArgumentException("JSON 节点不是数字，无法转为 int");
         }
         return Integer.parseInt(stringValue.trim());
     }
 
     public long asLong() {
-        if (stringValue == null) {
+        if (type != Type.NUMBER) {
             throw new IllegalArgumentException("JSON 节点不是数字，无法转为 long");
         }
         return Long.parseLong(stringValue.trim());
     }
 
     public double asDouble() {
-        if (stringValue == null) {
+        if (type != Type.NUMBER) {
             throw new IllegalArgumentException("JSON 节点不是数字，无法转为 double");
         }
         return Double.parseDouble(stringValue.trim());

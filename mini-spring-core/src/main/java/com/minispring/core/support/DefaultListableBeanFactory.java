@@ -17,6 +17,7 @@ import com.minispring.core.SingletonBeanRegistry;
 import com.minispring.core.env.Environment;
 
 import java.lang.annotation.Annotation;
+import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
@@ -24,6 +25,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -51,6 +53,9 @@ public class DefaultListableBeanFactory implements ListableBeanFactory, BeanDefi
 
     // 质检员（BeanPostProcessor）
     private final List<BeanPostProcessor> beanPostProcessors = new ArrayList<>();
+
+    // 正在创建中的单例：用于识别「构造器注入卡死型循环依赖」（三级缓存尚未暴露时就折返，直接给出可读错误而非 StackOverflow）
+    private final Set<String> currentlyInCreation = ConcurrentHashMap.newKeySet();
 
     // 配置环境（Environment），由上下文注入；@Value 处理器靠它以占位符查值
     private Environment environment;
@@ -93,6 +98,11 @@ public class DefaultListableBeanFactory implements ListableBeanFactory, BeanDefi
 
     @Override
     public Object getBean(String name) {
+        // 运行期注册的单例（registerSingleton，如启动器放入的 webServer）没有 BeanDefinition，先查一级缓存
+        Object registered = singletonObjects.get(name);
+        if (registered != null) {
+            return registered;
+        }
         BeanDefinition bd = getBeanDefinition(name);
         if (!bd.isSingleton()) {
             // prototype：每次新建，不缓存、不参与循环依赖破解、容器不负责销毁
@@ -116,6 +126,11 @@ public class DefaultListableBeanFactory implements ListableBeanFactory, BeanDefi
             earlySingletonObjects.put(name, bean);
             singletonFactories.remove(name);
             return bean;
+        }
+        // A-4：三级缓存还没暴露就折返创建自己 —— 构造器注入型循环依赖（无法用提前暴露破解），给出可读错误
+        if (currentlyInCreation.contains(name)) {
+            throw new BeansException("检测到无法提前暴露的循环依赖（构造器注入或 prototype 作用域）: " + name
+                    + " —— 请改用「单例 + 字段/方法注入」，或调整依赖方向");
         }
         // 都没有 → 完整创建
         return createBean(name, bd);
@@ -158,6 +173,19 @@ public class DefaultListableBeanFactory implements ListableBeanFactory, BeanDefi
     // ---------- 创建主流程 ----------
 
     private Object createBean(String beanName, BeanDefinition bd) {
+        // 同名单例折返（构造器注入循环）或同名 prototype 循环：提前暴露救不了，直接给出可读错误而非 StackOverflow
+        if (!currentlyInCreation.add(beanName)) {
+            throw new BeansException("检测到无法提前暴露的循环依赖（构造器注入或 prototype 作用域）: " + beanName
+                    + " —— 请改用「单例 + 字段/方法注入」，或调整依赖方向");
+        }
+        try {
+            return doCreateBean(beanName, bd);
+        } finally {
+            currentlyInCreation.remove(beanName);
+        }
+    }
+
+    private Object doCreateBean(String beanName, BeanDefinition bd) {
         Object bean = instantiate(beanName, bd);
         // 提前暴露的引用需单独捕获，避免 bean 后续被重新赋值导致 lambda 无法引用
         Object exposed = bean;
@@ -209,13 +237,47 @@ public class DefaultListableBeanFactory implements ListableBeanFactory, BeanDefi
         if (bd.isFactoryMethod()) {
             return instantiateUsingFactoryMethod(beanName, bd);
         }
+        // A-4（D3 收口）：@Autowired 构造器注入 —— BPP 选出候选构造器，容器解析参数后调用
+        Constructor<?> candidate = determineAutowiredConstructor(beanName, bd);
+        if (candidate != null) {
+            return instantiateUsingConstructor(beanName, candidate);
+        }
         try {
-            java.lang.reflect.Constructor<?> constructor = bd.getBeanClass().getDeclaredConstructor();
+            Constructor<?> constructor = bd.getBeanClass().getDeclaredConstructor();
             // D43：非 public 类（包私有配置类/组件）同样允许实例化，与 Spring 对齐
             constructor.setAccessible(true);
             return constructor.newInstance();
         } catch (Exception e) {
             throw new BeansException("实例化 Bean[" + beanName + "] 失败", e);
+        }
+    }
+
+    /** 询问各 InstantiationAwareBeanPostProcessor：这个类有没有标注注入注解的构造器。 */
+    private Constructor<?> determineAutowiredConstructor(String beanName, BeanDefinition bd) {
+        for (BeanPostProcessor processor : beanPostProcessors) {
+            if (!(processor instanceof InstantiationAwareBeanPostProcessor)) {
+                continue;
+            }
+            Constructor<?>[] candidates =
+                    ((InstantiationAwareBeanPostProcessor) processor).determineCandidateConstructors(bd.getBeanClass(), beanName);
+            if (candidates == null || candidates.length == 0) {
+                continue;
+            }
+            if (candidates.length > 1) {
+                throw new BeansException("Bean[" + beanName + "] 标注了多个 @Autowired 构造器，请只保留一个");
+            }
+            return candidates[0];
+        }
+        return null;
+    }
+
+    private Object instantiateUsingConstructor(String beanName, Constructor<?> constructor) {
+        constructor.setAccessible(true);
+        Object[] args = resolveArgs(constructor.getParameters(), beanName);
+        try {
+            return constructor.newInstance(args);
+        } catch (Exception e) {
+            throw new BeansException("构造器[" + constructor + "]实例化 Bean[" + beanName + "] 失败", e);
         }
     }
 
@@ -253,15 +315,19 @@ public class DefaultListableBeanFactory implements ListableBeanFactory, BeanDefi
     }
 
     private Object[] resolveFactoryMethodArgs(Method method) {
-        Parameter[] parameters = method.getParameters();
+        return resolveArgs(method.getParameters(), null);
+    }
+
+    /** 构造器 / @Bean 工厂方法共用的参数解析：@Qualifier 名 → 唯一类型 → @Primary；支持参数级 @Autowired(required=false)。 */
+    private Object[] resolveArgs(Parameter[] parameters, String beanName) {
         Object[] args = new Object[parameters.length];
         for (int i = 0; i < parameters.length; i++) {
-            args[i] = resolveFactoryMethodArg(parameters[i]);
+            args[i] = resolveArg(parameters[i], beanName);
         }
         return args;
     }
 
-    private Object resolveFactoryMethodArg(Parameter parameter) {
+    private Object resolveArg(Parameter parameter, String beanName) {
         String qualifier = findQualifierValue(parameter);
         if (qualifier != null && !qualifier.isEmpty() && containsBean(qualifier)) {
             return getBean(qualifier);
@@ -277,10 +343,31 @@ public class DefaultListableBeanFactory implements ListableBeanFactory, BeanDefi
                     return getBean(name);
                 }
             }
-            throw new BeansException("工厂方法参数类型[" + type.getName() + "]有多个候选: " + Arrays.toString(candidates)
+            throw new BeansException("注入参数类型[" + type.getName() + "]有多个候选: " + Arrays.toString(candidates)
                     + "，请用 @Qualifier 或 @Primary 拍板");
         }
-        throw new BeansException("工厂方法参数类型[" + type.getName() + "]找不到可用 Bean");
+        // 无候选：参数级 @Autowired(required=false)（按全限定名识别）允许缺省注入 null；默认 required 报错
+        if (isOptionalAutowired(parameter)) {
+            return null;
+        }
+        String where = (beanName == null ? "工厂方法" : "Bean[" + beanName + "]构造器");
+        throw new BeansException(where + "的参数类型[" + type.getName() + "]找不到可用 Bean");
+    }
+
+    /** 反射判断参数是否标了 @Autowired(required=false)（按全限定名，避免 core 反向依赖 context 注解）。 */
+    private boolean isOptionalAutowired(Parameter parameter) {
+        for (Annotation annotation : parameter.getAnnotations()) {
+            if (!annotation.annotationType().getName().equals("com.minispring.context.annotation.Autowired")) {
+                continue;
+            }
+            try {
+                Object required = annotation.annotationType().getMethod("required").invoke(annotation);
+                return Boolean.FALSE.equals(required);
+            } catch (ReflectiveOperationException ignored) {
+                return false;
+            }
+        }
+        return false;
     }
 
     /** 反射读取参数上的 @Qualifier value（按全限定名，避免 core 反向依赖 context 注解）。 */

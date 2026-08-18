@@ -15,16 +15,28 @@
     <description>AOP：切点 / 通知 / 切面 + JDK 动态代理</description>
 
     <dependencies>
+        <!-- A-1：AopAutoConfiguration 迁走后，aop 仅依赖 context（@Aspect 派生自 @Component），不再反向依赖 autoconfigure -->
         <dependency>
             <groupId>com.minispring</groupId>
             <artifactId>mini-spring-context</artifactId>
             <version>0.1.0-SNAPSHOT</version>
         </dependency>
-        <!-- 自动配置归位：AopAutoConfiguration 需要 @ConditionalOnClass/@ConditionalOnMissingBean 注解 -->
+        <!-- 仅测试期依赖；运行时保持零第三方依赖 -->
         <dependency>
-            <groupId>com.minispring</groupId>
-            <artifactId>mini-spring-autoconfigure</artifactId>
-            <version>0.1.0-SNAPSHOT</version>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <version>5.10.2</version>
+            <scope>test</scope>
         </dependency>
     </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>3.2.5</version>
+            </plugin>
+        </plugins>
+    </build>
 </project>
