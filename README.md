@@ -140,10 +140,11 @@ MiniSpringBoot
 ├── mini-spring-boot/          # 启动器（run 自动起服务器 + 关闭钩子）
 ├── mini-spring-starter-demo/  # Starter 验证（引入依赖即自动装配）
 ├── mini-spring-demo/          # 后端 demo 收口（全链路能力验证）
+├── demo-frontend/             # React + Vite 前端（M9 联调：用户管理 + 转账演示）
 └── deploy/                    # 部署物（mysql：M8 数据库容器 compose + 建表 SQL；Nginx/压测 M10）
 ```
 
-> demo 前端（React）在 M9 落地后补充；MySQL 已于 M8 接入（`deploy/mysql/`）。
+> React 前端已于 M9 落地（`demo-frontend/`，9010）；MySQL 于 M8 接入（`deploy/mysql/`）。
 
 ---
 
@@ -160,6 +161,13 @@ mvn -pl mini-spring-demo exec:java "-Dexec.mainClass=com.minispring.demo.app.Dem
 
 验证：浏览器访问 `http://localhost:9090/hello`、`http://localhost:9090/users`（CRUD 落 MySQL）、`http://localhost:9090/accounts/1`（转账事务：`POST /accounts/transfer?from=1&to=2&amount=100`，`POST /accounts/transfer-fail` 回滚取证）等接口。
 
+```bash
+# 启动前端（M9，另一终端；Vite 9010，/api 经 proxy 转 9090）
+cd demo-frontend && npm install && npm run dev
+```
+
+验证：浏览器打开 `http://localhost:9010`——用户管理页对 MySQL 真实 CRUD、转账页可视化事务提交/回滚；F12 Network 可见 `/api/*` 全链路请求。
+
 ---
 
 ## 路线图
@@ -175,7 +183,7 @@ mvn -pl mini-spring-demo exec:java "-Dexec.mainClass=com.minispring.demo.app.Dem
 - **M6** ✅：自动配置与 Starter
 - **M7** ✅：启动器（run 自动起服务器）、事件机制、后端 demo 收口
 - **M8** ✅：数据库接入（MySQL + HikariCP + JdbcTemplate + 声明式事务；V1~V10 唯一事实验收）
-- **M9**：React 前端 + 前后端联调
+- **M9** ✅：React 前端 + 前后端联调（Vite proxy 同源；浏览器/Network/MySQL 三方对照验收）
 - **M10**：3 实例高可用 + 全链路终验
 
 ---

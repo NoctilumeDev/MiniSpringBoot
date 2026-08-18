@@ -32,7 +32,7 @@ public class TransactionManager {
                 return action.doInTransaction();
             } catch (Exception e) {
                 throw (e instanceof RuntimeException) ? (RuntimeException) e
-                        : new DataAccessException("事务执行失败（受检异常上抛）", e);
+                        : new DataAccessException("事务执行失败（受检异常上抛）: " + e.getMessage(), e);
             }
         }
         Connection connection = null;
@@ -46,7 +46,7 @@ public class TransactionManager {
         } catch (Exception e) {
             rollbackQuietly(connection);
             throw (e instanceof RuntimeException) ? (RuntimeException) e
-                    : new DataAccessException("事务执行失败（受检异常触发回滚）", e);
+                    : new DataAccessException("事务执行失败（受检异常触发回滚）: " + e.getMessage(), e);
         } finally {
             // 线程池复用纪律：clear 必须在 finally（见 TransactionContext 的 javadoc）
             TransactionContext.clear();

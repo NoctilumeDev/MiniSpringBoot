@@ -1,0 +1,57 @@
+/* MiniSpringBoot demo 前端：手写极简样式，不引 UI 框架（M9 边界） */
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, 'Segoe UI', 'Microsoft YaHei', sans-serif;
+  background: #f5f6f8;
+  color: #1f2328;
+}
+.app { max-width: 880px; margin: 0 auto; padding: 16px; }
+header { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+header h1 { font-size: 20px; margin: 8px 0; }
+nav button {
+  border: 1px solid #c9cdd4; background: #fff; padding: 6px 14px;
+  border-radius: 6px 6px 0 0; cursor: pointer; font-size: 14px;
+}
+nav button.active { background: #2563eb; color: #fff; border-color: #2563eb; }
+main {
+  background: #fff; border: 1px solid #e2e4e9; border-radius: 0 8px 8px 8px;
+  padding: 16px; min-height: 320px;
+}
+footer { margin-top: 12px; color: #7a8190; }
+
+.banner {
+  display: flex; justify-content: space-between; align-items: flex-start; gap: 12px;
+  border-radius: 8px; padding: 10px 12px; margin: 12px 0 0; font-size: 14px;
+  white-space: pre-wrap; word-break: break-all;
+}
+.banner.error { background: #fde8e8; border: 1px solid #f5b5b5; color: #9b1c1c; }
+.banner.notice { background: #e8f5ec; border: 1px solid #b7e0c3; color: #16522b; }
+.banner button { border: none; background: none; cursor: pointer; font-size: 16px; color: inherit; }
+
+.row-form { display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-end; margin: 12px 0; }
+.row-form input { padding: 6px 8px; border: 1px solid #c9cdd4; border-radius: 6px; }
+.row-form label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: #57606a; }
+button {
+  border: 1px solid #c9cdd4; background: #fff; padding: 6px 12px;
+  border-radius: 6px; cursor: pointer; font-size: 14px;
+}
+button:hover:not(:disabled) { background: #f0f2f5; }
+button:disabled { opacity: 0.5; cursor: not-allowed; }
+button.danger { color: #b42318; border-color: #e3b0ab; }
+
+table { border-collapse: collapse; width: 100%; margin-top: 8px; }
+th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid #e9ebef; font-size: 14px; }
+th { color: #57606a; font-weight: 600; background: #fafbfc; }
+tr.editing { background: #fffbe6; }
+td input { padding: 4px 6px; border: 1px solid #c9cdd4; border-radius: 4px; width: 100%; }
+td button { margin-right: 6px; padding: 4px 10px; }
+
+.balance-row { display: flex; gap: 12px; margin: 12px 0; }
+.balance-card {
+  flex: 1; border: 1px solid #e2e4e9; border-radius: 8px; padding: 12px; text-align: center;
+}
+.balance-card h3 { margin: 0 0 6px; font-size: 14px; color: #57606a; }
+.balance-card .amount { font-size: 28px; font-weight: 700; margin: 6px 0 10px; }
+.hint { color: #7a8190; font-size: 13px; }
+code { background: #f0f2f5; padding: 1px 5px; border-radius: 4px; font-size: 12px; }

@@ -111,11 +111,17 @@ public class JdbcTemplate {
         }
     }
 
+    /**
+     * SQLException → DataAccessException 翻译。
+     * M9 纪律（错误保真）：包装消息必须携带根因文本（{@code e.getMessage()}）——
+     * 只留 SQL 丢根因的话，DB 断连/超时类故障在 HTTP 500 里看不出「为什么失败」
+     * （M9 V7 浏览器实测揪出：事务路径只见「事务执行失败」不见连接池根因）。
+     */
     private DataAccessException translate(String sql, SQLException e) {
         if (DuplicateKeyException.isConstraintViolation(e)) {
-            return new DuplicateKeyException("唯一键或约束冲突: " + sql, e);
+            return new DuplicateKeyException("唯一键或约束冲突: " + sql + " — " + e.getMessage(), e);
         }
-        return new DataAccessException("SQL 执行失败: " + sql, e);
+        return new DataAccessException("SQL 执行失败: " + sql + " — " + e.getMessage(), e);
     }
 
     @FunctionalInterface

@@ -133,8 +133,26 @@
 
 ### M9 · React 前端 + 联调
 
-- **产出**：React + Vite 前端（`demo-frontend/`），调后端 JSON API。
-- **落地证据**：**浏览器真实打开 React 页**，F12 Network 看到前端调后端；页面数据 = MySQL 里真实记录。
+- **产出**：`demo-frontend/`（React 18 + Vite 5，JavaScript/jsx，端口 9010；Vite proxy `/api`→9090 rewrite 去前缀——决策点 A①/B① 已批）；两页极简 UI（用户管理：列表/新建/编辑/删除；转账演示：双按钮 + 余额卡），零路由/状态/UI 库；fetch 统一封装 + 全局错误横幅（后端可读错误原样到 UI）。
+- **落地证据（V1~V8，浏览器真实操作 + F12 Network + docker exec 直查三方对照）**：
+  - V1 渲染：浏览器打开 :9010，标题/tab/表格骨架完整，控制台零报错（截图存档）；
+  - V2 列表=库：页面唯一行（id=23/甲/dup@v8.com）与 `docker exec` 直查完全一致；`GET /api/users` 200，payload 与 UI 逐字段相等（StrictMode 双请求为开发模式特征）；
+  - V3 新建落库：表单新建 → 横幅「已新建用户 #48（落库 MySQL）」→ docker exec 出现 id=48/fe-m9@minispring.dev；
+  - V4 编辑/删除落库：PUT #48 name→M9-Edited（DB 同步变化）；DELETE #48（confirm 弹窗接受）→ DB 行消失、表回到 1 行；
+  - V5 转账提交：页面余额卡 989/1160 = MySQL 精确 ±10；POST /api/accounts/transfer 200，横幅回报双侧余额；
+  - V6 转账回滚：[中途失败转账] → 红色横幅逐字透出后端异常「HTTP 500: … transfer-fail-in-middle（V3 回滚验收的刻意异常）」，余额卡与 DB 均不变（989/1160）；
+  - V7 断库自愈（**揪出并修复 B10 后复验**）：`docker stop mysql` → 前端点击转账 → 有限阻塞（~15-20s，Hikari connectionTimeout）→ 红色横幅完整透出「事务执行失败（受检异常触发回滚）: minispring-hikari - Connection is not available, request timed out after 30003ms (total=0, active=0, idle=0, waiting=2)」——根因（含连接池状态）直达浏览器 UI；`docker start` 后页面刷新即恢复；
+  - V8 F12 全链路：Network 面板见 /api/users、/api/accounts/*、POST/PUT/DELETE 全部请求与 200/500 状态、JSON 响应体。
+- **M9 期间揪出并修复（B10，错误保真对称缺失）**：M8 的 V7 只验了事务外读路径（「SQL 执行失败: …」），事务内写路径（@Transactional）经 TransactionManager 包装后只剩「事务执行失败（受检异常触发回滚）」——根因文本丢失。按对称纪律修全家族四处：`TransactionManager` 两处包装 + `JdbcTemplate.translate` 两处（SQL 与 DuplicateKey 分支），包装消息一律携带 `e.getMessage()`；浏览器复验根因直达 UI。
+- **落地边界（显式）**：CORS 显式不做（决策点 A① 推论：dev 用 Vite proxy、生产 M10 Nginx 同源反代）；前端不做构建产物部署（dist 留给 M10）；断连期间余额卡显示旧值且不标识陈旧性、多条错误横幅相互覆盖（demo 层 UX 简化，无正确性影响，如实标注）；D1/D47 维持 M10。
+
+#### M9 三次质量审查记录（按 §1.6 门闩）
+
+| 审查 | 时间 | 结论与证据 |
+| --- | --- | --- |
+| ① 回顾审查（回归/契约/依赖方向） | 2026-08-19 | 后端零改动兑现（唯一变更 jdbc 错误保真修复，属 bug 修正非契约变更）；前端与后端唯一耦合=JSON 契约+proxy 配置；M0~M8 回归：后端冒烟全绿（/hello、/void、/、/../secret 403、capability×4、accounts JSON）+ 44 单测全过 + MySQL 数据经多轮写删后与页面一致；教训沉淀：boot 模块 WebServer 单测绑 9090，跑全量测试前须停 demo 进程。 |
+| ② 当前审查（异常/边界/null 全路径） | 2026-08-19 | V1~V8 三方对照（浏览器/Network/DB）全过；揪出 B10（事务路径错误保真对称缺失）并修全家族四处、浏览器复验根因直达 UI；负例实测：断库 500 横幅可读、回滚横幅逐字透出后端异常、confirm 删除可取消路径正常。 |
+| ③ 前瞻审查（反例驱动） | 2026-08-19 | 反例①「前端在、后端挂」→ proxy 层 ECONNREFUSED 会以网络错误形态到 UI（fetch 封装已统一 catch，横幅呈现）；反例②「断连期间余额卡陈旧值误导操作者」→ 如实标注为边界（教学取舍）；反例③「StrictMode 双请求导致重复写」→ 核对：写操作均由按钮触发（非 effect），双请求仅出现在 effect 内的读路径，无重复写风险；反例④「M10 Nginx 托管 dist 后路由 404」→ 无 react-router（单页 tab），不触发 SPA 刷新回退问题。M10 风险预置：D1（JAR 扫描）与 D47（Hikari 参数面）在部署阶段一并处置。 |
 
 ### M10 · 3 实例 + Nginx 高可用 + 全链路终验
 
