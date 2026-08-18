@@ -157,6 +157,10 @@ public final class JsonNode {
     }
 
     public boolean asBoolean() {
+        if (type != Type.BOOLEAN) {
+            // B-7：类型不匹配时明确报错，不静默返回 false（与 asInt/asLong/asDouble 的防护对称）
+            throw new IllegalArgumentException("JSON 节点不是布尔值，无法转为 boolean");
+        }
         return booleanValue;
     }
 }

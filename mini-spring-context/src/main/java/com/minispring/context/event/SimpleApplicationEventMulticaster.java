@@ -74,6 +74,12 @@ public class SimpleApplicationEventMulticaster {
 
     @SuppressWarnings("unchecked")
     private void invoke(ApplicationListener<?> listener, ApplicationEvent event) {
-        ((ApplicationListener<ApplicationEvent>) listener).onApplicationEvent(event);
+        try {
+            ((ApplicationListener<ApplicationEvent>) listener).onApplicationEvent(event);
+        } catch (Exception e) {
+            // B-4：单个监听器异常不阻断后续监听器（与 Spring SimpleApplicationEventMulticaster 的隔离语义一致）
+            System.err.println("事件监听器[" + listener.getClass().getName() + "]处理 "
+                    + event.getClass().getSimpleName() + " 失败: " + e);
+        }
     }
 }

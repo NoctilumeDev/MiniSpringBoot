@@ -164,7 +164,7 @@
 | D11 | YAML 解析为「教学子集」：无 anchor、多行字符串（`|`/`>`）、flow style（`{k:v}`/`[a,b]`）、list-of-map 嵌套；值内 `#` 被当作注释截断（无法转义） | 配置用到这些语法 | 按需扩展 `YamlPropertySourceLoader` |
 | D12 | `@Value` 不支持 SpEL（`#{...}`）；类型转换仅 String + 基本/包装类型（无 List/Map/枚举） | 注入复杂类型或 SpEL 表达式 | M5 参数绑定时一并评估，或收窄标注 |
 | D13 | 配置文件仅 classpath 根 `application.*`，不支持 `config/` 子目录、命令行参数覆盖 | 外部部署自定义配置位置 | M10 部署规范统一约定 |
-| D14 | JSON 反序列化仅支持扁平 POJO 与 `List<String>`，不支持 `List<POJO>` / 嵌套集合 | POST 请求体含对象数组时 | M8/M9 数据接入、前端联调发复杂结构前，扩展 `JsonObjectMapper.mapToObject` |
+| D14 | JSON 反序列化仅支持扁平 POJO 与 `List<String>`，不支持 `List<POJO>` / 嵌套集合 | POST 请求体含对象数组时 | 已修于 M7（B-6）：List 字段按泛型实参逐元素映射，`List<Integer>`/`List<Long>`/`List<POJO>` 均正确；raw/顶层 List 按节点自然类型 |
 | D15 | `@PathVariable`/`@RequestParam` 依赖注解显式 `value()`，未启用 `-parameters`（参数名未编译保留），省略 value 会解析失败 | 按参数名隐式绑定时 | 需要时启用 `-parameters` 编译，或补参数名解析 |
 | D16 | 错误处理简化：业务异常统一 500，无 `@ExceptionHandler`/`@ResponseStatus`（无法区分 404/400） | 需要按异常类型返回不同状态码时 | M8/M9 细化错误响应时补异常解析器 |
 | D17 | `SunHttpServer` 仅 cached 线程池（每请求一线程），无 NIO/Reactor、无线程池上限控制 | 高并发压测时线程数无上限、吞吐受限 | M10 3 实例 + Nginx 分摊（教学项目可接受），必要时配固定线程池或换实现 |
@@ -178,8 +178,8 @@
 | D25 | `@ComponentScan` 扫到的 `@Configuration` 不处理其 `@Bean` | `processComponentScan` 只 `registerComponent` 不递归 | 已修于 M7：扫描器识别 `@Configuration` 后回调 `registerBeanMethods` |
 | D26 | prototype 循环依赖无防护 | 直接递归创建 → StackOverflow，无 `BeanCurrentlyInCreationException` | 已标注于 M7：prototype 不支持循环依赖（教学子集，不实现） |
 | D27 | 占位符循环引用防护不完整 | `doResolve` 的 `visiting.remove(key)` 在取 value 前移除，`${a}` 自引用 / `a↔b` 会 StackOverflow | 已修于 M7：try-finally 整段解析完成才移出 `visiting` |
-| D28 | `@PathVariable` 不做 URL 解码 | `%E5%BC%A0%E4%B8%89` 原样注入，中文路径参数拿到转义串 | M8/M9 中文参数联调前补 URLDecoder |
-| D29 | `SunHttpResponse.write()` 多次调用会失败 | 每次 `try-with-resources` 关闭 responseBody 流 | 响应需多次/流式写（如文件下载）时再改 |
+| D28 | ~~`@PathVariable` 不做 URL 解码~~ **误报撤销**：`SunHttpRequest` 用 `exchange.getRequestURI().getPath()`，Java `URI.getPath()` 本身即解码百分号编码，中文路径参数拿到的是原文（`/users/%E5%BC%A0%E4%B8%89` → `张三`）。登记时未查证平台默认行为，违反本表第 8 条纪律，留此行为鉴 | 无 | 无需修复；M8 起「平台默认行为先查证再登记」 |
+| D29 | ~~`SunHttpResponse.write()` 多次调用会失败~~ 已修于 M7（B-8）：首次 write 改用 chunked（length=0），流不自关、交给 `exchange.close()` 终结，支持任意多次 write；空 body 仍用 -1 | 响应需多次/流式写（如文件下载）时 | 已关闭 |
 | D30 | AOP：收集切面期间创建的业务 Bean 不会被代理 | `getAdvisors` 用 `buildingAdvisors` 防递归、期间返回空列表且不重试，切面 Bean 有依赖时命中 | 已修于 M7：收集期缓存 deferredProxyTargets，完成后补代理并更新单例 |
 | D31 | Controller 被代理后 `HandlerMethod` 调用失败 | `HandlerMethod` 存原始类 `Method`，`method.invoke(代理实例)` 抛 IllegalArgumentException；因 D8 当前 Controller 无接口不会被 JDK 代理故暂不触发 | 与 D8 一起在 M7 评估（CGLIB / 接口化） |
 | D32 | `@Configuration` 无 CGLIB 增强 | `@Bean` 方法互相调用直接 new、破坏单例语义 | 明确为「教学子集」边界（保持零依赖不引 CGLIB），M7 文档化 |
@@ -188,11 +188,11 @@
 | D35 | `ApplicationListener` 在单例预实例化之后才收集注册（`refresh()` 第 3 步） | Bean 初始化期间（如 `@PostConstruct`）发布的事件会丢失 | M8 事件收口：监听器收集提前到 BPP 实例化后、其余单例预实例化前 |
 | D36 | web 框架模块自带 `static/index.html`（M5 demo 遗留），与 demo 静态资源在 classpath 上冲突，`ClassLoader.getResourceAsStream` 按 classpath 顺序命中 web 模块那份 | 真实全链路（demo 依赖 web）访问 `/` 时 | 已修于 M7：删除 web 模块自带静态资源，静态资源归位 `mini-spring-demo` |
 | D37 | `ConfigFilePropertySourceLoader` 默认文件与 profile 文件的 properties/yml 优先级均与注释相反：默认层先 `addLast` properties 再 yml、profile 层先 `addBefore` properties 再 yml，都导致 properties 覆盖 yml；注释与 Spring 语义为 yml 覆盖 properties | 同 key 同时出现在 properties 与 yml 时 | 已修于 M7：默认层与 profile 层均改为「yml 在前、properties 在后」，各配同名 key 用例 |
-| D38 | `SimpleAnnotationMetadata.findAnnotation` 循环元注解（A→@B、B→@A）无防护 → 无限递归 StackOverflow | 用户自定义互相标注的语义注解级联被查时 | 已修于 M7：递归携带 visiting 集合，命中的注解类型跳过 |
+| D38 | `SimpleAnnotationMetadata.findAnnotation` 循环元注解（A→@B、B→@A）无防护 → 无限递归 StackOverflow；同型递归另有两处：`AnnotationBeanNameGenerator.isComponentAnnotation`、`ClassPathScanningCandidateComponentProvider.hasComponentAnnotation`（初修只覆盖第一处，M7 终审补齐全部三处并全局确认无第四处） | 用户自定义互相标注的语义注解级联被查时 | 已修于 M7：三处递归均携带 visiting 集合 |
 | D39 | `SimpleApplicationEventMulticaster.resolveEventType` 只反解本体实现的泛型，不认父类固化泛型（`class Foo extends BaseListener` 且 BaseListener implements ApplicationListener\<MyEvent\>）→ 退化成接收所有事件 | 监听器经父类声明监听类型时 | 已修于 M7：沿 getSuperclass 向上遍历接口泛型 |
 | D40 | `ClassPathScanningCandidateComponentProvider.loadClass` `catch (Throwable) return null` 吞掉顶级类的真实加载失败（依赖缺失/静态初始化崩溃） | 扫描包内某个顶级类初始化失败时 | 已修于 M7：仅静默忽略内部类/匿名类（名字含 `$`），顶级类失败上抛 |
 | D41 | `JsonParser.parseNumber` 对 `1.` / `1e` / `1e+` 等非法数字放行（延迟到 asDouble 才报错） | POST body 含非法数字字面量时 | 已修于 M7：严格校验整数/小数/指数部分都必须有数字 |
 | D42 | `@After` 注释写「正常返回后」但实现是 finally 语义（D4）；且 finally 内 afterMethod 自身抛异常会覆盖目标异常 | @After 通知自身抛异常时 | 已修于 M7：注释订正为 finally 语义 + afterMethod 异常用 addSuppressed 附加到目标异常 |
 | D43 | 注册与实例化的可见性不对称：注册侧（`registerBeanMethods`/`getDeclaredMethods`）接受非 public，实例化侧三处只认 public——① `instantiate` 构造器无 `setAccessible`（包私有配置类直接 IllegalAccessException）；② `findFactoryMethod` 用 `getMethods()`（包私有 @Bean 注册成功但解析必炸「工厂方法不存在」）；③ `invokeNoArgMethod` 用 `getMethod()`（非 public init/destroy 回调找不到） | 用户写包私有配置类 / 包私有 @Bean 方法 / 非 public 生命周期回调时（TempRepro 复现实证：注册成功、启动即炸） | 已修于 M7：三处补 setAccessible + getDeclaredMethods 优先；复现用例重跑通过（bean=ok） |
 
-> 注：B1（ITE 拆包）、B3（Object 方法过滤）为已发布 M3 代码的真实 bug，已单独修复并回归，不列入本表；B2（AOP×循环依赖）已在 M3「落地边界」登记。M6 后审查又修掉 B4（void/null 空响应断连）、B5（内嵌服务器未设线程池导致单线程串行）两个 M5 代码真实 bug，均已修复并回归。M7 审查再修掉 B6（`processComponentScan` 对未标 `@ComponentScan` 的 `@Configuration` 隐式扫描所在包）。M7「极端边界」复合审查又修掉 B7（`SunHttpRequest.decode` 对非法百分号编码 try-catch 兜底，避免坏 query 让 decode 致命——JDK HttpServer 已在 URI 层 400 拦截，属 defense-in-depth）、B8（`JsonNode.asInt/asLong/asDouble` 无 null 防护，JSON 字段类型不匹配如 int 字段给 boolean 导致 NPE→500 null，已修为友好 IllegalArgumentException）两个 web 层真实 bug，不列入本表。
+> 注：B1（ITE 拆包）、B3（Object 方法过滤）为已发布 M3 代码的真实 bug，已单独修复并回归，不列入本表；B2（AOP×循环依赖）已在 M3「落地边界」登记。M6 后审查又修掉 B4（void/null 空响应断连）、B5（内嵌服务器未设线程池导致单线程串行）两个 M5 代码真实 bug，均已修复并回归。M7 审查再修掉 B6（`processComponentScan` 对未标 `@ComponentScan` 的 `@Configuration` 隐式扫描所在包）。M7「极端边界」复合审查又修掉 B7（`SunHttpRequest.decode` 非法百分号编码兜底）、B8（`JsonNode.asInt/asLong/asDouble` null 防护）。M7 终审（外审 B-1~B-8）修掉：B-1 `JsonSerializer` NUMBER 节点误加引号、B-2 元注解循环递归补齐另两处（见 D38）、B-3 prototype BPP 重复注册、B-4 监听器异常阻断广播链、B-6 List 元素一律 asString（D14 随之关闭）、B-7 `asBoolean` 无类型防护；B-8 即 D29 关闭；B-5 即 D28 误报撤销。

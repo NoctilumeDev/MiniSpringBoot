@@ -16,6 +16,7 @@ final class SunHttpResponse implements HttpResponse {
     private final HttpExchange exchange;
     private int status = 200;
     private boolean committed = false;
+    private OutputStream bodyStream;
 
     SunHttpResponse(HttpExchange exchange) {
         this.exchange = exchange;
@@ -45,13 +46,18 @@ final class SunHttpResponse implements HttpResponse {
     public void write(byte[] bytes) {
         try {
             if (!committed) {
-                exchange.sendResponseHeaders(status, bytes.length == 0 ? -1 : bytes.length);
+                // B-8（D29 关闭）：首次 write 用 chunked（length=0）而非定长，
+                // 之后可以继续 write；流的关闭交给外层 exchange.close()，write 不再自关。
+                // 空 body 仍用 -1 显式声明「无响应体」。
+                exchange.sendResponseHeaders(status, bytes.length == 0 ? -1 : 0);
                 committed = true;
             }
             if (bytes.length > 0) {
-                try (OutputStream os = exchange.getResponseBody()) {
-                    os.write(bytes);
+                if (bodyStream == null) {
+                    bodyStream = exchange.getResponseBody();
                 }
+                bodyStream.write(bytes);
+                bodyStream.flush();
             }
         } catch (IOException e) {
             throw new IllegalStateException("写响应失败", e);

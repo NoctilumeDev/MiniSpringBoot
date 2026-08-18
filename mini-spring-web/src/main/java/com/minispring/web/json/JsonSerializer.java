@@ -112,6 +112,9 @@ public final class JsonSerializer {
                 sb.append(node.asBoolean());
                 break;
             case NUMBER:
+                // B-1：数字节点输出原文，不加引号（原与 STRING 共用 writeString 会把 42 写成 "42"）
+                sb.append(node.asString());
+                break;
             case STRING:
                 writeString(sb, node.asString());
                 break;

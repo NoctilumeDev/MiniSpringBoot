@@ -4,7 +4,9 @@ import java.io.File;
 import java.lang.annotation.Annotation;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  * 类路径扫描器：把一个包下的所有 {@code .class} 文件翻出来，
@@ -67,18 +69,33 @@ public class ClassPathScanningCandidateComponentProvider {
 
     private boolean hasComponentAnnotation(Class<?> clazz) {
         for (Annotation ann : clazz.getAnnotations()) {
-            Class<? extends Annotation> annType = ann.annotationType();
-            if (annType == Component.class) {
+            if (isComponentMeta(ann.annotationType(), new HashSet<>())) {
                 return true;
             }
-            // 不钻进 JDK 元注解（@Target/@Retention/@Documented）的环里
-            if (annType.getName().startsWith("java.lang.annotation")) {
-                continue;
+        }
+        return false;
+    }
+
+    /** 元注解递归判断：带 visiting 防护，@AnnA→@AnnB→@AnnA 互标不会无限递归（B-2）。 */
+    private boolean isComponentMeta(Class<? extends Annotation> annType, Set<Class<? extends Annotation>> visiting) {
+        if (annType == Component.class) {
+            return true;
+        }
+        // 不钻进 JDK 元注解（@Target/@Retention/@Documented）的环里
+        if (annType.getName().startsWith("java.lang.annotation")) {
+            return false;
+        }
+        if (!visiting.add(annType)) {
+            return false;
+        }
+        try {
+            for (Annotation meta : annType.getAnnotations()) {
+                if (isComponentMeta(meta.annotationType(), visiting)) {
+                    return true;
+                }
             }
-            // 元注解递归：@Service 上标注了 @Component
-            if (hasComponentAnnotation(annType)) {
-                return true;
-            }
+        } finally {
+            visiting.remove(annType);
         }
         return false;
     }

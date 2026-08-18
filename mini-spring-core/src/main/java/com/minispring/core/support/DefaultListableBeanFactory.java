@@ -179,8 +179,9 @@ public class DefaultListableBeanFactory implements ListableBeanFactory, BeanDefi
             }
         }
 
-        // 把「BeanPostProcessor 类型的 Bean」自动注册进后处理器链——AOP 代理器就靠这个机制生效
-        if (bean instanceof BeanPostProcessor) {
+        // 把「BeanPostProcessor 类型的单例 Bean」自动注册进后处理器链——AOP 代理器就靠这个机制生效。
+        // B-3：prototype 作用域的 BPP 不注册——它每次 getBean 都是新实例，注册会让处理器链无限膨胀
+        if (bd.isSingleton() && bean instanceof BeanPostProcessor) {
             addBeanPostProcessor((BeanPostProcessor) bean);
         }
 

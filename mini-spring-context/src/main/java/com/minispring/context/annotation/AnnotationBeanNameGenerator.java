@@ -2,6 +2,8 @@ package com.minispring.context.annotation;
 
 import java.beans.Introspector;
 import java.lang.annotation.Annotation;
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  * beanName 生成器：优先取组件注解上显式声明的 {@code value}，否则取「类名首字母小写」。
@@ -35,19 +37,30 @@ public class AnnotationBeanNameGenerator {
         return null;
     }
 
-    /** 判断某个注解类型是否（元注解递归地）贴着 {@link Component}。 */
+    /** 判断某个注解类型是否（元注解递归地）贴着 {@link Component}；带 visiting 防循环（B-2）。 */
     private boolean isComponentAnnotation(Class<? extends Annotation> annType) {
+        return isComponentAnnotation(annType, new HashSet<>());
+    }
+
+    private boolean isComponentAnnotation(Class<? extends Annotation> annType, Set<Class<? extends Annotation>> visiting) {
         if (annType == Component.class) {
             return true;
         }
-        for (Annotation meta : annType.getAnnotations()) {
-            Class<? extends Annotation> metaType = meta.annotationType();
-            if (metaType.getName().startsWith("java.lang.annotation.")) {
-                continue;
+        // 内置元注解（@Target/@Retention/@Documented/@Inherited）不参与语义判断
+        if (annType.getName().startsWith("java.lang.annotation.")) {
+            return false;
+        }
+        if (!visiting.add(annType)) {
+            return false; // @AnnA→@AnnB→@AnnA 循环互标：跳过而非无限递归
+        }
+        try {
+            for (Annotation meta : annType.getAnnotations()) {
+                if (isComponentAnnotation(meta.annotationType(), visiting)) {
+                    return true;
+                }
             }
-            if (isComponentAnnotation(metaType)) {
-                return true;
-            }
+        } finally {
+            visiting.remove(annType);
         }
         return false;
     }
