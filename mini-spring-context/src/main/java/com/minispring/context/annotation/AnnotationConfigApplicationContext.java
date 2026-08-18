@@ -107,7 +107,12 @@ public class AnnotationConfigApplicationContext implements ApplicationContext {
     private void processComponentScan(Class<?> configClass) {
         // 用元注解查找（而非 getAnnotation），这样 @MiniSpringBootApplication 这类复合注解上的 @ComponentScan 也能命中
         ComponentScan componentScan = SimpleAnnotationMetadata.findAnnotation(configClass, ComponentScan.class);
-        String[] basePackages = (componentScan == null || componentScan.basePackages().length == 0)
+        // B6：没标 @ComponentScan 的 @Configuration（含自动配置类）不允许隐式扫描所在包，
+        // 否则同包多个配置类会因 registerComponent 去重跳过类注册、却仍用错误 factoryBeanName 注册 @Bean。
+        if (componentScan == null) {
+            return;
+        }
+        String[] basePackages = (componentScan.basePackages().length == 0)
                 ? new String[]{configClass.getPackageName()}
                 : componentScan.basePackages();
         for (String basePackage : basePackages) {

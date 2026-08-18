@@ -173,7 +173,7 @@
 | D20 | `AutoConfigurationLoader.load` 不去重、不排序：候选顺序 = classpath 上 SPI 文件遍历序 + 文件内行序；重复类名靠 `registerComponent` 的 `containsBeanDefinition` 去重兜底，自动配置类之间无 `@Order/@AutoConfigureOrder` 排序保证 | 多 starter 重复列举同一自动配置；自动配置类 A 依赖 B 提供的 Bean（跨配置的 `@ConditionalOnBean`/`@ConditionalOnMissingBean`）而 B 恰在 A 之后加载时误判 | 已修于 M7：`AutoConfigurationImportSelector` 去重 + `@Order`/`@AutoConfigureOrder` 排序 |
 | D21 | 条件注解仅 AND 语义，无 OR/NOT 组合与嵌套条件（Spring 的 `AllNestedConditions`/`AnyNestedCondition`） | 需要「A 或 B」这类复合条件时 | 按需扩展 `ConditionEvaluator` 支持嵌套条件，或新增 `@ConditionalOnAny` |
 | D22 | `@Bean` 方法不支持参数注入 | `instantiateUsingFactoryMethod` 硬调 `getMethod(name)` 只找无参，带参 `@Bean` 抛 `NoSuchMethodException` | 已修于 M7：`@Bean` 工厂方法参数按类型/名字从容器解析 |
-| D23 | `@Bean` 方法上的 `@Primary`/`@Qualifier` 不生效 | `resolveByPrimary` 读 `bd.getBeanClass()`（=返回类型），读不到方法上的注解 | 已修于 M7：`@Bean` 方法注解留存到 `BeanDefinition` |
+| D23 | `@Bean` 方法上的 `@Primary`/`@Qualifier` 不生效 | `resolveByPrimary` 读 `bd.getBeanClass()`（=返回类型），读不到方法上的注解 | 已修于 M7：`@Bean` 方法注解留存到 `BeanDefinition`；`@Primary` 完整生效，`@Qualifier` 残留「存而不用」半截 → 见 D34 |
 | D24 | `@Controller("name")`/`@RestController("name")` 显式 beanName 无效 | `AnnotationBeanNameGenerator.explicitName` 未查 Controller/RestController | 已修于 M7：识别 `@Controller` 等元注解显式名 |
 | D25 | `@ComponentScan` 扫到的 `@Configuration` 不处理其 `@Bean` | `processComponentScan` 只 `registerComponent` 不递归 | 已修于 M7：扫描器识别 `@Configuration` 后回调 `registerBeanMethods` |
 | D26 | prototype 循环依赖无防护 | 直接递归创建 → StackOverflow，无 `BeanCurrentlyInCreationException` | 已标注于 M7：prototype 不支持循环依赖（教学子集，不实现） |
@@ -184,5 +184,7 @@
 | D31 | Controller 被代理后 `HandlerMethod` 调用失败 | `HandlerMethod` 存原始类 `Method`，`method.invoke(代理实例)` 抛 IllegalArgumentException；因 D8 当前 Controller 无接口不会被 JDK 代理故暂不触发 | 与 D8 一起在 M7 评估（CGLIB / 接口化） |
 | D32 | `@Configuration` 无 CGLIB 增强 | `@Bean` 方法互相调用直接 new、破坏单例语义 | 明确为「教学子集」边界（保持零依赖不引 CGLIB），M7 文档化 |
 | D33 | autoconfigure / config 框架模块自带 application.yml | 与用户应用同名文件在 classpath 上冲突 | 已修于 M7：demo 归位 `mini-spring-demo`，框架模块移除自带 `application.*` |
+| D34 | `@Qualifier` 半截：`BeanDefinition.qualifier` 被 set 但 `getQualifier()` 从未被注入裁决读取，注入端 `@Qualifier(v)` 仍直接按 beanName `getBean`，不支持「限定名 ≠ beanName」的按名匹配 | 需要按限定名（而非 beanName）解析多候选注入时 | M8 完善注入裁决：优先按 qualifier 字段匹配，再回退按 beanName |
+| D35 | `ApplicationListener` 在单例预实例化之后才收集注册（`refresh()` 第 3 步） | Bean 初始化期间（如 `@PostConstruct`）发布的事件会丢失 | M8 事件收口：监听器收集提前到 BPP 实例化后、其余单例预实例化前 |
 
-> 注：B1（ITE 拆包）、B3（Object 方法过滤）为已发布 M3 代码的真实 bug，已单独修复并回归，不列入本表；B2（AOP×循环依赖）已在 M3「落地边界」登记。M6 后审查又修掉 B4（void/null 空响应断连）、B5（内嵌服务器未设线程池导致单线程串行）两个 M5 代码真实 bug，均已修复并回归（`/void` 200 空响应、3 并发 `/sleep` 约 2s 而非 6s），不列入本表。
+> 注：B1（ITE 拆包）、B3（Object 方法过滤）为已发布 M3 代码的真实 bug，已单独修复并回归，不列入本表；B2（AOP×循环依赖）已在 M3「落地边界」登记。M6 后审查又修掉 B4（void/null 空响应断连）、B5（内嵌服务器未设线程池导致单线程串行）两个 M5 代码真实 bug，均已修复并回归。M7 审查再修掉 B6（`processComponentScan` 对未标 `@ComponentScan` 的 `@Configuration` 隐式扫描所在包，M7 改 `findAnnotation` 支持复合注解时漏掉 null 检查——一行 `if (componentScan == null) return;` 修复并回归），不列入本表。
