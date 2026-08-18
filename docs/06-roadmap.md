@@ -38,8 +38,12 @@
 
 ### M0 · 环境就绪 + 规矩冻结 + 方案审批
 
-- **产出**：工具链确认（JDK17 / Maven / Node / MySQL / Docker / 内置浏览器均已就绪）；「落地验收 / React / 串行 / 接口契约」写入文档；本里程碑表获批。
-- **落地证据**：文档更新为 React + 落地口径，git 提交，方案获用户批准。
+- **产出**：工具链确认；「落地验收 / React / 串行 / 接口契约」写入文档；本里程碑表获批；整机环境实测 + 16GB 内存预算锁定。
+- **实测环境（2026-08-18）**：
+  - 硬件：16 GB RAM（实测 15.8 GB）/ 24 逻辑核
+  - 工具链：JDK 17.0.12（Oracle，`JAVA_HOME=D:\IDEA\JDK17`）/ Maven 3.9.11 / Node v24.14.0 + npm 11.9.0 / Docker 29.7.2 + Compose v5.3.1（已装，引擎当前未运行，M8 前启动即可）
+- **16GB 内存预算（Docker Compose 编排）**：Docker Desktop VM ~2GB + MySQL 8 容器 512MB（mem_limit）+ 后端×3 各 512MB（JVM -Xmx256m）≈1.5GB + Nginx 64MB；容器内合计 ≈2.1GB，加宿主（Windows+IDE+浏览器）峰值 ≈11GB，总在 16GB 内，留 ~4GB 余量。
+- **落地证据**：文档更新为 React + 落地口径 + 环境实测记录，git 提交，方案获用户批准。
 
 ### M1 · IoC 容器
 
