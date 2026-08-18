@@ -87,6 +87,11 @@ final class SunHttpRequest implements HttpRequest {
     }
 
     private String decode(String s) {
-        return URLDecoder.decode(s, StandardCharsets.UTF_8);
+        try {
+            return URLDecoder.decode(s, StandardCharsets.UTF_8);
+        } catch (IllegalArgumentException e) {
+            // 非法百分号编码（孤立 % 或 %ZZ）：保留原串，避免整条请求因单个坏参数断连（B7）
+            return s;
+        }
     }
 }
