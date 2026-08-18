@@ -209,7 +209,10 @@ public class DefaultListableBeanFactory implements ListableBeanFactory, BeanDefi
             return instantiateUsingFactoryMethod(beanName, bd);
         }
         try {
-            return bd.getBeanClass().getDeclaredConstructor().newInstance();
+            java.lang.reflect.Constructor<?> constructor = bd.getBeanClass().getDeclaredConstructor();
+            // D43：非 public 类（包私有配置类/组件）同样允许实例化，与 Spring 对齐
+            constructor.setAccessible(true);
+            return constructor.newInstance();
         } catch (Exception e) {
             throw new BeansException("实例化 Bean[" + beanName + "] 失败", e);
         }
@@ -233,6 +236,13 @@ public class DefaultListableBeanFactory implements ListableBeanFactory, BeanDefi
     }
 
     private Method findFactoryMethod(Class<?> factoryClass, String methodName) {
+        // D43：先扫本类声明的方法（含非 public 的包私有 @Bean），再回退 public 方法（含接口默认方法）
+        for (Method method : factoryClass.getDeclaredMethods()) {
+            if (method.getName().equals(methodName)) {
+                method.setAccessible(true);
+                return method;
+            }
+        }
         for (Method method : factoryClass.getMethods()) {
             if (method.getName().equals(methodName)) {
                 return method;
@@ -363,7 +373,14 @@ public class DefaultListableBeanFactory implements ListableBeanFactory, BeanDefi
 
     private void invokeNoArgMethod(String beanName, Object bean, String methodName) {
         try {
-            Method method = bean.getClass().getMethod(methodName);
+            Method method;
+            try {
+                // D43：init/destroy 回调允许非 public（与注册侧 getDeclaredMethods 对称）
+                method = bean.getClass().getDeclaredMethod(methodName);
+                method.setAccessible(true);
+            } catch (NoSuchMethodException e) {
+                method = bean.getClass().getMethod(methodName);
+            }
             method.invoke(bean);
         } catch (Exception e) {
             throw new BeansException("Bean[" + beanName + "] 方法[" + methodName + "] 调用失败", e);
