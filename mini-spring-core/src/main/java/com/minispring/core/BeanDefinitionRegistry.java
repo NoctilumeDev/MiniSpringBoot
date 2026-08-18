@@ -10,4 +10,7 @@ public interface BeanDefinitionRegistry {
     BeanDefinition getBeanDefinition(String beanName) throws BeansException;
 
     boolean containsBeanDefinition(String beanName);
+
+    /** 返回当前已登记的所有 Bean 名。 */
+    String[] getBeanDefinitionNames();
 }

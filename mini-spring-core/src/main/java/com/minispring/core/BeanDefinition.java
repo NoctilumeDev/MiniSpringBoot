@@ -17,6 +17,8 @@ public class BeanDefinition {
     private String scope = SCOPE_SINGLETON;
     private String initMethodName;
     private String destroyMethodName;
+    private String factoryBeanName;
+    private String factoryMethodName;
     private final List<PropertyValue> propertyValues = new ArrayList<>();
 
     public BeanDefinition(Class<?> beanClass) {
@@ -25,6 +27,28 @@ public class BeanDefinition {
 
     public Class<?> getBeanClass() {
         return beanClass;
+    }
+
+    /** 该 Bean 由哪个工厂 Bean（如 @Configuration 类）生产；为空表示直接 new。 */
+    public String getFactoryBeanName() {
+        return factoryBeanName;
+    }
+
+    public void setFactoryBeanName(String factoryBeanName) {
+        this.factoryBeanName = factoryBeanName;
+    }
+
+    /** 该 Bean 由工厂方法的哪个方法生产（对应 @Bean 方法名）。 */
+    public String getFactoryMethodName() {
+        return factoryMethodName;
+    }
+
+    public void setFactoryMethodName(String factoryMethodName) {
+        this.factoryMethodName = factoryMethodName;
+    }
+
+    public boolean isFactoryMethod() {
+        return factoryMethodName != null;
     }
 
     public String getScope() {

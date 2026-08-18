@@ -15,6 +15,7 @@
     <!-- 严格串行：只列出已落地的模块，随里程碑推进逐个添加 -->
     <modules>
         <module>mini-spring-core</module>
+        <module>mini-spring-context</module>
     </modules>
 
     <properties>

@@ -2,11 +2,12 @@ package com.minispring.core.support;
 
 import com.minispring.core.BeanDefinition;
 import com.minispring.core.BeanDefinitionRegistry;
-import com.minispring.core.BeanFactory;
 import com.minispring.core.BeanPostProcessor;
 import com.minispring.core.BeansException;
 import com.minispring.core.DisposableBean;
 import com.minispring.core.InitializingBean;
+import com.minispring.core.InstantiationAwareBeanPostProcessor;
+import com.minispring.core.ListableBeanFactory;
 import com.minispring.core.ObjectFactory;
 import com.minispring.core.PropertyValue;
 
@@ -30,7 +31,7 @@ import java.util.concurrent.ConcurrentHashMap;
  *   <li>三级 {@code singletonFactories}    ：能产出半成品的工厂</li>
  * </ul>
  */
-public class DefaultListableBeanFactory implements BeanFactory, BeanDefinitionRegistry, AutoCloseable {
+public class DefaultListableBeanFactory implements ListableBeanFactory, BeanDefinitionRegistry, AutoCloseable {
 
     // 图纸仓库
     private final Map<String, BeanDefinition> beanDefinitionMap = new ConcurrentHashMap<>();
@@ -66,6 +67,11 @@ public class DefaultListableBeanFactory implements BeanFactory, BeanDefinitionRe
     @Override
     public boolean containsBeanDefinition(String beanName) {
         return this.beanDefinitionMap.containsKey(beanName);
+    }
+
+    @Override
+    public String[] getBeanDefinitionNames() {
+        return this.beanDefinitionMap.keySet().toArray(new String[0]);
     }
 
     // ---------- BeanFactory ----------
@@ -114,6 +120,18 @@ public class DefaultListableBeanFactory implements BeanFactory, BeanDefinitionRe
         return containsBeanDefinition(name);
     }
 
+    @Override
+    public String[] getBeanNamesForType(Class<?> type) {
+        List<String> matched = new ArrayList<>();
+        for (Map.Entry<String, BeanDefinition> entry : beanDefinitionMap.entrySet()) {
+            Class<?> beanClass = entry.getValue().getBeanClass();
+            if (type.isAssignableFrom(beanClass)) {
+                matched.add(entry.getKey());
+            }
+        }
+        return matched.toArray(new String[0]);
+    }
+
     // ---------- 创建主流程 ----------
 
     private Object createBean(String beanName, BeanDefinition bd) {
@@ -144,6 +162,9 @@ public class DefaultListableBeanFactory implements BeanFactory, BeanDefinitionRe
     }
 
     private Object instantiate(String beanName, BeanDefinition bd) {
+        if (bd.isFactoryMethod()) {
+            return instantiateUsingFactoryMethod(beanName, bd);
+        }
         try {
             return bd.getBeanClass().getDeclaredConstructor().newInstance();
         } catch (Exception e) {
@@ -151,11 +172,28 @@ public class DefaultListableBeanFactory implements BeanFactory, BeanDefinitionRe
         }
     }
 
-    /** 属性填充：把 PropertyValue 逐个注入字段；引用类型的值会触发其依赖 Bean 的真实创建。 */
+    /** 由 @Bean 方法生产 Bean：先拿到工厂 Bean，再调用其工厂方法（本阶段仅支持无参工厂方法）。 */
+    private Object instantiateUsingFactoryMethod(String beanName, BeanDefinition bd) {
+        Object factoryBean = getBean(bd.getFactoryBeanName());
+        try {
+            Method method = factoryBean.getClass().getMethod(bd.getFactoryMethodName());
+            return method.invoke(factoryBean);
+        } catch (Exception e) {
+            throw new BeansException("工厂方法[" + bd.getFactoryMethodName() + "]实例化 Bean[" + beanName + "] 失败", e);
+        }
+    }
+
+    /** 属性填充：先注入 XML 风格的 PropertyValue，再触发注解注入钩子（@Autowired）。 */
     private void populateBean(String beanName, BeanDefinition bd, Object bean) {
         for (PropertyValue pv : bd.getPropertyValues()) {
             Object value = pv.isRef() ? getBean((String) pv.getValue()) : pv.getValue();
             applyPropertyValue(beanName, bean, pv.getName(), value);
+        }
+        // 注解驱动的字段/构造注入（@Autowired）：在填充阶段、初始化回调之前执行
+        for (BeanPostProcessor processor : beanPostProcessors) {
+            if (processor instanceof InstantiationAwareBeanPostProcessor) {
+                ((InstantiationAwareBeanPostProcessor) processor).postProcessProperties(bean, beanName);
+            }
         }
     }
 
