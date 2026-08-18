@@ -43,6 +43,8 @@ public class ConfigDemo {
 
         if ("prod".equals(profile)) {
             check(app.getPort() == 8443, "@Value 注入 server.port=8443（prod 覆盖默认）");
+            check("yml-profile-wins".equals(app.getConflict()),
+                    "@Value 注入 app.conflict=yml-profile-wins（profile 层 yml 覆盖 properties，D37）");
         } else {
             check(app.getPort() == 9090, "@Value 注入 server.port=9090（默认值）");
         }

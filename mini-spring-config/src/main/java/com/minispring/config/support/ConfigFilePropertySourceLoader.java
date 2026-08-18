@@ -30,10 +30,10 @@ public class ConfigFilePropertySourceLoader {
             return; // 没有任何配置文件
         }
 
-        // 带 profile 的文件，优先级高于默认文件（插到锚点之前）
+        // 带 profile 的文件，优先级高于默认文件（插到锚点之前）；与默认层同规则：yml 高于 properties，故先插 yml
         for (String profile : environment.getActiveProfiles()) {
-            addBeforeIfPresent(environment, DEFAULT_NAME + "-" + profile + ".properties", anchor);
             addBeforeIfPresent(environment, DEFAULT_NAME + "-" + profile + ".yml", anchor);
+            addBeforeIfPresent(environment, DEFAULT_NAME + "-" + profile + ".properties", anchor);
         }
     }
 

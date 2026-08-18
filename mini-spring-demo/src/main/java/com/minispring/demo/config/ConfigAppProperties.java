@@ -39,6 +39,10 @@ public class ConfigAppProperties {
     @Value("${app.${app.pointer}}")
     private String nestedPlaceholder;
 
+    // prod 层同名 key：验证 profile 文件里 yml 优先级也高于 properties（D37）；默认 profile 无此 key，走空默认值
+    @Value("${app.conflict:}")
+    private String conflict;
+
     public String getName() {
         return name;
     }
@@ -77,5 +81,9 @@ public class ConfigAppProperties {
 
     public String getNestedPlaceholder() {
         return nestedPlaceholder;
+    }
+
+    public String getConflict() {
+        return conflict;
     }
 }

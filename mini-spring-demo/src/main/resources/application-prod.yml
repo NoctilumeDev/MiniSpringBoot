@@ -3,3 +3,4 @@ server:
   port: 8443
 app:
   env: prod
+  conflict: yml-profile-wins
