@@ -65,7 +65,8 @@
 ### M4 · 外部化配置
 
 - **产出**：`Environment/PropertySource`、properties/yaml 解析、`@Value` 占位符与默认值、Profile。
-- **落地证据**：demo 从 `application.yml` 真实读值注入字段；切换 profile 后值真实变化。
+- **落地证据**：`ConfigDemo` 真实 `main` 启动，从 `application.yml` + `application.properties` 读值注入字段，并逐一断言——yaml 二级嵌套、列表拍平（`app.features[0]/[1]`）、int 类型转换、默认值（`${app.missing:3000}`）、嵌套占位符（`${app.${app.pointer}}`）、properties 解析（`app.version`）、prod profile 覆盖 `server.port`（8080→8443），全部在运行期真实通过。
+- **落地边界（显式技术债）**：YAML 仅为「教学子集」、`@Value` 不支持 SpEL 与复杂类型、Profile 仅手动激活、配置文件仅 classpath 根——详见 §7 的 D10–D13。
 
 ### M5 · Web 与 MVC
 
@@ -129,7 +130,7 @@
 
 ## 7. 已知局限与技术债（代码审查登记）
 
-> 下列各项经 M0–M3 代码审查显式登记，当前 demo 均不触发，仅作诚实标注；按「接上时机」逐项关闭。
+> 下列各项经 M0–M4 代码审查显式登记，当前 demo 均不触发，仅作诚实标注；按「接上时机」逐项关闭。
 
 | 编号 | 局限 / 技术债 | 触发条件 | 接上时机 / 做法 |
 | --- | --- | --- | --- |
@@ -141,5 +142,10 @@
 | D6 | `getBeanNamesForType` 不感知 JDK 代理，按具体类注入会 ClassCastException | 按具体类而非接口注入被代理 Bean | 保持「按接口注入」约定（JDK 代理固有限制，与 Spring 一致） |
 | D7 | 单例创建无线程安全保护 | 运行时懒加载/动态注册单例时存在竞态 | 单例 refresh 预实例化 + 服务器其后启动即安全；未来懒加载再加锁 |
 | D8 | AOP 仅 JDK 动态代理，无接口的类无法被织入 | 对具体类（如 M5 的 Controller）做 AOP 时 | M5/M6 前评估：引入 CGLIB 代理策略，或将被增强 Bean 接口化 |
+| D9 | demo 包名跨模块重复：`com.minispring.demo` 同时出现在 core（IocDemo）与 context（demo 组件），Scanner 的 `getResource` 按 classpath 顺序命中首个目录，扫描结果依赖 classpath 顺序 | 同一包名跨模块、以文件目录扫描时 | M5 组装前把 demo 包模块化（`core.demo` / `context.demo`） |
+| D10 | Profile 激活仅支持手动 `setActiveProfiles`，未从 `spring.profiles.active` / `SPRING_PROFILES_ACTIVE` 自动读取 | 部署阶段按环境变量切换 profile | M10 部署前接上 |
+| D11 | YAML 解析为「教学子集」：无 anchor、多行字符串（`|`/`>`）、list-of-map 嵌套；值内 `#` 被当作注释截断 | 配置用到这些语法 | 按需扩展 `YamlPropertySourceLoader` |
+| D12 | `@Value` 不支持 SpEL（`#{...}`）；类型转换仅 String + 基本/包装类型（无 List/Map/枚举） | 注入复杂类型或 SpEL 表达式 | M5 参数绑定时一并评估，或收窄标注 |
+| D13 | 配置文件仅 classpath 根 `application.*`，不支持 `config/` 子目录、命令行参数覆盖 | 外部部署自定义配置位置 | M10 部署规范统一约定 |
 
 > 注：B1（ITE 拆包）、B3（Object 方法过滤）为已发布 M3 代码的真实 bug，已单独修复并回归，不列入本表；B2（AOP×循环依赖）已在 M3「落地边界」登记。

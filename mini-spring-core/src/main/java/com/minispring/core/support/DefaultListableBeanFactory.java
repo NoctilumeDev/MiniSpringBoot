@@ -6,11 +6,13 @@ import com.minispring.core.BeanFactoryAware;
 import com.minispring.core.BeanPostProcessor;
 import com.minispring.core.BeansException;
 import com.minispring.core.DisposableBean;
+import com.minispring.core.EnvironmentAware;
 import com.minispring.core.InitializingBean;
 import com.minispring.core.InstantiationAwareBeanPostProcessor;
 import com.minispring.core.ListableBeanFactory;
 import com.minispring.core.ObjectFactory;
 import com.minispring.core.PropertyValue;
+import com.minispring.core.env.Environment;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -44,6 +46,13 @@ public class DefaultListableBeanFactory implements ListableBeanFactory, BeanDefi
 
     // 质检员（BeanPostProcessor）
     private final List<BeanPostProcessor> beanPostProcessors = new ArrayList<>();
+
+    // 配置环境（Environment），由上下文注入；@Value 处理器靠它以占位符查值
+    private Environment environment;
+
+    public void setEnvironment(Environment environment) {
+        this.environment = environment;
+    }
 
     public void addBeanPostProcessor(BeanPostProcessor processor) {
         this.beanPostProcessors.add(processor);
@@ -232,6 +241,9 @@ public class DefaultListableBeanFactory implements ListableBeanFactory, BeanDefi
     private Object initializeBean(String beanName, BeanDefinition bd, Object bean) {
         if (bean instanceof BeanFactoryAware) {
             ((BeanFactoryAware) bean).setBeanFactory(this);
+        }
+        if (bean instanceof EnvironmentAware) {
+            ((EnvironmentAware) bean).setEnvironment(environment);
         }
         for (BeanPostProcessor processor : beanPostProcessors) {
             bean = processor.postProcessBeforeInitialization(bean, beanName);

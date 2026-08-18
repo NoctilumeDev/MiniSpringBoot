@@ -1,0 +1,5 @@
+# prod 环境：覆盖默认配置里的 server.port
+server:
+  port: 8443
+app:
+  env: prod

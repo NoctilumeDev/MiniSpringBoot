@@ -3,6 +3,8 @@ package com.minispring.context.annotation;
 import com.minispring.context.ApplicationContext;
 import com.minispring.core.BeanDefinition;
 import com.minispring.core.BeanPostProcessor;
+import com.minispring.core.env.Environment;
+import com.minispring.core.env.StandardEnvironment;
 import com.minispring.core.support.DefaultListableBeanFactory;
 
 /**
@@ -12,12 +14,19 @@ import com.minispring.core.support.DefaultListableBeanFactory;
 public class AnnotationConfigApplicationContext implements ApplicationContext {
 
     private final DefaultListableBeanFactory beanFactory;
+    private final Environment environment;
     private final ClassPathScanningCandidateComponentProvider scanner;
     private final AnnotationBeanNameGenerator beanNameGenerator;
     private final AnnotatedBeanDefinitionReader reader;
 
     public AnnotationConfigApplicationContext(Class<?>... primarySources) {
+        this(new StandardEnvironment(), primarySources);
+    }
+
+    public AnnotationConfigApplicationContext(Environment environment, Class<?>... primarySources) {
+        this.environment = environment;
         this.beanFactory = new DefaultListableBeanFactory();
+        this.beanFactory.setEnvironment(environment);
         this.scanner = new ClassPathScanningCandidateComponentProvider();
         this.beanNameGenerator = new AnnotationBeanNameGenerator();
         this.reader = new AnnotatedBeanDefinitionReader(beanFactory);
@@ -31,6 +40,11 @@ public class AnnotationConfigApplicationContext implements ApplicationContext {
         }
         // 预实例化所有单例
         refresh();
+    }
+
+    /** 返回当前上下文持有的配置环境（后续 Web 阶段读取 server.port 等会用到）。 */
+    public Environment getEnvironment() {
+        return environment;
     }
 
     private void registerConfigClass(Class<?> configClass) {

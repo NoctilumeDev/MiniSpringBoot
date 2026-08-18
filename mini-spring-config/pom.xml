@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.minispring</groupId>
+        <artifactId>minispring-parent</artifactId>
+        <version>0.1.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>mini-spring-config</artifactId>
+    <name>mini-spring-config</name>
+    <description>外部化配置：Environment / PropertySource / properties·yaml 解析 / @Value / Profile</description>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.minispring</groupId>
+            <artifactId>mini-spring-context</artifactId>
+            <version>0.1.0-SNAPSHOT</version>
+        </dependency>
+    </dependencies>
+</project>
