@@ -32,5 +32,6 @@ public class DemoApplication {
 
         System.out.println("  [http] 内嵌服务器已启动: http://localhost:" + port);
         System.out.println("  [http] 接口: GET /hello | GET /users/{id} | POST /users | GET /void | GET /sleep | GET /（静态资源）");
+        System.out.println("  [http] 全链路能力: GET /capability/aop/order | GET /capability/aop/fail | GET /capability/autoconfig | GET /capability/starter/format");
     }
 }

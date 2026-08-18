@@ -186,5 +186,6 @@
 | D33 | autoconfigure / config 框架模块自带 application.yml | 与用户应用同名文件在 classpath 上冲突 | 已修于 M7：demo 归位 `mini-spring-demo`，框架模块移除自带 `application.*` |
 | D34 | `@Qualifier` 半截：`BeanDefinition.qualifier` 被 set 但 `getQualifier()` 从未被注入裁决读取，注入端 `@Qualifier(v)` 仍直接按 beanName `getBean`，不支持「限定名 ≠ beanName」的按名匹配 | 需要按限定名（而非 beanName）解析多候选注入时 | M8 完善注入裁决：优先按 qualifier 字段匹配，再回退按 beanName |
 | D35 | `ApplicationListener` 在单例预实例化之后才收集注册（`refresh()` 第 3 步） | Bean 初始化期间（如 `@PostConstruct`）发布的事件会丢失 | M8 事件收口：监听器收集提前到 BPP 实例化后、其余单例预实例化前 |
+| D36 | web 框架模块自带 `static/index.html`（M5 demo 遗留），与 demo 静态资源在 classpath 上冲突，`ClassLoader.getResourceAsStream` 按 classpath 顺序命中 web 模块那份 | 真实全链路（demo 依赖 web）访问 `/` 时 | 已修于 M7：删除 web 模块自带静态资源，静态资源归位 `mini-spring-demo` |
 
 > 注：B1（ITE 拆包）、B3（Object 方法过滤）为已发布 M3 代码的真实 bug，已单独修复并回归，不列入本表；B2（AOP×循环依赖）已在 M3「落地边界」登记。M6 后审查又修掉 B4（void/null 空响应断连）、B5（内嵌服务器未设线程池导致单线程串行）两个 M5 代码真实 bug，均已修复并回归。M7 审查再修掉 B6（`processComponentScan` 对未标 `@ComponentScan` 的 `@Configuration` 隐式扫描所在包，M7 改 `findAnnotation` 支持复合注解时漏掉 null 检查——一行 `if (componentScan == null) return;` 修复并回归），不列入本表。
