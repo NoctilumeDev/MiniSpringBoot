@@ -1,9 +1,14 @@
 package com.minispring.context.annotation;
 
 import java.beans.Introspector;
+import java.lang.annotation.Annotation;
 
 /**
- * beanName 生成器：优先取注解上显式声明的 {@code value}，否则取「类名首字母小写」。
+ * beanName 生成器：优先取组件注解上显式声明的 {@code value}，否则取「类名首字母小写」。
+ *
+ * <p>D24：不写死 {@code @Component/@Service/@Repository/@Configuration}，而是反扫类上所有
+ * 「元注解带 {@link Component}」的组件注解、读其 {@code value()}。这样 web 层的
+ * {@code @Controller("name")/@RestController("name")} 即便不在本模块、也无需反向依赖就能被识别。
  */
 public class AnnotationBeanNameGenerator {
 
@@ -12,24 +17,47 @@ public class AnnotationBeanNameGenerator {
         return explicit != null ? explicit : Introspector.decapitalize(beanClass.getSimpleName());
     }
 
-    /** 从组件注解族里读显式 beanName（@Component/@Service/@Repository/@Configuration 的 value）。 */
     private String explicitName(Class<?> beanClass) {
-        Component c = beanClass.getAnnotation(Component.class);
-        if (c != null && !c.value().isEmpty()) {
-            return c.value();
-        }
-        Service s = beanClass.getAnnotation(Service.class);
-        if (s != null && !s.value().isEmpty()) {
-            return s.value();
-        }
-        Repository r = beanClass.getAnnotation(Repository.class);
-        if (r != null && !r.value().isEmpty()) {
-            return r.value();
-        }
-        Configuration cfg = beanClass.getAnnotation(Configuration.class);
-        if (cfg != null && !cfg.value().isEmpty()) {
-            return cfg.value();
+        for (Annotation ann : beanClass.getAnnotations()) {
+            Class<? extends Annotation> annType = ann.annotationType();
+            // 内置元注解（@Target/@Retention/@Documented/@Inherited）不参与语义判断
+            if (annType.getName().startsWith("java.lang.annotation.")) {
+                continue;
+            }
+            if (!isComponentAnnotation(annType)) {
+                continue;
+            }
+            String value = readValue(ann, annType);
+            if (value != null && !value.isEmpty()) {
+                return value;
+            }
         }
         return null;
+    }
+
+    /** 判断某个注解类型是否（元注解递归地）贴着 {@link Component}。 */
+    private boolean isComponentAnnotation(Class<? extends Annotation> annType) {
+        if (annType == Component.class) {
+            return true;
+        }
+        for (Annotation meta : annType.getAnnotations()) {
+            Class<? extends Annotation> metaType = meta.annotationType();
+            if (metaType.getName().startsWith("java.lang.annotation.")) {
+                continue;
+            }
+            if (isComponentAnnotation(metaType)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private String readValue(Annotation ann, Class<? extends Annotation> annType) {
+        try {
+            Object value = annType.getMethod("value").invoke(ann);
+            return value instanceof String ? (String) value : null;
+        } catch (ReflectiveOperationException ignored) {
+            return null;
+        }
     }
 }

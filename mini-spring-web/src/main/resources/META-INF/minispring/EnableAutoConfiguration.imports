@@ -1,0 +1,2 @@
+# Web/MVC 自动配置 SPI
+com.minispring.web.autoconfigure.WebMvcAutoConfiguration

@@ -72,7 +72,8 @@ public class AutowiredAnnotationBeanPostProcessor implements InstantiationAwareB
         String primary = null;
         for (String name : candidates) {
             BeanDefinition bd = registry.getBeanDefinition(name);
-            if (bd.getBeanClass() != null && bd.getBeanClass().isAnnotationPresent(Primary.class)) {
+            // 统一看 BeanDefinition.isPrimary()——既覆盖类级 @Primary，也覆盖 @Bean 方法级 @Primary（D23）
+            if (bd.isPrimary()) {
                 if (primary != null) {
                     throw new BeansException("注入[" + beanName + "." + fieldName + "]失败：存在多个 @Primary 候选");
                 }

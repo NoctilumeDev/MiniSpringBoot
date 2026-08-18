@@ -45,6 +45,16 @@ public class AnnotatedBeanDefinitionReader {
             if (method.isAnnotationPresent(Scope.class)) {
                 bd.setScope(method.getAnnotation(Scope.class).value());
             }
+            // D23：@Bean 方法上的 @Primary / @Qualifier 留存到 BeanDefinition，供多候选注入裁决
+            if (method.isAnnotationPresent(Primary.class)) {
+                bd.setPrimary(true);
+            }
+            if (method.isAnnotationPresent(Qualifier.class)) {
+                String qualifier = method.getAnnotation(Qualifier.class).value();
+                if (qualifier != null && !qualifier.isEmpty()) {
+                    bd.setQualifier(qualifier);
+                }
+            }
             registry.registerBeanDefinition(beanName, bd);
         }
     }

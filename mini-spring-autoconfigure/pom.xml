@@ -20,11 +20,5 @@
             <artifactId>mini-spring-context</artifactId>
             <version>0.1.0-SNAPSHOT</version>
         </dependency>
-        <!-- 仅 demo 需要：用 ConfigFilePropertySourceLoader 加载 application.yml；框架内核条件机制只依赖 core.env.Environment -->
-        <dependency>
-            <groupId>com.minispring</groupId>
-            <artifactId>mini-spring-config</artifactId>
-            <version>0.1.0-SNAPSHOT</version>
-        </dependency>
     </dependencies>
 </project>

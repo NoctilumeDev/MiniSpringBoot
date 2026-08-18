@@ -11,12 +11,17 @@ import com.minispring.core.InitializingBean;
 import com.minispring.core.InstantiationAwareBeanPostProcessor;
 import com.minispring.core.ListableBeanFactory;
 import com.minispring.core.ObjectFactory;
+import com.minispring.core.SmartInstantiationAwareBeanPostProcessor;
 import com.minispring.core.PropertyValue;
+import com.minispring.core.SingletonBeanRegistry;
 import com.minispring.core.env.Environment;
 
+import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.lang.reflect.Parameter;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -34,7 +39,7 @@ import java.util.concurrent.ConcurrentHashMap;
  *   <li>三级 {@code singletonFactories}    ：能产出半成品的工厂</li>
  * </ul>
  */
-public class DefaultListableBeanFactory implements ListableBeanFactory, BeanDefinitionRegistry, AutoCloseable {
+public class DefaultListableBeanFactory implements ListableBeanFactory, BeanDefinitionRegistry, SingletonBeanRegistry, AutoCloseable {
 
     // 图纸仓库
     private final Map<String, BeanDefinition> beanDefinitionMap = new ConcurrentHashMap<>();
@@ -142,6 +147,14 @@ public class DefaultListableBeanFactory implements ListableBeanFactory, BeanDefi
         return matched.toArray(new String[0]);
     }
 
+    /** 覆盖（或新增）某个单例：供后处理器（如 AOP 代理器）在 Bean 创建完成后补代理回填一级缓存。 */
+    @Override
+    public void registerSingleton(String beanName, Object singletonObject) {
+        singletonObjects.put(beanName, singletonObject);
+        earlySingletonObjects.remove(beanName);
+        singletonFactories.remove(beanName);
+    }
+
     // ---------- 创建主流程 ----------
 
     private Object createBean(String beanName, BeanDefinition bd) {
@@ -158,6 +171,14 @@ public class DefaultListableBeanFactory implements ListableBeanFactory, BeanDefi
         populateBean(beanName, bd, bean);
         bean = initializeBean(beanName, bd, bean);
 
+        // 循环依赖时，提前暴露的可能是代理；若初始化后仍是原对象，则采用提前暴露的代理作最终单例（B2）
+        if (bd.isSingleton()) {
+            Object earlyReference = earlySingletonObjects.get(beanName);
+            if (earlyReference != null && earlyReference != bean) {
+                bean = earlyReference;
+            }
+        }
+
         // 把「BeanPostProcessor 类型的 Bean」自动注册进后处理器链——AOP 代理器就靠这个机制生效
         if (bean instanceof BeanPostProcessor) {
             addBeanPostProcessor((BeanPostProcessor) bean);
@@ -171,9 +192,16 @@ public class DefaultListableBeanFactory implements ListableBeanFactory, BeanDefi
         return bean;
     }
 
-    /** 获取提前引用。M1 阶段无 AOP 代理，直接返回原始对象；M3 之后在此处可能返回代理。 */
+    /** 获取提前引用：委托 {@link SmartInstantiationAwareBeanPostProcessor}（如 AOP 代理器）提前生成代理。 */
     private Object getEarlyBeanReference(String beanName, Object bean) {
-        return bean;
+        Object exposed = bean;
+        for (BeanPostProcessor processor : beanPostProcessors) {
+            if (processor instanceof SmartInstantiationAwareBeanPostProcessor) {
+                exposed = ((SmartInstantiationAwareBeanPostProcessor) processor)
+                        .getEarlyBeanReference(exposed, beanName);
+            }
+        }
+        return exposed;
     }
 
     private Object instantiate(String beanName, BeanDefinition bd) {
@@ -187,15 +215,77 @@ public class DefaultListableBeanFactory implements ListableBeanFactory, BeanDefi
         }
     }
 
-    /** 由 @Bean 方法生产 Bean：先拿到工厂 Bean，再调用其工厂方法（本阶段仅支持无参工厂方法）。 */
+    /**
+     * 由 @Bean 方法生产 Bean：先拿到工厂 Bean，再调用其工厂方法。
+     *
+     * <p>D22：工厂方法可带参数——每个参数按「{@code @Qualifier} 名 → 唯一类型 → {@code @Primary}」从容器解析。
+     * 为了不让 core 反向依赖 context 的注解，{@code @Qualifier} 用全限定名字符串反射识别。
+     */
     private Object instantiateUsingFactoryMethod(String beanName, BeanDefinition bd) {
         Object factoryBean = getBean(bd.getFactoryBeanName());
         try {
-            Method method = factoryBean.getClass().getMethod(bd.getFactoryMethodName());
-            return method.invoke(factoryBean);
+            Method method = findFactoryMethod(factoryBean.getClass(), bd.getFactoryMethodName());
+            Object[] args = resolveFactoryMethodArgs(method);
+            return method.invoke(factoryBean, args);
         } catch (Exception e) {
             throw new BeansException("工厂方法[" + bd.getFactoryMethodName() + "]实例化 Bean[" + beanName + "] 失败", e);
         }
+    }
+
+    private Method findFactoryMethod(Class<?> factoryClass, String methodName) {
+        for (Method method : factoryClass.getMethods()) {
+            if (method.getName().equals(methodName)) {
+                return method;
+            }
+        }
+        throw new BeansException("工厂方法[" + methodName + "]不存在");
+    }
+
+    private Object[] resolveFactoryMethodArgs(Method method) {
+        Parameter[] parameters = method.getParameters();
+        Object[] args = new Object[parameters.length];
+        for (int i = 0; i < parameters.length; i++) {
+            args[i] = resolveFactoryMethodArg(parameters[i]);
+        }
+        return args;
+    }
+
+    private Object resolveFactoryMethodArg(Parameter parameter) {
+        String qualifier = findQualifierValue(parameter);
+        if (qualifier != null && !qualifier.isEmpty() && containsBean(qualifier)) {
+            return getBean(qualifier);
+        }
+        Class<?> type = parameter.getType();
+        String[] candidates = getBeanNamesForType(type);
+        if (candidates.length == 1) {
+            return getBean(candidates[0]);
+        }
+        if (candidates.length > 1) {
+            for (String name : candidates) {
+                if (getBeanDefinition(name).isPrimary()) {
+                    return getBean(name);
+                }
+            }
+            throw new BeansException("工厂方法参数类型[" + type.getName() + "]有多个候选: " + Arrays.toString(candidates)
+                    + "，请用 @Qualifier 或 @Primary 拍板");
+        }
+        throw new BeansException("工厂方法参数类型[" + type.getName() + "]找不到可用 Bean");
+    }
+
+    /** 反射读取参数上的 @Qualifier value（按全限定名，避免 core 反向依赖 context 注解）。 */
+    private String findQualifierValue(Parameter parameter) {
+        for (Annotation annotation : parameter.getAnnotations()) {
+            if (!annotation.annotationType().getName().equals("com.minispring.context.annotation.Qualifier")) {
+                continue;
+            }
+            try {
+                Object value = annotation.annotationType().getMethod("value").invoke(annotation);
+                return value == null ? null : String.valueOf(value);
+            } catch (ReflectiveOperationException ignored) {
+                return null;
+            }
+        }
+        return null;
     }
 
     /** 属性填充：先注入 XML 风格的 PropertyValue，再触发注解注入钩子（@Autowired）。 */

@@ -21,6 +21,14 @@ public class StaticResourceHandler {
         if (path == null || path.equals("/")) {
             path = "/index.html";
         }
+        // D18：显式拒绝目录穿越（..）。classpath 资源读取本身会被 JarFile/FileSystem 挡住，
+        // 但教学子集不依赖底层实现做兜底，入口处先做防御性校验更直观、也便于测试。
+        if (path.contains("..")) {
+            response.setStatus(403);
+            response.setContentType("text/plain; charset=utf-8");
+            response.write("403 Forbidden");
+            return true;
+        }
         String location = PREFIX + path;
         try (InputStream in = getClass().getClassLoader().getResourceAsStream(location)) {
             if (in == null) {

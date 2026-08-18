@@ -1,6 +1,0 @@
-# 自动配置 SPI：每行一个自动配置类全限定名（# 开头为注释）
-com.minispring.autoconfigure.demo.GreetingAutoConfiguration
-com.minispring.autoconfigure.demo.NamingAutoConfiguration
-com.minispring.autoconfigure.demo.PresentFeatureAutoConfiguration
-com.minispring.autoconfigure.demo.AbsentFeatureAutoConfiguration
-com.minispring.autoconfigure.demo.OptionalFeatureAutoConfiguration

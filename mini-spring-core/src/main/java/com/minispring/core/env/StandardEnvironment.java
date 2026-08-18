@@ -88,26 +88,30 @@ public class StandardEnvironment implements Environment {
         String key = sep >= 0 ? content.substring(0, sep) : content;
         String defaultValue = sep >= 0 ? content.substring(sep + 1) : null;
 
-        // 简单循环引用防护：${a} 的解析过程中又出现 ${a}
+        // 循环引用防护：${a} 的「整条解析链」结束前，key 始终待在 visiting 里；
+        // 若解析值 / 默认值 / 拼接结果里又引回同一 key，立即判死，避免 StackOverflow（D27）。
         if (!visiting.add(key)) {
             throw new IllegalStateException("占位符循环引用: " + key);
         }
-        String resolvedKey = doResolve(key, visiting);
-        visiting.remove(key);
+        try {
+            String resolvedKey = doResolve(key, visiting);
 
-        String value = getProperty(resolvedKey);
-        String replacement;
-        if (value != null) {
-            replacement = value;
-        } else if (defaultValue != null) {
-            replacement = doResolve(defaultValue, visiting);
-        } else {
-            throw new IllegalStateException("无法解析占位符 [" + content + "]（在源 [" + text + "] 中）");
+            String value = getProperty(resolvedKey);
+            String replacement;
+            if (value != null) {
+                replacement = value;
+            } else if (defaultValue != null) {
+                replacement = doResolve(defaultValue, visiting);
+            } else {
+                throw new IllegalStateException("无法解析占位符 [" + content + "]（在源 [" + text + "] 中）");
+            }
+
+            String before = text.substring(0, start);
+            String after = text.substring(end + 1);
+            return doResolve(before + replacement + after, visiting);
+        } finally {
+            visiting.remove(key);
         }
-
-        String before = text.substring(0, start);
-        String after = text.substring(end + 1);
-        return doResolve(before + replacement + after, visiting);
     }
 
     /** 找到与第 {@code start} 个 {@code ${} 匹配的右大括号，正确跳过嵌套占位符。 */

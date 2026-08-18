@@ -19,6 +19,8 @@ public class BeanDefinition {
     private String destroyMethodName;
     private String factoryBeanName;
     private String factoryMethodName;
+    private boolean primary;
+    private String qualifier;
     private final List<PropertyValue> propertyValues = new ArrayList<>();
 
     public BeanDefinition(Class<?> beanClass) {
@@ -77,6 +79,24 @@ public class BeanDefinition {
 
     public void setDestroyMethodName(String destroyMethodName) {
         this.destroyMethodName = destroyMethodName;
+    }
+
+    /** 是否为「多候选」场景下的优先 Bean（对应 {@code @Primary}，可来自类或 {@code @Bean} 方法）。 */
+    public boolean isPrimary() {
+        return primary;
+    }
+
+    public void setPrimary(boolean primary) {
+        this.primary = primary;
+    }
+
+    /** 该 Bean 的限定名（对应 {@code @Qualifier} 的 value），用于按名裁决多候选注入。 */
+    public String getQualifier() {
+        return qualifier;
+    }
+
+    public void setQualifier(String qualifier) {
+        this.qualifier = qualifier;
     }
 
     public List<PropertyValue> getPropertyValues() {

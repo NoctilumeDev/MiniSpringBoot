@@ -26,7 +26,7 @@ public final class AutoConfigurationLoader {
     }
 
     /**
-     * 汇总 classpath 上所有同名 SPI 文件中的类名（去重不在此处，靠注册时的 beanName 去重兜底）。
+     * 汇总 classpath 上所有同名 SPI 文件中的类名（原始顺序，去重与排序由 {@link AutoConfigurationImportSelector} 统一处理）。
      */
     public static String[] load(ClassLoader classLoader) {
         List<String> classNames = new ArrayList<>();

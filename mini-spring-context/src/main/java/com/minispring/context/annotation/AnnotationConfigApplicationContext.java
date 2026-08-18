@@ -1,6 +1,12 @@
 package com.minispring.context.annotation;
 
 import com.minispring.context.ApplicationContext;
+import com.minispring.context.ApplicationEvent;
+import com.minispring.context.ApplicationEventPublisher;
+import com.minispring.context.ApplicationListener;
+import com.minispring.context.event.ContextClosedEvent;
+import com.minispring.context.event.ContextRefreshedEvent;
+import com.minispring.context.event.SimpleApplicationEventMulticaster;
 import com.minispring.core.BeanDefinition;
 import com.minispring.core.BeanDefinitionRegistry;
 import com.minispring.core.BeanPostProcessor;
@@ -26,6 +32,7 @@ public class AnnotationConfigApplicationContext implements ApplicationContext {
     private final AnnotatedBeanDefinitionReader reader;
     private final ConditionEvaluator conditionEvaluator;
     private final List<DeferredImport> deferredImports = new ArrayList<>();
+    private final SimpleApplicationEventMulticaster eventMulticaster = new SimpleApplicationEventMulticaster();
 
     public AnnotationConfigApplicationContext(Class<?>... primarySources) {
         this(new StandardEnvironment(), primarySources);
@@ -98,7 +105,8 @@ public class AnnotationConfigApplicationContext implements ApplicationContext {
     }
 
     private void processComponentScan(Class<?> configClass) {
-        ComponentScan componentScan = configClass.getAnnotation(ComponentScan.class);
+        // 用元注解查找（而非 getAnnotation），这样 @MiniSpringBootApplication 这类复合注解上的 @ComponentScan 也能命中
+        ComponentScan componentScan = SimpleAnnotationMetadata.findAnnotation(configClass, ComponentScan.class);
         String[] basePackages = (componentScan == null || componentScan.basePackages().length == 0)
                 ? new String[]{configClass.getPackageName()}
                 : componentScan.basePackages();
@@ -107,7 +115,11 @@ public class AnnotationConfigApplicationContext implements ApplicationContext {
                 if (conditionEvaluator.shouldSkip(SimpleAnnotationMetadata.of(candidate))) {
                     continue;
                 }
-                registerComponent(candidate);
+                String beanName = registerComponent(candidate);
+                // D25：被 @ComponentScan 扫到的 @Configuration 也要递归处理其 @Bean 方法
+                if (SimpleAnnotationMetadata.findAnnotation(candidate, Configuration.class) != null) {
+                    reader.registerBeanMethods(candidate, beanName);
+                }
             }
         }
     }
@@ -168,6 +180,16 @@ public class AnnotationConfigApplicationContext implements ApplicationContext {
         if (clazz.isAnnotationPresent(Scope.class)) {
             bd.setScope(clazz.getAnnotation(Scope.class).value());
         }
+        // 类级 @Primary / @Qualifier 留存到 BeanDefinition，供多候选注入裁决（与 @Bean 方法级对齐）
+        if (clazz.isAnnotationPresent(Primary.class)) {
+            bd.setPrimary(true);
+        }
+        if (clazz.isAnnotationPresent(Qualifier.class)) {
+            String qualifier = clazz.getAnnotation(Qualifier.class).value();
+            if (qualifier != null && !qualifier.isEmpty()) {
+                bd.setQualifier(qualifier);
+            }
+        }
         beanFactory.registerBeanDefinition(beanName, bd);
         return beanName;
     }
@@ -187,6 +209,12 @@ public class AnnotationConfigApplicationContext implements ApplicationContext {
                 beanFactory.getBean(name);
             }
         }
+        // 3) 所有单例就绪后，把容器里的 ApplicationListener 登记进广播器
+        for (String name : beanFactory.getBeanNamesForType(ApplicationListener.class)) {
+            eventMulticaster.addApplicationListener((ApplicationListener<?>) beanFactory.getBean(name));
+        }
+        // 4) 广播「刷新完成」
+        publishEvent(new ContextRefreshedEvent(this));
     }
 
     // ----- 委托给底层工厂 -----
@@ -212,7 +240,13 @@ public class AnnotationConfigApplicationContext implements ApplicationContext {
     }
 
     @Override
+    public void publishEvent(ApplicationEvent event) {
+        eventMulticaster.multicastEvent(event);
+    }
+
+    @Override
     public void close() {
+        publishEvent(new ContextClosedEvent(this));
         beanFactory.close();
     }
 

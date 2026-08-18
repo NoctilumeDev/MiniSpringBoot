@@ -1,0 +1,6 @@
+# M6 自动配置演示（从 mini-spring-autoconfigure 迁移而来）：每行一个自动配置类全限定名
+com.minispring.demo.autoconfig.GreetingAutoConfiguration
+com.minispring.demo.autoconfig.NamingAutoConfiguration
+com.minispring.demo.autoconfig.PresentFeatureAutoConfiguration
+com.minispring.demo.autoconfig.AbsentFeatureAutoConfiguration
+com.minispring.demo.autoconfig.OptionalFeatureAutoConfiguration
