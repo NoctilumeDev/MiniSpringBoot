@@ -10,6 +10,10 @@ public class ConfigAppProperties {
     @Value("${app.name}")
     private String name;
 
+    // 同名 key 同时出现在 yml 与 properties，验证 yml 优先级更高（D37）
+    @Value("${app.owner}")
+    private String owner;
+
     @Value("${server.port}")
     private int port;
 
@@ -37,6 +41,10 @@ public class ConfigAppProperties {
 
     public String getName() {
         return name;
+    }
+
+    public String getOwner() {
+        return owner;
     }
 
     public int getPort() {

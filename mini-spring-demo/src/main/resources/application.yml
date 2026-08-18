@@ -1,6 +1,7 @@
 # MiniSpringBoot 后端 demo 默认配置（M4 外部化配置字段 + M6 自动配置开关 + M7 应用字段合并）
 app:
   name: "MiniSpringBoot"
+  owner: "yml-value"
   timeout: 30
   features:
     - ioc

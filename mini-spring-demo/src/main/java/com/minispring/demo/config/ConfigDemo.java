@@ -32,6 +32,7 @@ public class ConfigDemo {
 
         System.out.println("    --- profile = " + (profile == null ? "(默认)" : profile) + " ---");
         check("MiniSpringBoot".equals(app.getName()), "@Value 注入 app.name（yaml）");
+        check("yml-value".equals(app.getOwner()), "@Value 注入 app.owner=yml-value（yml 覆盖 properties，D37）");
         check(app.getTimeout() == 30, "@Value 注入 app.timeout（int 类型转换）");
         check(app.getFallbackTimeout() == 3000, "@Value 默认值 ${app.missing:3000}");
         check("ioc".equals(app.getFirstFeature()) && "aop".equals(app.getSecondFeature()),

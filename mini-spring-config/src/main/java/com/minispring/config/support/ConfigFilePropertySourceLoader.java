@@ -17,13 +17,14 @@ public class ConfigFilePropertySourceLoader {
     private static final String DEFAULT_NAME = "application";
 
     public void load(StandardEnvironment environment) {
-        // 默认文件：properties 最低，yml 次之；记录第一个文件源作为插入 profile 的锚点
+        // 默认文件：properties 最低、yml 次之（下标越小优先级越高，故 yml 先 addLast 拿到更高优先级）；
+        // 记录第一个加载的默认文件源作为插入 profile 的锚点。
         String anchor = null;
-        if (addLastIfPresent(environment, DEFAULT_NAME + ".properties")) {
-            anchor = DEFAULT_NAME + ".properties";
-        }
-        if (addLastIfPresent(environment, DEFAULT_NAME + ".yml") && anchor == null) {
+        if (addLastIfPresent(environment, DEFAULT_NAME + ".yml")) {
             anchor = DEFAULT_NAME + ".yml";
+        }
+        if (addLastIfPresent(environment, DEFAULT_NAME + ".properties") && anchor == null) {
+            anchor = DEFAULT_NAME + ".properties";
         }
         if (anchor == null) {
             return; // 没有任何配置文件
