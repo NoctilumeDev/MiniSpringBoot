@@ -5,6 +5,7 @@ import com.minispring.aop.MethodInvocation;
 import com.minispring.aop.MethodInvocationProceedingJoinPoint;
 import com.minispring.aop.ProceedingJoinPoint;
 
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 
 /**
@@ -25,6 +26,10 @@ public class AspectJAroundAdvice implements MethodInterceptor {
     @Override
     public Object invoke(MethodInvocation invocation) throws Throwable {
         ProceedingJoinPoint pjp = new MethodInvocationProceedingJoinPoint(invocation);
-        return aroundMethod.invoke(aspectInstance, pjp);
+        try {
+            return aroundMethod.invoke(aspectInstance, pjp);
+        } catch (InvocationTargetException e) {
+            throw e.getTargetException();
+        }
     }
 }

@@ -3,6 +3,7 @@ package com.minispring.aop.interceptor;
 import com.minispring.aop.MethodInterceptor;
 import com.minispring.aop.MethodInvocation;
 
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 
 /**
@@ -24,7 +25,11 @@ public class AfterReturningAdviceInterceptor implements MethodInterceptor {
         try {
             return invocation.proceed();
         } finally {
-            afterMethod.invoke(aspectInstance);
+            try {
+                afterMethod.invoke(aspectInstance);
+            } catch (InvocationTargetException e) {
+                throw e.getTargetException();
+            }
         }
     }
 }

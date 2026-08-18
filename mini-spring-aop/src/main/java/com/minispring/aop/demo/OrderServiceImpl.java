@@ -11,4 +11,9 @@ public class OrderServiceImpl implements OrderService {
         System.out.println("    [业务] 真实执行下单逻辑：" + product);
         return "已下单[" + product + "]";
     }
+
+    @Override
+    public void failOrder() {
+        throw new IllegalStateException("下单失败(模拟业务异常)");
+    }
 }

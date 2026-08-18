@@ -38,6 +38,25 @@ public class AopDemo {
         System.out.println("    [OK] @Around 触发 " + aspect.aroundCount() + " 次，累计耗时 " + aspect.aroundCostNanos() + " ns");
         System.out.println("    [OK] 目标方法真实执行，返回值 = " + result);
 
+        // 4. B1 回归：被代理方法抛异常时，拿到的是原始异常，而非被包装成 UndeclaredThrowableException
+        try {
+            orderService.failOrder();
+            check(false, "failOrder 应抛出业务异常");
+        } catch (IllegalStateException e) {
+            check("下单失败(模拟业务异常)".equals(e.getMessage()),
+                    "异常被包装(B1)，实际拿到 " + e.getClass().getName());
+        }
+        System.out.println("    [OK] B1 异常原样透传：failOrder 抛出原始 IllegalStateException");
+
+        // 5. B3 回归：Object 方法(toString/hashCode/equals)不应触发切面
+        int beforeObjectCalls = aspect.beforeCount() + aspect.afterCount() + aspect.aroundCount();
+        orderService.toString();
+        orderService.hashCode();
+        orderService.equals(orderService);
+        int afterObjectCalls = aspect.beforeCount() + aspect.afterCount() + aspect.aroundCount();
+        check(beforeObjectCalls == afterObjectCalls, "Object 方法不应触发切面(B3)");
+        System.out.println("    [OK] B3 Object 方法(toString/hashCode/equals)未触发切面");
+
         ctx.close();
         System.out.println("=== M3 落地验证通过 ===");
     }

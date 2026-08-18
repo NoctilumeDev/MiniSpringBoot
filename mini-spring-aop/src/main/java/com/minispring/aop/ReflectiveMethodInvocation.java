@@ -1,5 +1,6 @@
 package com.minispring.aop;
 
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.List;
 
@@ -43,7 +44,12 @@ public class ReflectiveMethodInvocation implements MethodInvocation {
     public Object proceed() throws Throwable {
         // 拦截器全部走完 -> 直捣目标方法
         if (currentIndex >= interceptors.size()) {
-            return method.invoke(target, arguments);
+            try {
+                return method.invoke(target, arguments);
+            } catch (InvocationTargetException e) {
+                // 拆掉反射多包的一层，把原始异常原样抛出；否则 JDK 代理会再包成 UndeclaredThrowableException
+                throw e.getTargetException();
+            }
         }
         MethodInterceptor interceptor = interceptors.get(currentIndex++);
         return interceptor.invoke(this);

@@ -4,4 +4,7 @@ package com.minispring.aop.demo;
 public interface OrderService {
 
     String placeOrder(String product);
+
+    /** 模拟会抛业务异常的方法：用来验证异常能原样透传，不被代理包装。 */
+    void failOrder();
 }
