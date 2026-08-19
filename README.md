@@ -60,38 +60,49 @@ MiniSpringBoot 是一个 **从零手写** 的 Spring Boot 内核复刻项目。�
 
 ## 架构总览
 
-MiniSpringBoot 采用与 Spring 对齐的分层设计。下面是**框架内核**的分层（从上到下，依赖方向严格单向，上层依赖下层）：
+MiniSpringBoot 采用与 Spring 对齐的分层设计。下图上半部为**框架内核**的依赖分层（箭头方向 = 依赖方向，上层依赖下层）；下半部为 demo 应用轨道——虚线是它对内核与基础设施的真实使用关系，与各模块 `pom.xml` 一一对应：
 
-```
-┌────────────────────────────────────────────────────────────────┐
-│  boot          MiniSpringApplication.run() / Lifecycle 驱动 /   │
-│                关闭钩子 / Banner / StartedEvent（不依赖 web）   │
-├────────────────────────────────────────────────────────────────┤
-│  autoconfigure @Conditional / SPI 读取 + 框架自动配置类归位     │
-│                （web/aop/config 均 optional：裁掉即消失，       │
-│                与 spring-boot-autoconfigure 实证结构一致）      │
-├────────────────────────────────────────────────────────────────┤
-│  web           DispatcherServlet / HandlerMapping / 参数绑定    │
-│                （内嵌 HTTP 服务器，零第三方依赖；经 Lifecycle   │
-│                由 boot 启动）                                   │
-├────────────────────────────────────────────────────────────────┤
-│  jdbc          JdbcTemplate / RowMapper / DataAccessException / │
-│                编程式·声明式事务（@Transactional，纯 java.sql.*）│
-├────────────────────────────────────────────────────────────────┤
-│  aop           Pointcut / Advice / 动态代理 / 自动代理创建器    │
-├────────────────────────────────────────────────────────────────┤
-│  context       注解扫描 / @Configuration·@Bean / 事件 / Lifecycle│
-├────────────────────────────────────────────────────────────────┤
-│  config        Environment / PropertySource / @Value            │
-├────────────────────────────────────────────────────────────────┤
-│  core          BeanFactory / BeanDefinition / Bean 生命周期     │
-│                BeanPostProcessor                                │
-└────────────────────────────────────────────────────────────────┘
-     —— 内核全部基于 JDK 17，零第三方运行时依赖 ——
+```mermaid
+graph TD
+    subgraph KERNEL["框架内核 · 全部基于 JDK 17，零第三方运行时依赖"]
+        direction TB
+        BOOT["boot · 启动器<br/>MiniSpringApplication.run() / Lifecycle 驱动<br/>关闭钩子 / Banner / StartedEvent（不依赖 web）"]
+        AUTO["autoconfigure · 自动配置<br/>@Conditional 派生 / SPI 读取<br/>web · aop · config · jdbc 均 optional：裁掉即消失"]
+        WEB["web · Web/MVC<br/>DispatcherServlet / HandlerMapping / 参数绑定 / 自写 JSON<br/>内嵌 HTTP 服务器（零第三方，经 Lifecycle 由 boot 启动）"]
+        JDBC["jdbc · JDBC 与事务<br/>JdbcTemplate / RowMapper / DataAccessException<br/>编程式 · 声明式事务（@Transactional，纯 java.sql.*）"]
+        AOP["aop · AOP<br/>Pointcut / Advice / JDK 动态代理 / 自动代理创建器"]
+        CTX["context · 上下文<br/>注解扫描 / @Configuration·@Bean / 事件广播 / Lifecycle"]
+        CFG["config · 外部化配置<br/>Environment / PropertySource / @Value"]
+        CORE["core · 核心容器<br/>BeanFactory / BeanDefinition / Bean 生命周期 / BeanPostProcessor"]
+        BOOT --> AUTO
+        AUTO --> WEB
+        AUTO --> JDBC
+        WEB --> AOP
+        JDBC --> AOP
+        AOP --> CTX
+        CTX --> CFG
+        CTX --> CORE
+    end
+    subgraph DEMO["demo 应用轨道 · 双轨制（此层可引真实依赖）"]
+        APP["mini-spring-demo<br/>后端收口"]
+        FE["demo-frontend<br/>React + Vite（:9010）"]
+        STARTER["mini-spring-starter-demo<br/>Starter 验证"]
+        DB[("MySQL 8<br/>deploy/mysql（:13306）")]
+    end
+    APP -.-> BOOT
+    APP -.-> WEB
+    APP -.-> AOP
+    APP -.-> JDBC
+    APP -.- STARTER
+    STARTER -.-> AUTO
+    FE -. "Vite proxy /api" .-> APP
+    APP -.-> DB
 
-  demo 轨道：mini-spring-demo（后端收口）/ mini-spring-starter-demo（Starter 验证）
-           / demo-frontend（React 前端）/ deploy（MySQL 容器）
+    classDef kernelNode fill:#eef2f8,stroke:#5b7db1,color:#1f2328
+    class BOOT,AUTO,WEB,JDBC,AOP,CTX,CFG,CORE kernelNode
 ```
+
+> Nginx 反向代理与 3 实例高可用为 M10 计划，未画入。
 
 | 模块 | 对应 Spring 的概念 | 责任 |
 | --- | --- | --- |
