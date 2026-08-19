@@ -10,6 +10,7 @@ import com.minispring.web.mvc.annotation.PutMapping;
 import com.minispring.web.mvc.annotation.RequestBody;
 import com.minispring.web.mvc.annotation.RequestMapping;
 import com.minispring.web.mvc.annotation.RestController;
+import com.minispring.web.servlet.ResponseStatusException;
 
 import java.util.List;
 
@@ -33,7 +34,8 @@ public class UserController {
         User user = jdbc.queryOne("SELECT id, name, email FROM users WHERE id = ?",
                 UserController::mapUser, id);
         if (user == null) {
-            throw new IllegalArgumentException("用户不存在: " + id);
+            // 外审复核第三轮（D16 部分收口）：资源缺失是 404，不是服务器故障 500
+            throw new ResponseStatusException(404, "用户不存在: " + id);
         }
         return user;
     }

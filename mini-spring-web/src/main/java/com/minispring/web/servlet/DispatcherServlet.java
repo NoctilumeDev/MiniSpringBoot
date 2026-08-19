@@ -77,11 +77,44 @@ public class DispatcherServlet implements HttpHandler, BeanFactoryAware, Initial
         // M4（M0-M9 复审第二轮）：响应头已发出（handler 中途 write 后再抛异常）时状态码不可改，
         // 继续写会把错误文本追加进已提交的响应体形成「200 + 错误尾巴」的混合体——记日志并放弃改写
         if (response.isCommitted()) {
-            System.err.println("请求处理异常（响应已提交，无法改写为 500）: " + e);
+            System.err.println("请求处理异常（响应已提交，无法改写为错误状态）: " + e);
             return;
         }
-        response.setStatus(500);
+        int status = resolveStatus(e);
+        response.setStatus(status);
         response.setContentType("text/plain; charset=utf-8");
-        response.write("500 Internal Server Error: " + e.getMessage());
+        response.write(status + " " + statusLabel(status) + ": " + e.getMessage());
+    }
+
+    /**
+     * 异常 → HTTP 状态码的内建映射（外审复核第三轮，D16 部分收口）：
+     * <ul>
+     *   <li>{@link ResponseStatusException} → 自带状态码（资源缺失 404、明确指定的 4xx 等）；</li>
+     *   <li>{@link IllegalArgumentException} → 400（参数/校验类错误是客户端的锅）；</li>
+     *   <li>其余（含 {@code IllegalStateException}、{@code DataAccessException}）→ 500
+     *       ——业务规则冲突与基础设施故障维持「服务器错误」口径，不与客户端错误混淆。</li>
+     * </ul>
+     * 包级可见：供同包单测直接断言映射结果（约束性锚点）。
+     */
+    int resolveStatus(Throwable e) {
+        if (e instanceof ResponseStatusException) {
+            return ((ResponseStatusException) e).getStatus();
+        }
+        if (e instanceof IllegalArgumentException) {
+            return 400;
+        }
+        return 500;
+    }
+
+    /** 常见状态码的 reason-phrase（响应体前缀用；未知码退化为 "Error"）。 */
+    private static String statusLabel(int status) {
+        switch (status) {
+            case 400: return "Bad Request";
+            case 404: return "Not Found";
+            case 405: return "Method Not Allowed";
+            case 409: return "Conflict";
+            case 500: return "Internal Server Error";
+            default: return "Error";
+        }
     }
 }

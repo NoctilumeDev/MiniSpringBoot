@@ -4,6 +4,7 @@ import com.minispring.context.annotation.Autowired;
 import com.minispring.context.annotation.Service;
 import com.minispring.jdbc.JdbcTemplate;
 import com.minispring.jdbc.transaction.Transactional;
+import com.minispring.web.servlet.ResponseStatusException;
 
 import java.math.BigDecimal;
 import java.util.Map;
@@ -48,7 +49,8 @@ public class AccountServiceImpl implements AccountService {
         BigDecimal value = jdbc.queryOne("SELECT balance FROM accounts WHERE id = ?",
                 rs -> rs.getBigDecimal("balance"), id);
         if (value == null) {
-            throw new IllegalArgumentException("账户不存在: " + id);
+            // 外审复核第三轮（D16 部分收口）：资源缺失 → 404
+            throw new ResponseStatusException(404, "账户不存在: " + id);
         }
         return value;
     }
@@ -56,6 +58,7 @@ public class AccountServiceImpl implements AccountService {
     private void debit(long fromId, BigDecimal amount) {
         // 29-31（负数转账修复）：负数金额会让 WHERE balance >= ? 恒真（余额 >= 负数），
         // 变成「反向转账 + 余额可被打负」——前端拦截形同虚设，API 层必须自校验。
+        // IllegalArgumentException → 框架内建映射 400（参数校验是客户端错误，非 500）
         if (amount.compareTo(BigDecimal.ZERO) <= 0) {
             throw new IllegalArgumentException("转账金额必须为正数: " + amount);
         }
@@ -65,15 +68,15 @@ public class AccountServiceImpl implements AccountService {
         int updated = jdbc.update("UPDATE accounts SET balance = balance - ? WHERE id = ? AND balance >= ?",
                 amount, fromId, amount);
         if (updated != 1) {
-            // 可能因余额不足（条件不命中）或账户不存在而失败，统一给可读错误
-            throw new IllegalStateException("扣款失败：账户 " + fromId + " 不存在或余额不足");
+            // 外审复核第三轮：请求侧问题（账户不存在/余额不足）→ 400，不再与服务器故障混同 500
+            throw new ResponseStatusException(400, "扣款失败：账户 " + fromId + " 不存在或余额不足");
         }
     }
 
     private void credit(long toId, BigDecimal amount) {
         int updated = jdbc.update("UPDATE accounts SET balance = balance + ? WHERE id = ?", amount, toId);
         if (updated != 1) {
-            throw new IllegalStateException("入款失败，账户 " + toId + " 不存在");
+            throw new ResponseStatusException(404, "入款失败，账户 " + toId + " 不存在");
         }
     }
 }

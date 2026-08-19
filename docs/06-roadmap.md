@@ -171,6 +171,15 @@
 - **文档账实核对（5 处虚报订正）**：①`01-ioc-container.md` §9 与本表 M1 落地证据宣称「@PostConstruct/@PreDestroy ✅」——代码不存在（`AnnotationConfigApplicationContext` 自己注释承认），订正为 InitializingBean/DisposableBean/@Bean(initMethod/destroyMethod)；②README「@EventListener 泛型解析」——不存在，订正为 ApplicationListener 接口式监听；③`architecture.md` 列出 BeanFactoryPostProcessor/@AfterReturning/@AfterThrowing/AopProxyFactory 四个不存在物——逐条订正为实际实现或标注「未实现，显式边界」；④README「3 实例高可用验收」——M10 未开始，订正为计划；⑤D5「无通知排序」——实现早已存在（AspectJAdvisorFactory.resolveOrder + 升序排序），属该关未关，核实关闭。教训同 M0-M9 复审第一轮：「宣称已修/已支持 ≠ 代码事实」。
 - **连带账目**：D49 描述按实测更新（接口类型 Map 字段抛可读错误而非登记时的「静默空 HashMap」，仅具体 Map 类型字段仍静默）；D51 关闭（字段+构造器参数双侧对称）；M6 由「登记债务」改为直接落地修复。
 
+### 外审意见复核（第三轮：他机本地环境结论 × 本仓库标准环境实证）
+
+> 背景：另一 AI 在其本地副本（连本机 MySQL、非本仓库标准 Docker 环境）跑出三条意见 + 一组工程配套观察。逐项以「唯一事实」核实后处置——**现象级结论须在本仓库环境复验，环境差异会污染判断**（其运行期间还重建过 minispring-mysql 容器：bind mount 指向其副本路径导致容器起不来、其应用连本机 3306 无 minispring_demo 库报 "Unknown database"；本仓库 `compose down/up` 重建后数据卷完好恢复）。
+
+- **意见①「slf4j NOP 警告（mysql-connector-j 间接拉）」**：现象属实（NOP、零行为影响），**归因错误**——`dependency:tree -Dincludes=org.slf4j` 唯一路径是 `HikariCP 5.1.0 → slf4j-api 1.7.36`，mysql-connector-j 不在其列。处置：demo 层补 `slf4j-simple 1.7.36`（双轨制允许），NOP 警告消除、Hikari 池启停/evict 诊断真实可见（V7 类断连排障受益）。
+- **意见②「pom 缺 maven-jar-plugin.version 警告」**：属实（Maven 原话「威胁构建稳定性」）。处置：boot pom 显式锁 `3.3.0`。
+- **意见③「业务异常全部 500 而非 400/404」**：属实（`/users/99999`→500、负数转账→500 实测复现），即登记在册的 D16。处置：D16 部分收口（详见债务表条目）——框架层 `ResponseStatusException` + `resolveStatus` 内建映射（含约束单测，直接断言映射结果），demo 层资源缺失改 404、参数校验走 400。
+- **工程配套观察（无 CI / 无 LICENSE / 无 .github）**：属实。处置：新增 `.github/workflows/ci.yml`（backend：JDK 17 + MySQL service 映射 13306 + init.sql 建表 + `mvn clean install`；frontend：Node 20 + `npm ci && npm run build`）；新增 `LICENSE`（MIT）。`groupId com.minispring` 与 Spring 疑似混淆：**不改**——改名牵动全部模块坐标与已发布 tag，且教学项目该命名属合理范畴（外审意见本身亦如此认定）。
+
 ### M10 · 3 实例 + Nginx 高可用 + 全链路终验
 
 - **产出**：Nginx `upstream` + 健康检查、3 个无状态实例、健康检查接口、压测脚本、部署手册。
@@ -227,7 +236,7 @@
 | D13 | 配置文件仅 classpath 根 `application.*`，不支持 `config/` 子目录、命令行参数覆盖 | 外部部署自定义配置位置 | M10 部署规范统一约定 |
 | D14 | JSON 反序列化仅支持扁平 POJO 与 `List<String>`，不支持 `List<POJO>` / 嵌套集合 | POST 请求体含对象数组时 | 已修于 M7（B-6）：List 字段按泛型实参逐元素映射，`List<Integer>`/`List<Long>`/`List<POJO>` 均正确；raw/顶层 List 按节点自然类型 |
 | D15 | `@PathVariable`/`@RequestParam` 依赖注解显式 `value()`，未启用 `-parameters`（参数名未编译保留），省略 value 会解析失败 | 按参数名隐式绑定时 | 需要时启用 `-parameters` 编译，或补参数名解析 |
-| D16 | 错误处理简化：业务异常统一 500，无 `@ExceptionHandler`/`@ResponseStatus`（无法区分 404/400） | 需要按异常类型返回不同状态码时 | M8/M9 细化错误响应时补异常解析器 |
+| D16 | ~~错误处理简化：业务异常统一 500，无 `@ExceptionHandler`/`@ResponseStatus`（无法区分 404/400）~~ **部分收口（外审复核第三轮）**：`DispatcherServlet.resolveStatus` 内建映射——`ResponseStatusException`（web 新增，携带状态码的业务异常）→ 自带码、`IllegalArgumentException` → 400、其余 → 500；demo 侧用户/账户不存在改抛 404、余额不足/账户缺失的扣入款失败改 400（`transfer-fail` 的 IllegalStateException 维持 500，V3 回滚叙事不变）。**余量**：`@ExceptionHandler`/`@ResponseStatus` 注解机制未做（用异常类约定替代）；`DataAccessException` → 409（如唯一键冲突）受依赖方向限制（web 不依赖 jdbc）未做，维持 500 | 需要按异常类型返回不同状态码时 | 已部分关闭（注解化异常解析器按需再开） |
 | D17 | `SunHttpServer` 仅 cached 线程池（每请求一线程），无 NIO/Reactor、无线程池上限控制 | 高并发压测时线程数无上限、吞吐受限 | M10 3 实例 + Nginx 分摊（教学项目可接受），必要时配固定线程池或换实现 |
 | D18 | 静态资源 `"static" + path` 拼接未显式拒绝 `..` | 直觉上担心路径穿越，但 JDK HttpServer `URI.getPath()` 已规范化、`ClassLoader.getResourceAsStream` 不逃逸 classpath 根，当前不构成漏洞 | 已修于 M7：`StaticResourceHandler.handle` 入口显式拒绝 `..` → 403 |
 | D19 | ~~`mini-spring-autoconfigure` 的 `main` 源集混入 demo 自动配置类~~ 已修于 M7；M7 终审（A-2）补齐同类残留：web（WebDemo/WebConfig/HelloController/UserController/User）、aop（AopConfig/AopDemo/LoggingAspect/OrderService/OrderServiceImpl）、core（IocDemo）的框架模块 demo 类全部清除，四个框架模块 `main` 源集零 demo | 任何模块依赖 `mini-spring-autoconfigure` 并开启自动配置时 | 已关闭 |
@@ -279,3 +288,4 @@
 > M8 审查（V1~V10 唯一事实验收）修掉：B9（`JdkDynamicAopProxy` 不命中切点的直通路径无 ITE 拆包——M3 修 B1 时只覆盖拦截链路，直通路径为对称遗漏；M8 接口化 Service + 仅部分方法 @Transactional 使该路径成为常态，V7 断连实测「500 Internal Server Error: null」暴露后修复，加对称约束用例）、TransactionAspect 构造依赖死结（改 BeanFactoryAware 懒解析，启动序列实证切面先于 dataSource 创建）、`ConditionEvaluator` 多条件 AND 语义（`findAnnotations` 全收集）、`RequestMappingHandlerMapping` 派生注解元注解化（@PutMapping/@DeleteMapping 落地）。D2/D34 按 M8 计划关闭；新登记 D47（Hikari 参数面）。测试 28→44。
 > M0–M9 全量复审（外审 35 条 + 补充 29–35 号）修掉：P0-1~P0-6、29-31（负数转账）、32（请求体上限）、34（Banner 版本联动）、N1/N2/N4/N5/N7/N18（详见 §3「M0–M9 全量复审修复」小节）；P0-2 即 D37 纠正、P0-3 即 M8 产出描述更正。另修 M9 复审遗留的 TransactionManager Error 路径隐式提交（committed 标记 + finally 统一回滚，含 transactionRollsBackOnError 用例）。未修各项登记 D48–D60。测试 45→52（core +2：逆序销毁/并发误报；web +2：Ambiguous/类级 path 别名；web json +3：NaN/Infinity 家族）。
 > M0–M9 全量复审第二轮（严苛复审 + 账实核对，详见 §3 对应小节）修掉：H1/H2 两个高危（三级缓存残留、@Import 循环导入）、M1~M8 中危八项（M2 含用户复审后的追修：带参子接口/泛型父类形态 + 假通过用例重写为直接断言锚点）、L1~L10 低危十项，订正文档虚报五处（@PostConstruct/@PreDestroy、@EventListener、architecture.md 四个不存在物、3 实例高可用、D5 该关未关）。测试 52→66（core +1：失败重试不取半成品；context +9：Import 环×2、手动单例限定名、required=false 限定名、监听器泛型四形态×5——原 1 个假通过用例重写为 4 个直接断言 + 1 个端到端，注入旧缺陷实测 3/5 必失败；config +4：多 profile last-wins、同层 properties>yml、profile 覆盖默认、properties 中文 UTF-8）。
+> 外审意见复核第三轮（他机本地环境结论 × 本仓库标准环境实证，详见 §3 对应小节）修掉：jar-plugin 版本锁死、demo 层 slf4j-simple（NOP 警告消除、Hikari 池日志可见）、D16 部分收口（ResponseStatusException + 异常→状态码内建映射，demo 资源缺失 404/参数校验 400），并补齐 CI 工作流（backend+frontend 双 job）与 MIT LICENSE。测试 66→69（web +3：异常→状态码映射直接断言）。

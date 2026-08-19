@@ -56,6 +56,10 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-jar-plugin</artifactId>
+                <!-- 版本必须显式锁死（外审复核第三轮）：不锁时 Maven 报
+                     'build.plugins.plugin.version is missing'——「威胁构建稳定性」，
+                     未来 Maven 版本可能拒绝构建或静默换行为 -->
+                <version>3.3.0</version>
                 <configuration>
                     <archive>
                         <manifestEntries>
