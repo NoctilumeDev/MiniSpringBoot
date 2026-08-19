@@ -3,12 +3,15 @@
 > 假如这个世界上没有 Spring Boot，我们该怎么办？
 > —— 那就从零把它造出来，把所有底层和内核拆开、摊平、写透。
 
+[![CI](https://github.com/NoctilumeDev/MiniSpringBoot/actions/workflows/ci.yml/badge.svg)](https://github.com/NoctilumeDev/MiniSpringBoot/actions/workflows/ci.yml)
 ![JDK](https://img.shields.io/badge/JDK-17-2c3e50?logo=java&logoColor=white)
 ![Maven](https://img.shields.io/badge/Maven-3.9-2c3e50?logo=apachemaven&logoColor=white)
 ![内核依赖](https://img.shields.io/badge/内核-零第三方运行时依赖-2e7d32)
 ![里程碑](https://img.shields.io/badge/M0~M9-落地验收通过-2e7d32)
 ![数据库](https://img.shields.io/badge/MySQL-8%2FHikariCP-2c3e50?logo=mysql&logoColor=white)
 ![前端](https://img.shields.io/badge/React-18%2FVite-61dafb?logo=react&logoColor=black)
+![Tests](https://img.shields.io/badge/tests-69%2F69-brightgreen)
+![License](https://img.shields.io/badge/license-MIT-blue)
 
 MiniSpringBoot 是一个 **从零手写** 的 Spring Boot 内核复刻项目。框架内核不依赖 Spring、不依赖任何第三方运行时库，只用 JDK 重新实现 Spring 家族最核心的那几块「魔法」：IoC 容器、AOP、Web/MVC、自动配置、外部化配置、JDBC 与声明式事务。
 
@@ -138,6 +141,7 @@ MiniSpringBoot 采用与 Spring 对齐的分层设计。下面是**框架内核*
 - 一个能真正跑起来的示例应用 `demo`（React 前端 + 后端 + MySQL 全链路）
 - 3 实例无状态 + Nginx 负载均衡的高可用演练（M10 计划）
 - 每个里程碑都有明确的「落地证据」验收清单
+- **每一轮全量复审都以 `docker exec` 直查 MySQL / 真实 HTTP / 浏览器操作为唯一事实**——「宣称已修 ≠ 代码事实」，登记关闭前逐项 grep 源码核实；修复必须配「修错了必失败」的约束性测试（往届复审曾揪出三级缓存残留、`@Import` 循环导入、监听器泛型静默退化等 20+ 真实缺陷，详见 [docs/06-roadmap.md](docs/06-roadmap.md) 各轮审查记录）
 
 ### 4. 不能牵一发动全身——接口契约
 
@@ -150,6 +154,8 @@ MiniSpringBoot 采用与 Spring 对齐的分层设计。下面是**框架内核*
 ```
 MiniSpringBoot
 ├── README.md
+├── LICENSE                   # MIT
+├── .github/workflows/ci.yml  # CI（backend: JDK17+MySQL service 真连库跑测试；frontend: Vite build）
 ├── docs/                      # 设计文档
 │   ├── architecture.md        # 总体设计
 │   ├── 01-ioc-container.md    # IoC 容器
@@ -157,7 +163,7 @@ MiniSpringBoot
 │   ├── 03-web-mvc.md          # Web 与 MVC
 │   ├── 04-auto-configuration.md # 自动配置与 Starter
 │   ├── 05-externalized-configuration.md # 外部化配置
-│   ├── 06-roadmap.md          # 路线图、技术债与验收标准
+│   ├── 06-roadmap.md          # 路线图、技术债与验收标准（含各轮复审记录）
 │   ├── 07-boot.md             # 启动器
 │   ├── 08-jdbc.md             # JDBC 与事务
 │   ├── 09-frontend.md         # React 前端与联调
@@ -191,7 +197,7 @@ mvn clean test
 mvn -pl mini-spring-demo exec:java "-Dexec.mainClass=com.minispring.demo.app.DemoApplication"
 ```
 
-验证：浏览器访问 `http://localhost:9090/hello`、`http://localhost:9090/users`（CRUD 落 MySQL）、`http://localhost:9090/accounts/1`（转账事务：`POST /accounts/transfer?from=1&to=2&amount=100`，`POST /accounts/transfer-fail` 回滚取证）等接口。
+验证：浏览器访问 `http://localhost:9090/hello`、`http://localhost:9090/users`（CRUD 落 MySQL）、`http://localhost:9090/accounts/1`（转账事务：`POST /accounts/transfer?from=1&to=2&amount=100`，`POST /accounts/transfer-fail` 回滚取证；资源缺失返回 404、参数非法返回 400）等接口。
 
 ```bash
 # 启动前端（M9，另一终端；Vite 9010，/api 经 proxy 转 9090）
@@ -199,6 +205,8 @@ cd demo-frontend && npm install && npm run dev
 ```
 
 验证：浏览器打开 `http://localhost:9010`——用户管理页对 MySQL 真实 CRUD、转账页可视化事务提交/回滚；F12 Network 可见 `/api/*` 全链路请求。
+
+> 推送到 main 即触发 [GitHub Actions CI](.github/workflows/ci.yml)：backend 在云端起 MySQL service 跑全量 69 个测试（jdbc 单测真连库），frontend 跑 `npm ci && npm run build`——本地能跑的，云端同样验证。
 
 ---
 
@@ -211,7 +219,7 @@ cd demo-frontend && npm install && npm run dev
 | 注解扫描 | `@ComponentScan`、`@Configuration`/`@Bean`、复合/元注解递归 | ✅ 真实扫描 |
 | 事件机制 | `ApplicationEvent`、`ApplicationListener` 泛型事件分发（接口式监听）、初始化期事件 | ✅ 真实按序触发 |
 | AOP | JDK 动态代理、execution/`@annotation` 切点、Before/After/Around | ✅ 真实织入（事务/日志） |
-| Web/MVC | 自写 HTTP 服务器 + JSON、`@RequestMapping` 及派生注解、路径模板 | ✅ 浏览器真实请求 |
+| Web/MVC | 自写 HTTP 服务器 + JSON、`@RequestMapping` 及派生注解、路径模板、异常→状态码映射（404/400/500，`ResponseStatusException`） | ✅ 浏览器真实请求 |
 | 自动配置 | `@Conditional` 派生、SPI 装配、optional 依赖裁剪即消失 | ✅ 分离 classpath 实证 |
 | 启动器 | `MiniSpringApplication.run()`、Lifecycle 驱动、关闭钩子、Banner | ✅ 一条命令拉起全栈 |
 | JDBC/事务 | JdbcTemplate、`DataAccessException` 体系、编程式 + `@Transactional` | ✅ 真连 MySQL 落库 |
@@ -233,12 +241,13 @@ cd demo-frontend && npm install && npm run dev
 - **M7** ✅：启动器（run 自动起服务器）、事件机制、后端 demo 收口
 - **M8** ✅：数据库接入（MySQL + HikariCP + JdbcTemplate + 声明式事务；V1~V10 唯一事实验收）
 - **M9** ✅：React 前端 + 前后端联调（Vite proxy 同源；浏览器/Network/MySQL 三方对照验收）
+- **M0–M9 三轮全量复审** ✅：外审 + 自审 + 他机环境复核，累计揪出并修复 40+ 真实缺陷（详见 [docs/06-roadmap.md](docs/06-roadmap.md) 各轮记录），测试 45→69
 - **M10**：3 实例高可用 + 全链路终验
 
 ---
 
 ## 许可与致谢
 
-框架内核为教学演示用途，demo 应用用于验证可用性与高可用。灵感与参照来自 Spring Framework 与 Spring Boot 的公开设计，向它们致以敬意——正是它们把 Java 生态带到了今天的高度，而我们要做的，是把它们的「黑盒」重新打开。
+本项目以 [MIT License](LICENSE) 开源。灵感与参照来自 Spring Framework 与 Spring Boot 的公开设计，向它们致以敬意——正是它们把 Java 生态带到了今天的高度，而我们要做的，是把它们的「黑盒」重新打开。
 
 > 站在巨人的肩膀上，去拆解巨人的骨架。
