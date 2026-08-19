@@ -60,7 +60,7 @@ MiniSpringBoot 是一个 **从零手写** 的 Spring Boot 内核复刻项目。�
 
 ## 架构总览
 
-MiniSpringBoot 采用与 Spring 对齐的分层设计。下图上半部为**框架内核**的依赖分层（箭头方向 = 依赖方向，上层依赖下层）；下半部为 demo 应用轨道——虚线是它对内核与基础设施的真实使用关系，与各模块 `pom.xml` 一一对应：
+MiniSpringBoot 采用与 Spring 对齐的分层设计。箭头方向 = 依赖方向（上层依赖下层，越底层越核心）：demo 应用轨道在上方消费内核能力，框架内核在下方提供支撑——虚线是 demo 对内核与基础设施的真实使用关系，与各模块 `pom.xml` 一一对应：
 
 ```mermaid
 graph TD
@@ -84,22 +84,22 @@ graph TD
         CTX --> CORE
     end
     subgraph DEMO["demo 应用轨道 · 双轨制（此层可引真实依赖）"]
-        APP["mini-spring-demo<br/>后端收口"]
+        direction TB
         FE["demo-frontend<br/>React + Vite（:9010）"]
+        APP["mini-spring-demo<br/>后端收口（Controller / Service）"]
         STARTER["mini-spring-starter-demo<br/>Starter 验证"]
         DB[("MySQL 8<br/>deploy/mysql（:13306）")]
+        FE -. "Vite proxy /api" .-> APP
+        APP -. "JDBC" .-> DB
+        APP -.- STARTER
     end
-    APP -.-> BOOT
-    APP -.-> WEB
-    APP -.-> AOP
-    APP -.-> JDBC
-    APP -.- STARTER
-    STARTER -.-> AUTO
-    FE -. "Vite proxy /api" .-> APP
-    APP -.-> DB
+    APP -. "run() 入口" .-> BOOT
+    STARTER -. "SPI 自动装配" .-> AUTO
 
     classDef kernelNode fill:#eef2f8,stroke:#5b7db1,color:#1f2328
+    classDef demoNode fill:#f6f8fa,stroke:#8b949e,color:#1f2328
     class BOOT,AUTO,WEB,JDBC,AOP,CTX,CFG,CORE kernelNode
+    class FE,APP,STARTER demoNode
 ```
 
 > Nginx 反向代理与 3 实例高可用为 M10 计划，未画入。
@@ -125,13 +125,13 @@ graph TD
 
 | 用户管理（CRUD 落 MySQL） | 转账演示（事务提交 / 回滚） |
 | :---: | :---: |
-| ![用户管理页](docs/screenshots/users-page.png) | ![转账演示页](docs/screenshots/transfer-page.png) |
+| <img src="docs/screenshots/users-page.png" width="640" alt="用户管理页"/> | <img src="docs/screenshots/transfer-page.png" width="640" alt="转账演示页"/> |
 | 表中 id=23 / id=96 两行与 `users` 表逐行一致；新建、编辑、删除均真实落库（唯一键冲突会被 MySQL 约束拒绝并透出到 UI） | 余额卡 770 / 1230 即 `accounts` 表实时值；「中途失败转账」先扣款后抛异常 → 事务整体回滚，两账户分文不动 |
 
 | 错误根因直达 UI（数据库断连） | 状态码语义（404，非一律 500） |
 | :---: | :---: |
-| ![错误横幅](docs/screenshots/error-banner.png) | ![404 证据](docs/screenshots/404-evidence.png) |
-| `docker stop mysql` 后转账：约 30s 有限阻塞（Hikari connectionTimeout），红色横幅逐字透出根因与连接池状态（`Connection is not available, request timed out after 30010ms (total=0, active=0, idle=0)`）；事务开启失败即回滚，余额零变动；`docker start` 后接口立即自愈 | 资源缺失返回 404、参数非法返回 400（如负数转账金额）、业务规则冲突才是 500——异常到状态码的内建映射，调用方不再靠猜 |
+| <img src="docs/screenshots/error-banner.png" width="640" alt="错误横幅"/> | <img src="docs/screenshots/404-evidence.png" width="640" alt="404 证据"/> |
+| `docker stop mysql` 后转账：约 30s 有限阻塞（Hikari connectionTimeout），红色横幅逐字透出根因与连接池状态（`Connection is not available, request timed out after 30010ms`）；事务开启失败即回滚，余额零变动；`docker start` 后接口立即自愈 | 向不存在的账户（#99999）转账 → 后端返回 **HTTP 404**（非 500），错误消息「入款失败，账户 99999 不存在」逐层透出到红色横幅；事务同步回滚，余额 770/1230 不变。参数非法返回 400（如负数金额），业务规则冲突才是 500——状态码语义清晰，调用方不再靠猜 |
 
 > 以上四张图的取证过程（含断连前后 DB 快照差分）记录于 [docs/06-roadmap.md](docs/06-roadmap.md) 各轮验收章节。
 
