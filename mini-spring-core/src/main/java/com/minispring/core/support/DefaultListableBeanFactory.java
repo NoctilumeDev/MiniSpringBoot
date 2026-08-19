@@ -216,8 +216,19 @@ public class DefaultListableBeanFactory implements ListableBeanFactory, BeanDefi
             singletonFactories.put(beanName, factory);
         }
 
-        populateBean(beanName, bd, bean);
-        bean = initializeBean(beanName, bd, bean);
+        try {
+            populateBean(beanName, bd, bean);
+            bean = initializeBean(beanName, bd, bean);
+        } catch (RuntimeException | Error e) {
+            // H1（M0-M9 复审第二轮）：创建失败必须清掉本 bean 在三级/二级缓存里的残留——
+            // 否则后续 getBean 会从三级缓存命中「字段未注入的半成品」并静默返回（无任何报错的
+            // 最阴险路径）。Spring 靠创建中标记守卫自愈，此处直接在失败路径收敛清理，语义等价。
+            if (bd.isSingleton()) {
+                singletonFactories.remove(beanName);
+                earlySingletonObjects.remove(beanName);
+            }
+            throw e;
+        }
 
         // 循环依赖时，提前暴露的可能是代理；若初始化后仍是原对象，则采用提前暴露的代理作最终单例（B2）
         if (bd.isSingleton()) {
@@ -354,7 +365,7 @@ public class DefaultListableBeanFactory implements ListableBeanFactory, BeanDefi
         if (qualifier != null && !qualifier.isEmpty()) {
             // D34（M8 收口，与 AutowiredAnnotationBeanPostProcessor.resolveByQualifier 对称）：
             // 限定名匹配 BeanDefinition.qualifier（限定名 ≠ beanName 也认）→ 回退 beanName
-            return resolveArgByQualifier(qualifier, parameter.getType(), beanName);
+            return resolveArgByQualifier(qualifier, parameter.getType(), beanName, isOptionalAutowired(parameter));
         }
         Class<?> type = parameter.getType();
         String[] candidates = getBeanNamesForType(type);
@@ -363,7 +374,9 @@ public class DefaultListableBeanFactory implements ListableBeanFactory, BeanDefi
         }
         if (candidates.length > 1) {
             for (String name : candidates) {
-                if (getBeanDefinition(name).isPrimary()) {
+                // M1：候选集可能含运行期手动单例（无 BeanDefinition，如 webServer）——只对
+                // 有定义的候选读 @Primary，手动单例本就不该参与 Primary 裁决，跳过而非崩溃
+                if (containsBeanDefinition(name) && getBeanDefinition(name).isPrimary()) {
                     return getBean(name);
                 }
             }
@@ -379,11 +392,12 @@ public class DefaultListableBeanFactory implements ListableBeanFactory, BeanDefi
     }
 
     /** D34：参数的限定名裁决——匹配 qualifier 字段优先，回退 beanName，两层都空给可读错误。 */
-    private Object resolveArgByQualifier(String qualifier, Class<?> type, String beanName) {
+    private Object resolveArgByQualifier(String qualifier, Class<?> type, String beanName, boolean optional) {
         String where = (beanName == null ? "工厂方法" : "Bean[" + beanName + "]构造器");
         String matched = null;
         for (String name : getBeanNamesForType(type)) {
-            if (qualifier.equals(getBeanDefinition(name).getQualifier())) {
+            // M1：跳过无 BeanDefinition 的手动单例（同 resolveArg 的 Primary 裁决）
+            if (containsBeanDefinition(name) && qualifier.equals(getBeanDefinition(name).getQualifier())) {
                 if (matched != null) {
                     throw new BeansException(where + "参数 qualifier=\"" + qualifier + "\" 命中多个 Bean（" + matched + ", " + name + "）");
                 }
@@ -395,6 +409,10 @@ public class DefaultListableBeanFactory implements ListableBeanFactory, BeanDefi
         }
         if (containsBean(qualifier)) {
             return getBean(qualifier);
+        }
+        // D51 对称收口：required=false 且限定名未命中 → null 注入（与 AutowiredAnnotationBeanPostProcessor 对称）
+        if (optional) {
+            return null;
         }
         throw new BeansException(where + "参数找不到 qualifier=\"" + qualifier + "\"（既无此限定名，也无此 beanName），类型 " + type.getName());
     }
@@ -505,19 +523,40 @@ public class DefaultListableBeanFactory implements ListableBeanFactory, BeanDefi
     }
 
     private void invokeNoArgMethod(String beanName, Object bean, String methodName) {
+        Method method = findNoArgMethod(bean.getClass(), methodName);
+        if (method == null) {
+            throw new BeansException("Bean[" + beanName + "] 找不到无参方法[" + methodName + "]（bean 实际类型 "
+                    + bean.getClass().getName() + "）");
+        }
         try {
-            Method method;
-            try {
-                // D43：init/destroy 回调允许非 public（与注册侧 getDeclaredMethods 对称）
-                method = bean.getClass().getDeclaredMethod(methodName);
-                method.setAccessible(true);
-            } catch (NoSuchMethodException e) {
-                method = bean.getClass().getMethod(methodName);
-            }
             method.invoke(bean);
         } catch (Exception e) {
             throw new BeansException("Bean[" + beanName + "] 方法[" + methodName + "] 调用失败", e);
         }
+    }
+
+    /**
+     * 沿「本类 → 父类链 → 接口链」查找无参方法。M7（M0-M9 复审第二轮）：Bean 被替换成
+     * JDK 代理（如 D30 补偿回填）后，目标类声明的方法不在代理类上——destroyMethod/initMethod
+     * 回调须沿接口与父类回查，找不到时给可读错误而非裸反射异常。
+     */
+    private Method findNoArgMethod(Class<?> clazz, String methodName) {
+        for (Class<?> current = clazz; current != null && current != Object.class; current = current.getSuperclass()) {
+            try {
+                Method method = current.getDeclaredMethod(methodName);
+                method.setAccessible(true); // D43：init/destroy 回调允许非 public（与注册侧 getDeclaredMethods 对称）
+                return method;
+            } catch (NoSuchMethodException ignored) {
+            }
+        }
+        // JDK 代理：接口方法经 getMethod 可达（public）
+        for (Class<?> iface : clazz.getInterfaces()) {
+            try {
+                return iface.getMethod(methodName);
+            } catch (NoSuchMethodException ignored) {
+            }
+        }
+        return null;
     }
 
     // ---------- 销毁 ----------

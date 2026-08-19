@@ -55,6 +55,13 @@ public class TransactionAspect implements BeanFactoryAware {
                     "容器中不存在 TransactionManager——检查 JdbcAutoConfiguration 是否装配"
                             + "（minispring.datasource.url 已配置？）");
         }
+        // M5（M0-M9 复审第二轮）：多候选时取 names[0] 的结果依赖 ConcurrentHashMap 遍历序——
+        // 双数据源场景下事务路由随机。与其静默赌一个，不如启动期语义前移：显式报错要求用户收敛
+        if (names.length > 1) {
+            throw new com.minispring.jdbc.DataAccessException("容器中存在多个 TransactionManager（"
+                    + java.util.Arrays.toString(names) + "）——@Transactional 无法裁决事务边界；"
+                    + "教学子集请只保留一个（或拆分应用）");
+        }
         return beanFactory.getBean(names[0], TransactionManager.class);
     }
 }

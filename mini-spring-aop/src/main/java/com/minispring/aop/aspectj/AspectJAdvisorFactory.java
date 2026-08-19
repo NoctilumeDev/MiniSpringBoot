@@ -30,7 +30,9 @@ public class AspectJAdvisorFactory {
 
     public List<Advisor> getAdvisors() {
         List<Advisor> advisors = new ArrayList<>();
-        for (Method method : aspectInstance.getClass().getDeclaredMethods()) {
+        // L7：沿父类链收集通知方法——通知写在切面基类（含非 public）同样生效，
+        // 与注解扫描/字段注入的「继承照顾」纪律对称
+        for (Method method : collectMethods(aspectInstance.getClass())) {
             int order = resolveOrder(method);
             if (method.isAnnotationPresent(Before.class)) {
                 advisors.add(new PointcutAdvisor(
@@ -47,6 +49,19 @@ public class AspectJAdvisorFactory {
             }
         }
         return advisors;
+    }
+
+    /** 收集类及其父类的所有方法（跳过桥接/合成方法）。 */
+    private List<Method> collectMethods(Class<?> clazz) {
+        List<Method> methods = new ArrayList<>();
+        for (Class<?> current = clazz; current != null && current != Object.class; current = current.getSuperclass()) {
+            for (Method method : current.getDeclaredMethods()) {
+                if (!method.isBridge() && !method.isSynthetic()) {
+                    methods.add(method);
+                }
+            }
+        }
+        return methods;
     }
 
     /** 优先级来源：方法级 {@code @Order} > 切面类级 {@code @Order} > 缺省最低优先级（D5）。 */

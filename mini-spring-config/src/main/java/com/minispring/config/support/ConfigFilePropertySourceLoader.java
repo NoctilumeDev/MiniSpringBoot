@@ -4,6 +4,9 @@ import com.minispring.core.env.MapPropertySource;
 import com.minispring.core.env.StandardEnvironment;
 
 import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -31,9 +34,16 @@ public class ConfigFilePropertySourceLoader {
             return; // 没有任何配置文件
         }
 
-        // 带 profile 的文件，优先级高于默认文件（插到锚点之前）；同层内 properties 优先于 yml。
-        // addBefore 是「后插入的优先级更高」，故先插 properties 再插 yml → properties 靠前。
-        for (String profile : environment.getActiveProfiles()) {
+        // 带 profile 的文件，优先级高于默认文件（插到锚点之前）。
+        // L3（M0-M9 复审第二轮，测试实证）：addBefore(anchor, x) 中 List.add(index, x) 使
+        // 「先插入者更靠前」——同层 properties 优先须「先插 properties 再插 yml」；
+        // 多 profile 对齐 Spring last-wins（后激活的覆盖先激活的）须「倒序遍历 profiles，
+        // 让最后激活的最先插入、最靠前」。旧实现同层正确、多 profile 方向反（先激活者赢）。
+        // （复审中曾两度按直觉误判插入方向，最终以 lastActivatedProfileWins /
+        //  propertiesBeatsYmlInSameProfileLayer 两个用例的实测结果为准。）
+        List<String> profiles = new ArrayList<>(Arrays.asList(environment.getActiveProfiles()));
+        for (int i = profiles.size() - 1; i >= 0; i--) {
+            String profile = profiles.get(i);
             addBeforeIfPresent(environment, DEFAULT_NAME + "-" + profile + ".properties", anchor);
             addBeforeIfPresent(environment, DEFAULT_NAME + "-" + profile + ".yml", anchor);
         }

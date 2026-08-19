@@ -1,6 +1,7 @@
 package com.minispring.core.support;
 
 import com.minispring.core.BeanDefinition;
+import com.minispring.core.BeansException;
 import com.minispring.core.DisposableBean;
 import com.minispring.core.PropertyValue;
 import org.junit.jupiter.api.Test;
@@ -17,6 +18,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
  * IoC 容器的基线单测（仅作最低基线，不作为「落地验收」依据）。
@@ -120,7 +122,7 @@ class DefaultListableBeanFactoryTest {
         assertEquals(List.of("zzz", "aaa"), DESTROY_LOG);
     }
 
-    /** N5：并发 getBean 同名单例不得误报循环依赖（修复前第二个线程撞 currentlyInCreation 直接抛错）。 */
+    /** N5：并发 getBean 同名单例不得误报循环依赖（修复前第二线程撞 currentlyInCreation 直接抛错）。 */
     @Test
     void concurrentGetBeanDoesNotFalseReportCircularDependency() throws Exception {
         DefaultListableBeanFactory factory = new DefaultListableBeanFactory();
@@ -139,5 +141,30 @@ class DefaultListableBeanFactoryTest {
         } finally {
             pool.shutdownNow();
         }
+    }
+
+    static class HalfBaked {
+        @SuppressWarnings("unused")
+        private Object dep;
+    }
+
+    /**
+     * H1（M0-M9 复审第二轮）：创建失败必须清掉三级缓存残留。
+     * 修复前：第一次 getBean 注入失败抛错，但 singletonFactories 里的工厂残留——
+     * 第二次 getBean 从三级缓存命中「字段未注入的半成品」静默返回（无任何报错）。
+     * 本用例锚定：重试必须再次抛错，绝不允许拿到坏对象。
+     */
+    @Test
+    void failedCreationDoesNotLeaveFactoryResidue() {
+        DefaultListableBeanFactory factory = new DefaultListableBeanFactory();
+        BeanDefinition bd = new BeanDefinition(HalfBaked.class);
+        bd.addPropertyValue(PropertyValue.ref("dep", "no-such-bean"));
+        factory.registerBeanDefinition("halfBaked", bd);
+
+        // 第一次：注入失败（ref 的 bean 不存在）
+        assertThrows(BeansException.class, () -> factory.getBean("halfBaked"));
+        // 第二次（H1 核心）：不得从三级缓存拿到半成品——必须再次抛同样类型的错误
+        assertThrows(BeansException.class, () -> factory.getBean("halfBaked"),
+                "创建失败的 Bean 不得在重试时静默返回半成品");
     }
 }

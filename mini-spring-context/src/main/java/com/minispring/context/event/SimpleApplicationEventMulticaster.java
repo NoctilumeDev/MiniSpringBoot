@@ -51,14 +51,42 @@ public class SimpleApplicationEventMulticaster {
         return ApplicationEvent.class;
     }
 
+    /**
+     * 解析接口上的 ApplicationListener 泛型实参。M2（M0-M9 复审第二轮）：泛型可能经
+     * <b>子接口</b>固化——两种形态都要认：①带自身参数的子接口
+     * （{@code interface SmartListener<E> extends ApplicationListener<E>}，出现为
+     * ParameterizedType）；②固化泛型的子接口（{@code interface FixedListener extends
+     * ApplicationListener<FixedEvent>}，在 getGenericInterfaces() 里出现为 raw Class）。
+     * 任一形态解析失败都会退化成「接收所有事件」（D39 只修了父类链，此处补齐子接口链）。
+     */
     private Class<?> resolveFromInterface(Type iface) {
-        if (!(iface instanceof ParameterizedType)) {
+        Class<?> raw;
+        if (iface instanceof ParameterizedType) {
+            ParameterizedType pt = (ParameterizedType) iface;
+            raw = (Class<?>) pt.getRawType();
+            if (raw == ApplicationListener.class) {
+                return resolveTypeArgument(pt);
+            }
+        } else if (iface instanceof Class) {
+            raw = (Class<?>) iface;
+        } else {
             return null;
         }
-        ParameterizedType pt = (ParameterizedType) iface;
-        if (pt.getRawType() != ApplicationListener.class) {
-            return null;
+        // 子接口（ParameterizedType / raw Class 皆可能）：沿其继承树上溯
+        // （接口继承无环，编译器保证）
+        if (ApplicationListener.class.isAssignableFrom(raw)) {
+            for (Type superIface : raw.getGenericInterfaces()) {
+                Class<?> resolved = resolveFromInterface(superIface);
+                if (resolved != null) {
+                    return resolved;
+                }
+            }
         }
+        return null;
+    }
+
+    /** 取 {@code ApplicationListener<X>} 的泛型实参 X：普通类直取，参数化类型取其原始类型。 */
+    private Class<?> resolveTypeArgument(ParameterizedType pt) {
         Type arg = pt.getActualTypeArguments()[0];
         if (arg instanceof Class) {
             return (Class<?>) arg;

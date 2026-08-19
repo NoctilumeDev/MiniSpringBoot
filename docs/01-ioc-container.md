@@ -89,18 +89,18 @@ Aware 回调（BeanNameAware / BeanFactoryAware）
    ↓
 BeanPostProcessor.postProcessBeforeInitialization
    ↓
-初始化（InitializingBean.afterPropertiesSet / @PostConstruct）
+初始化（InitializingBean.afterPropertiesSet / @Bean initMethod）
    ↓
 BeanPostProcessor.postProcessAfterInitialization   ← AOP 代理在这里生成
    ↓
 放入一级缓存，对外提供
    ↓
-（容器关闭）DisposableBean.destroy / @PreDestroy
+（容器关闭）DisposableBean.destroy / @Bean destroyMethod
 ```
 
 设计要点：
 
-- **两步注解回调的顺序**：`@PostConstruct` 先于 `InitializingBean`（二者均为「初始化」环节，注解优先级更高）。
+- **生命周期回调的两种形态**：注解式 `@PostConstruct`/`@PreDestroy` 属 Spring 机制，本框架**未实现**（教学子集显式边界）；等价能力由 `InitializingBean`/`DisposableBean` 接口与 `@Bean(initMethod/destroyMethod)` 声明式回调承担（D2 已落地）。
 - **AOP 的插入点**：代理对象在 `postProcessAfterInitialization` 生成——所以「代理」永远发生在「原始对象完全就绪」之后。这是理解 AOP 与生命周期关系的关键。
 
 ---
@@ -206,6 +206,6 @@ ObjectFactory           — 半成品工厂（三级缓存）
 - 能 `@ComponentScan` 扫描到包内组件并注入依赖 ✅
 - 支持构造器注入 + 字段注入 + setter 注入 ✅
 - 支持 `@Scope` 两种作用域 ✅
-- 支持 `@PostConstruct` / `@PreDestroy` ✅
+- 支持 `InitializingBean`/`DisposableBean` 与 `@Bean(initMethod/destroyMethod)` 生命周期回调 ✅（注解式 `@PostConstruct`/`@PreDestroy` 未实现，显式边界）
 - 用单测证明「循环依赖 A←→B」能够被正确解开 ✅
 - BeanPostProcessor 介入能改变最终 Bean（用「包装 Bean」的 demo 验证）✅

@@ -69,6 +69,9 @@ public class SunHttpServer implements WebServer {
                     response.setStatus(500);
                     response.setContentType("text/plain; charset=utf-8");
                     response.write("Internal Server Error: " + e.getMessage());
+                } else {
+                    // L2：响应已提交时无法改写——留日志证据而非静默吞掉（排障黑洞）
+                    System.err.println("请求处理异常（响应已提交，兜底放弃改写）: " + e);
                 }
             } finally {
                 exchange.close();

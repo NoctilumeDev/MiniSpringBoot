@@ -17,8 +17,11 @@ import com.minispring.core.env.Environment;
 import com.minispring.core.env.StandardEnvironment;
 import com.minispring.core.support.DefaultListableBeanFactory;
 
+import java.lang.reflect.Constructor;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  * 注解驱动的应用上下文：一条构造器把「扫描 + 注册 + 条件装配 + 注入 + 预实例化」全部串起来——
@@ -93,6 +96,26 @@ public class AnnotationConfigApplicationContext implements ApplicationContext {
     }
 
     private void registerConfigClass(Class<?> configClass) {
+        registerConfigClass(configClass, new HashSet<>());
+    }
+
+    /**
+     * @param visiting 导入链上正在注册的配置类集合（H2：A @Import B、B @Import A 的循环导入
+     *                 必须得到可读错误而非 StackOverflowError——与 D27/D38 的 visiting 防护同构）
+     */
+    private void registerConfigClass(Class<?> configClass, Set<Class<?>> visiting) {
+        if (!visiting.add(configClass)) {
+            throw new IllegalStateException("检测到 @Import 循环导入: " + configClass.getName()
+                    + " 已在当前导入链上（" + visiting + "）——请打破环或调整 @Import 方向");
+        }
+        try {
+            doRegisterConfigClass(configClass, visiting);
+        } finally {
+            visiting.remove(configClass);
+        }
+    }
+
+    private void doRegisterConfigClass(Class<?> configClass, Set<Class<?>> visiting) {
         // 类级条件不命中，整棵配置类（含 @Bean / 组件扫描 / 导入）都不注册
         if (conditionEvaluator.shouldSkip(SimpleAnnotationMetadata.of(configClass))) {
             return;
@@ -104,7 +127,7 @@ public class AnnotationConfigApplicationContext implements ApplicationContext {
         // 3) @ComponentScan 扫描
         processComponentScan(configClass);
         // 4) @Import（含 @EnableAutoConfiguration 触发的自动配置导入）
-        processImports(configClass);
+        processImports(configClass, visiting);
     }
 
     private void processComponentScan(Class<?> configClass) {
@@ -132,7 +155,7 @@ public class AnnotationConfigApplicationContext implements ApplicationContext {
         }
     }
 
-    private void processImports(Class<?> configClass) {
+    private void processImports(Class<?> configClass, Set<Class<?>> visiting) {
         Import importAnnotation = SimpleAnnotationMetadata.findAnnotation(configClass, Import.class);
         if (importAnnotation == null) {
             return;
@@ -142,9 +165,9 @@ public class AnnotationConfigApplicationContext implements ApplicationContext {
                 // 延迟到用户配置全部落地后再执行，见 invokeDeferredImports()
                 deferredImports.add(new DeferredImport(imported, SimpleAnnotationMetadata.of(configClass)));
             } else if (ImportSelector.class.isAssignableFrom(imported)) {
-                registerImports(imported, SimpleAnnotationMetadata.of(configClass));
+                registerImports(imported, SimpleAnnotationMetadata.of(configClass), visiting);
             } else {
-                registerConfigClass(imported);
+                registerConfigClass(imported, visiting);
             }
         }
     }
@@ -154,16 +177,16 @@ public class AnnotationConfigApplicationContext implements ApplicationContext {
         int index = 0;
         while (index < deferredImports.size()) {
             DeferredImport deferred = deferredImports.get(index++);
-            registerImports(deferred.selectorClass, deferred.metadata);
+            registerImports(deferred.selectorClass, deferred.metadata, new HashSet<>());
         }
     }
 
-    private void registerImports(Class<?> selectorClass, AnnotatedTypeMetadata importingMetadata) {
+    private void registerImports(Class<?> selectorClass, AnnotatedTypeMetadata importingMetadata, Set<Class<?>> visiting) {
         ImportSelector selector = (ImportSelector) instantiate(selectorClass);
         String[] importedClassNames = selector.selectImports(importingMetadata);
         for (String className : importedClassNames) {
             try {
-                registerConfigClass(Class.forName(className, true, AnnotationConfigApplicationContext.class.getClassLoader()));
+                registerConfigClass(Class.forName(className, true, AnnotationConfigApplicationContext.class.getClassLoader()), visiting);
             } catch (ClassNotFoundException e) {
                 throw new BeansException("导入的配置类[" + className + "]不在 classpath 上", e);
             }
@@ -172,7 +195,10 @@ public class AnnotationConfigApplicationContext implements ApplicationContext {
 
     private Object instantiate(Class<?> clazz) {
         try {
-            return clazz.getDeclaredConstructor().newInstance();
+            // L5（D43 同族第四处）：包私有的 ImportSelector/DeferredImportSelector 同样允许实例化
+            Constructor<?> constructor = clazz.getDeclaredConstructor();
+            constructor.setAccessible(true);
+            return constructor.newInstance();
         } catch (ReflectiveOperationException e) {
             throw new BeansException("实例化[" + clazz.getName() + "]失败", e);
         }

@@ -129,7 +129,7 @@
 - `BeanDefinitionRegistry`：注册与查找
 - `BeanFactory` / `DefaultListableBeanFactory`：生产与缓存 Bean
 - `ApplicationContext`：在 BeanFactory 之上叠加扫描、事件等能力
-- `BeanPostProcessor` / `BeanFactoryPostProcessor`：扩展点
+- `BeanPostProcessor`（含 `InstantiationAware` / `SmartInstantiationAware` 派生）：扩展点（`BeanFactoryPostProcessor` 未实现，属规划项）
 - `InitializingBean` / `DisposableBean`：生命周期回调
 - 三级缓存：`singletonObjects` / `earlySingletonObjects` / `singletonFactories`（解决循环依赖）
 - `ObjectFactory`：半成品工厂
@@ -138,14 +138,14 @@
 
 - 注解：`@Component` / `@Service` / `@Repository` / `@Controller` / `@Configuration` / `@Bean`
 - 注入注解：`@Autowired` / `@Value` / `@Qualifier` / `@Primary`
-- 生命周期注解：`@PostConstruct` / `@PreDestroy` / `@Scope`
-- `ClassPathScanner`：扫描 classpath 下的字节码，识别候选 Bean
+- 作用域注解：`@Scope`（注解式 `@PostConstruct`/`@PreDestroy` 未实现——生命周期回调走 `InitializingBean`/`DisposableBean`/`@Bean(initMethod/destroyMethod)`，显式边界）
+- `ClassPathScanningCandidateComponentProvider`：扫描 classpath 下的字节码，识别候选 Bean
 
 ### 4.4 `mini-spring-aop` —— 面向切面
 
 - `Aspect` / `Pointcut` / `Advice` / `Advisor`
-- 通知：`@Before` / `@After` / `@AfterReturning` / `@AfterThrowing` / `@Around`
-- `AopProxyFactory`：生成 JDK 动态代理
+- 通知：`@Before` / `@After`（finally 语义）/ `@Around`（`@AfterReturning`/`@AfterThrowing` 未实现，显式边界）
+- `JdkDynamicAopProxy`：生成 JDK 动态代理（无独立 AopProxyFactory，教学子集直连）
 
 ### 4.5 `mini-spring-web` —— Web 与 MVC
 

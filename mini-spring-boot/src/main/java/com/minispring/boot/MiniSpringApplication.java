@@ -57,7 +57,9 @@ public final class MiniSpringApplication {
             for (Lifecycle lifecycle : lifecycles) {
                 try {
                     lifecycle.stop();
-                } catch (RuntimeException e) {
+                } catch (Throwable e) {
+                    // L1：只 catch RuntimeException 时，stop() 抛 Error 会跳过 context.close()——
+                    // 连接池等资源不释放（与 TransactionManager 对 Error 的回滚纪律对称）
                     System.err.println("停止 Lifecycle[" + lifecycle.getClass().getName() + "]失败: " + e);
                 }
             }

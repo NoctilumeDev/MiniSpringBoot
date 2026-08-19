@@ -41,11 +41,13 @@ export default function TransferPage({ onError, onNotice }) {
     setBusy(true);
     try {
       if (kind === 'ok') {
-        const r = await api.transfer(from, to, amount);
+        // 发送校验过的数值（L6）：校验 Number(amount) 但发送原始字符串时，
+        // " 10 " 这类输入能过校验、到后端 new BigDecimal(" 10 ") 抛 NFE 变 500
+        const r = await api.transfer(from, to, value);
         onNotice(`转账提交成功：#${r.from} → ${r.fromBalance}，#${r.to} → ${r.toBalance}`);
       } else {
         // 预期 500：服务端在扣款后刻意抛异常 → 事务回滚 → 余额不变
-        await api.transferFail(from, to, amount);
+        await api.transferFail(from, to, value);
         onNotice('不应到达：transfer-fail 预期抛异常');
       }
     } catch (err) {

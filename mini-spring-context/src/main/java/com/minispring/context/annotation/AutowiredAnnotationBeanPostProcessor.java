@@ -89,8 +89,19 @@ public class AutowiredAnnotationBeanPostProcessor implements InstantiationAwareB
                 for (int i = 0; i < paramTypes.length; i++) {
                     String qualifier = qualifierOf(method.getParameters()[i].getAnnotation(Qualifier.class));
                     // 解析按非必需（缺失返回 null），是否报错由方法级 required 决定
-                    Object value = resolveDependency(paramTypes[i], qualifier, false, beanName,
-                            beanName + "." + method.getName() + "(arg" + i + ")");
+                    Object value;
+                    try {
+                        value = resolveDependency(paramTypes[i], qualifier, false, beanName,
+                                beanName + "." + method.getName() + "(arg" + i + ")");
+                    } catch (BeansException e) {
+                        // L4：多候选无 @Primary 等解析失败与「无候选」对称——required=false 时
+                        // 跳过整个方法而非启动失败（Spring 同语义）
+                        if (autowired.required()) {
+                            throw e;
+                        }
+                        missing = true;
+                        break;
+                    }
                     if (value == null) {
                         if (autowired.required()) {
                             throw new BeansException("注入方法[" + beanName + "." + method.getName()
@@ -122,7 +133,16 @@ public class AutowiredAnnotationBeanPostProcessor implements InstantiationAwareB
                                      String beanName, String description) {
         // 1. @Qualifier 指名道姓：限定名 → beanName 两层匹配
         if (qualifier != null && !qualifier.isEmpty()) {
-            return resolveByQualifier(qualifier, requiredType, description);
+            try {
+                return resolveByQualifier(qualifier, requiredType, description);
+            } catch (BeansException e) {
+                // D51 收口：required=false 且限定名未命中 → null 注入（与方法注入/构造器参数对称，
+                // 此前与方法注入「解析按非必需」的注释自相矛盾）
+                if (!required) {
+                    return null;
+                }
+                throw e;
+            }
         }
         // 2. 按类型匹配
         String[] candidates = beanFactory.getBeanNamesForType(requiredType);
@@ -143,6 +163,10 @@ public class AutowiredAnnotationBeanPostProcessor implements InstantiationAwareB
     private Object resolveByQualifier(String qualifier, Class<?> requiredType, String description) {
         String matched = null;
         for (String name : beanFactory.getBeanNamesForType(requiredType)) {
+            // M1：候选集可能含运行期手动单例（无 BeanDefinition，如 webServer）——跳过而非崩溃
+            if (!registry.containsBeanDefinition(name)) {
+                continue;
+            }
             BeanDefinition bd = registry.getBeanDefinition(name);
             if (qualifier.equals(bd.getQualifier())) {
                 if (matched != null) {
@@ -170,6 +194,10 @@ public class AutowiredAnnotationBeanPostProcessor implements InstantiationAwareB
     private Object resolveByPrimary(String[] candidates, Class<?> requiredType, String beanName, String description) {
         String primary = null;
         for (String name : candidates) {
+            // M1：跳过运行期手动单例（无 BeanDefinition，不参与 Primary 裁决）
+            if (!registry.containsBeanDefinition(name)) {
+                continue;
+            }
             BeanDefinition bd = registry.getBeanDefinition(name);
             // 统一看 BeanDefinition.isPrimary()——既覆盖类级 @Primary，也覆盖 @Bean 方法级 @Primary（D23）
             if (bd.isPrimary()) {

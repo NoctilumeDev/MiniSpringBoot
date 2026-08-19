@@ -74,6 +74,12 @@ public class DispatcherServlet implements HttpHandler, BeanFactoryAware, Initial
     }
 
     private void writeError(HttpResponse response, Throwable e) {
+        // M4（M0-M9 复审第二轮）：响应头已发出（handler 中途 write 后再抛异常）时状态码不可改，
+        // 继续写会把错误文本追加进已提交的响应体形成「200 + 错误尾巴」的混合体——记日志并放弃改写
+        if (response.isCommitted()) {
+            System.err.println("请求处理异常（响应已提交，无法改写为 500）: " + e);
+            return;
+        }
         response.setStatus(500);
         response.setContentType("text/plain; charset=utf-8");
         response.write("500 Internal Server Error: " + e.getMessage());

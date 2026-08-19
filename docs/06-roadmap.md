@@ -59,7 +59,7 @@
 ### M1 · IoC 容器
 
 - **产出**：`BeanDefinition` / `BeanDefinitionRegistry` / `DefaultListableBeanFactory` / 三级缓存 / 生命周期 / `BeanPostProcessor`。
-- **落地证据**：demo `main` 真启动，依赖注入成功、循环依赖 `A↔B` 正确解开、`@PostConstruct/@PreDestroy` 真实回调。
+- **落地证据**：demo `main` 真启动，依赖注入成功、循环依赖 `A↔B` 正确解开、`InitializingBean`/`DisposableBean` 与 `@Bean(initMethod/destroyMethod)` 生命周期回调真实执行（注解式 `@PostConstruct`/`@PreDestroy` 未实现，属教学子集显式边界——初版此处虚报，M0-M9 复审第二轮订正）。
 
 ### M2 · 注解与类扫描
 
@@ -163,6 +163,14 @@
 - **N 系登记未修（D48–D60）**：见债务表；其中 N12（切点热路径性能）、N13（405）、N16（自动配置顺序依赖）在 M10 部署/压测前评估优先级。
 
 
+### M0–M9 全量复审修复（第二轮：严苛复审 + 账实核对，进入 M10 前二次收口）
+
+- **高危修复**：H1 三级缓存残留——`doCreateBean` 失败路径不清 `singletonFactories`/`earlySingletonObjects`，后续 `getBean` 会静默返回「字段未注入的半成品」（约束用例：失败后重试必须再次抛错而非拿到坏对象）；H2 `@Import` 循环导入无 visiting 防护 → StackOverflowError，现给可读错误（与 D27/D38 同构）。
+- **中危修复**：M1 注入裁决四路径（core 的 Primary/qualifier 参数裁决 + context 的 resolveByQualifier/resolveByPrimary）遇运行期手动单例（无 BeanDefinition，如 webServer）崩溃——D46 修了可见性没扫齐同族；M2 监听器泛型解析不认子接口固化泛型（D39 只修父类链；实测揪出两种形态——raw Class 固化与 ParameterizedType 带参，均沿接口树上溯），用例运行期的 CCE 噪音消失即为过滤生效实证；M3 properties 按 ISO-8859-1 读取中文必乱码（改 Reader+UTF-8，与 yml 对称）；M4 `writeError` 不查 `isCommitted`（已提交后写 500 文本形成混合体）；M5 多 TransactionManager 时切面按 CHM 遍历序随机取一个（改显式报错）；M6 类级 `@Transactional` 静默无效（`@annotation` 切点补类级命中，`@Target` 补 TYPE）；M7 D30 补偿代理的 init/destroy 回调找不到方法（`invokeNoArgMethod` 沿父类链+接口链回查）；M8 `JsonSerializer` 半写状态（字段名+冒号已写出后取值失败留下 `{"a":,` 非法 JSON——先取值再写名）。
+- **低危修复**：L1 shutdown 钩子只 catch RuntimeException（Error 跳过 context.close）；L2 SunHttpServer 兜底 catch 在响应已提交时完全静默（补日志）；L3 多 profile 优先级方向与 Spring 相反——正序遍历使先激活者赢，Spring 是 last-wins，改倒序遍历（同层 properties>yml 新旧实现均正确；复审中曾两度凭直觉误判 addBefore 的插入方向并险些反向引入 bug，最终以 lastActivatedProfileWins / propertiesBeatsYmlInSameProfileLayer 两个用例的实测钉死——教训：优先级类结论必须以可执行用例实证，不得凭注释或脑内推演）；L4 方法注入 required=false 遇「多候选无 @Primary」抛错而非跳过（与「无候选」半截不对称，随 D51 关闭）；L5 ImportSelector 实例化无 setAccessible（D43 同族第四处）；L6 前端校验 Number(amount) 但发送原始字符串（" 10 " 过校验后端 NFE 500）；L7 controller/切面的父类方法不注册（getDeclaredMethods 只看本类）；L9 `asInt/asLong/asDouble` 值不可转时裸 NumberFormatException（500 呈现 null，B10 错误保真同族）；L10 Date 无序列化策略（反射吐内部字段，改 ISO-8601 字符串）。
+- **文档账实核对（5 处虚报订正）**：①`01-ioc-container.md` §9 与本表 M1 落地证据宣称「@PostConstruct/@PreDestroy ✅」——代码不存在（`AnnotationConfigApplicationContext` 自己注释承认），订正为 InitializingBean/DisposableBean/@Bean(initMethod/destroyMethod)；②README「@EventListener 泛型解析」——不存在，订正为 ApplicationListener 接口式监听；③`architecture.md` 列出 BeanFactoryPostProcessor/@AfterReturning/@AfterThrowing/AopProxyFactory 四个不存在物——逐条订正为实际实现或标注「未实现，显式边界」；④README「3 实例高可用验收」——M10 未开始，订正为计划；⑤D5「无通知排序」——实现早已存在（AspectJAdvisorFactory.resolveOrder + 升序排序），属该关未关，核实关闭。教训同 M0-M9 复审第一轮：「宣称已修/已支持 ≠ 代码事实」。
+- **连带账目**：D49 描述按实测更新（接口类型 Map 字段抛可读错误而非登记时的「静默空 HashMap」，仅具体 Map 类型字段仍静默）；D51 关闭（字段+构造器参数双侧对称）；M6 由「登记债务」改为直接落地修复。
+
 ### M10 · 3 实例 + Nginx 高可用 + 全链路终验
 
 - **产出**：Nginx `upstream` + 健康检查、3 个无状态实例、健康检查接口、压测脚本、部署手册。
@@ -208,7 +216,7 @@
 | D2 | ~~`@Bean` 不支持 `initMethod/destroyMethod`~~ 已修于 M8：`@Bean(initMethod/…, destroyMethod/…)` 双属性落地（`AnnotatedBeanDefinitionReader` 读取 → BeanDefinition 已有字段），生命周期回调与「方法不存在时报错」负例均有单测；V10 实证 `HikariDataSource.close()`（destroyMethod）在 shutdown hook 里真实执行（MySQL 连接归零） | 需要方法级生命周期回调时 | 已关闭 |
 | D3 | ~~`@Autowired` 声明支持构造器/方法/参数注入，实际只实现字段注入~~ 已修于 M7 终审（A-4）：构造器注入（BPP `determineCandidateConstructors` 选构造器、容器解析参数、多个 `@Autowired` 构造器报错）、方法注入（字段注入后调用，`required=false` 依赖缺失仅跳过该方法）、参数级 `@Autowired(required=false)`（缺省注入 null）全部落地；构造器/prototype 循环依赖改为可读错误而非 StackOverflow | 需要构造或方法注入时 | 已关闭 |
 | D4 | ~~`@After` 注释写「正常返回后」，实现为 finally 语义~~ 已修于 M7（D42 + A 系终审）：注释订正、异常 suppressed 附加，拦截器更名为 `AfterAdviceInterceptor`（名称与 finally 语义一致） | 目标方法抛异常时后置仍会执行 | 已关闭 |
-| D5 | 无通知排序（`@Order`） | 多切面命中同一方法时顺序不确定 | M6/M7 多切面场景补 `Ordered` 优先级 |
+| D5 | ~~无通知排序（`@Order`）~~ 已修（M7 实现但未记账，M0-M9 复审第二轮核实关闭）：`AspectJAdvisorFactory.resolveOrder` 落地「方法级 `@Order` > 切面类级 `@Order` > 缺省最低优先级」，`AspectJAutoProxyCreator.getAdvisors` 按 order 升序组成拦截链 | 多切面命中同一方法时顺序不确定 | 已关闭 |
 | D6 | `getBeanNamesForType` 不感知 JDK 代理，按具体类注入会 ClassCastException | 按具体类而非接口注入被代理 Bean | 保持「按接口注入」约定（JDK 代理固有限制，与 Spring 一致） |
 | D7 | 单例创建无线程安全保护 | 运行时懒加载/动态注册单例时存在竞态 | 单例 refresh 预实例化 + 服务器其后启动即安全；未来懒加载再加锁 |
 | D8 | AOP 仅 JDK 动态代理，无接口的类无法被织入 | 对具体类（如 M5 的 Controller）做 AOP 时 | M5/M6 前评估：引入 CGLIB 代理策略，或将被增强 Bean 接口化 |
@@ -252,9 +260,9 @@
 | D46 | M7 终审第三轮实测发现：`registerSingleton` 注册的运行期单例（如 webServer）可见性不对称——`getBean` 能取（前轮已修），但 `containsBean` 只查 BeanDefinition、`getBeanNamesForType` 只遍历 BeanDefinition，对运行期单例全部返回「不存在」（分离 classpath 实测 webServer=true 已注册但 containsBean=false 实证）。已修：containsBean 同查一级缓存；getBeanNamesForType 补查「无定义的手动单例」按实例类型匹配（与 Spring 的 ManualSingletonNames 语义对齐） | 业务按类型/存在性查询运行期注册的单例时 | 已修于 M7 终审第三轮（分离 classpath 复测通过） |
 | D47 | HikariCP 仅 `minispring.datasource.max-pool-size` 可配，connection-timeout / minimum-idle / keepalive 等维持库默认（connectionTimeout=30s：DB 断连时请求有限阻塞 30 秒才返回 500，V7 实证——非挂死但体验欠佳） | 生产部署需要快速失败 / 池参数调优时 | M10 部署前评估：按需透传 `minispring.datasource.connection-timeout` 等参数；教学子集暂显式不做 |
 | D48 | N3：`RequestMappingHandlerMapping.isController` 用 `isAnnotationPresent` 不递归元注解，而类扫描器递归——自定义「元标注 @RestController」的组合注解能注册 Bean 却永远没有路由 | 用户定义 `@MyRestController`（其上标注 @RestController）并只加在类上时 | 按需：isController 改为递归元注解查找（带 visiting 防环，与 D38 三处同构） |
-| D49 | N6：`JsonObjectMapper.mapToPojo` Map 字段静默映射为空 HashMap（数据全丢无报错）；String 字段对 object/array 节点静默注入 null（与 asInt 显式报错不对称） | POST body 的 POJO 含 Map 字段 / String 字段收到结构化节点时 | 需要结构化字段绑定时：Map 分支按节点类型填充或显式报错，String 分支对非叶子节点报错 |
+| D49 | N6：`JsonObjectMapper.mapToPojo` 对 Map 字段的行为——接口类型 Map 字段（`Map<String,Object>` 声明）抛「构造对象失败」可读错误；具体 Map 类型字段（如 `HashMap`）仍静默映射为空 HashMap（数据全丢无报错）；String 字段对 object/array 节点静默注入 null（与 asInt 显式报错不对称） | POST body 的 POJO 含 Map 字段 / String 字段收到结构化节点时 | 需要结构化字段绑定时：Map 分支按节点类型填充或显式报错，String 分支对非叶子节点报错（描述按 M0-M9 复审第二轮实测更新） |
 | D50 | N8：占位符 `visiting` 集合跨整个拼接串递归——`b=${a}x${a}`（同一占位符在值内出现两次）被误判循环引用 | 配置值内同一占位符出现多次时 | 按 Spring 语义改为逐占位符进出栈 |
-| D51 | N9：`@Autowired(required=false)` + `@Qualifier` 组合下 `resolveByQualifier` 找不到直接抛异常而非注入 null，与方法注入「解析按非必需」注释自相矛盾 | 可选依赖带限定名且无候选时 | 对称修复：required=false 时限定名未命中走 null 注入 |
+| D51 | ~~N9：`@Autowired(required=false)` + `@Qualifier` 组合下 `resolveByQualifier` 找不到直接抛异常而非注入 null，与方法注入「解析按非必需」注释自相矛盾~~ 已修于 M0-M9 复审第二轮：字段路径（`resolveDependency` 的 qualifier 分支 catch 后按 required 裁决）与构造器/工厂方法参数路径（`resolveArgByQualifier` 增加 optional 参数）双侧对称落地；连带修复 L4——方法注入遇「多候选无 @Primary」解析失败时 required=false 也跳过方法（此前只覆盖「无候选返回 null」半截） | 可选依赖带限定名且无候选时 | 已关闭 |
 | D52 | N10：`registerComponent` 同 beanName 冲突静默跳过第二个类（`@Service("foo")`×2），Spring 抛 ConflictingBeanDefinitionException | 两个组件显式同名时 | 启动期抛冲突错误（与 N1 的 Ambiguous mapping 同纪律：配置错误启动即报） |
 | D53 | N11：`processComponentScan` 被扫到的 `@Configuration` 不递归处理其 `@ComponentScan`/`@Import`（D25 只修了 @Bean 半截） | 嵌套配置类链路（配置类里再 @Import 另一配置类）时 | 教学子集显式不支持；或递归处理 @Import |
 | D54 | N12：`AspectJExpressionPointcut.globMatch` 每次 matches 重新 StringBuilder+Pattern.compile（每次代理调用的热路径）；且 `com.x.service.*` 会跨包匹配 `com.x.service.sub.Foo`（Spring 中 `.` 不跨包） | 高频代理调用（压测）/ 深包子包类被意外命中 | M10 压测前：解析期缓存 Pattern；语义对齐按需 |
@@ -270,3 +278,4 @@
 > M7 终审第三轮（D45 方案 B）：optional 依赖 + `@ConditionalOnClass(name)` 字符串探测 + context 层 `Lifecycle`（boot 摘除 web 依赖，服务器启动归位 web 自动配置），模块级「裁剪即消失」经分离 classpath 真实启动实证（裁 aop+web / 只裁 aop 两场景）；实测顺带揪出并修复 D46（运行期单例可见性不对称）。至此 M0~M7 三轮外审 + 自审全部闭环，唯一残留 D44（已如实标注 + 警告日志）。
 > M8 审查（V1~V10 唯一事实验收）修掉：B9（`JdkDynamicAopProxy` 不命中切点的直通路径无 ITE 拆包——M3 修 B1 时只覆盖拦截链路，直通路径为对称遗漏；M8 接口化 Service + 仅部分方法 @Transactional 使该路径成为常态，V7 断连实测「500 Internal Server Error: null」暴露后修复，加对称约束用例）、TransactionAspect 构造依赖死结（改 BeanFactoryAware 懒解析，启动序列实证切面先于 dataSource 创建）、`ConditionEvaluator` 多条件 AND 语义（`findAnnotations` 全收集）、`RequestMappingHandlerMapping` 派生注解元注解化（@PutMapping/@DeleteMapping 落地）。D2/D34 按 M8 计划关闭；新登记 D47（Hikari 参数面）。测试 28→44。
 > M0–M9 全量复审（外审 35 条 + 补充 29–35 号）修掉：P0-1~P0-6、29-31（负数转账）、32（请求体上限）、34（Banner 版本联动）、N1/N2/N4/N5/N7/N18（详见 §3「M0–M9 全量复审修复」小节）；P0-2 即 D37 纠正、P0-3 即 M8 产出描述更正。另修 M9 复审遗留的 TransactionManager Error 路径隐式提交（committed 标记 + finally 统一回滚，含 transactionRollsBackOnError 用例）。未修各项登记 D48–D60。测试 45→52（core +2：逆序销毁/并发误报；web +2：Ambiguous/类级 path 别名；web json +3：NaN/Infinity 家族）。
+> M0–M9 全量复审第二轮（严苛复审 + 账实核对，详见 §3 对应小节）修掉：H1/H2 两个高危（三级缓存残留、@Import 循环导入）、M1~M8 中危八项、L1~L10 低危十项，订正文档虚报五处（@PostConstruct/@PreDestroy、@EventListener、architecture.md 四个不存在物、3 实例高可用、D5 该关未关）。测试 52→62（core +1：失败重试不取半成品；context +5：Import 环×2、手动单例限定名、required=false 限定名、子接口泛型；config +4：多 profile last-wins、同层 properties>yml、profile 覆盖默认、properties 中文 UTF-8）。

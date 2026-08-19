@@ -70,9 +70,14 @@ public class AspectJExpressionPointcut implements Pointcut {
         return classMatches(targetClass.getName()) && methodMatches(method.getName());
     }
 
-    /** 注解切点：方法本身或实现类的对应方法上标了指定注解即命中。 */
+    /** 注解切点：方法本身、类级标注（该类全部方法命中）、或实现类的对应方法上标了指定注解即命中。 */
     private boolean annotationMatches(Method method, Class<?> targetClass) {
         if (isAnnotationPresent(method)) {
+            return true;
+        }
+        // M6（M0-M9 复审第二轮）：类级标注（如 @Transactional 标在实现类上）命中该类全部
+        // 方法——此前静默不命中（Bean 不被代理、无事务、无任何警告），与 Spring 类级语义对齐
+        if (targetClass.isAnnotationPresent(annotationClass)) {
             return true;
         }
         // method 可能来自接口（JDK 代理）：回查实现类的对应方法（specific method）

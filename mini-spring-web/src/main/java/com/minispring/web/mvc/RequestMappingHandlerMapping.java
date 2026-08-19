@@ -52,6 +52,19 @@ public class RequestMappingHandlerMapping implements HandlerMapping, BeanFactory
         return clazz.isAnnotationPresent(Controller.class) || clazz.isAnnotationPresent(RestController.class);
     }
 
+    /** L7：沿父类链收集方法（跳过桥接/合成）——基类声明的 handler 方法同样注册路由。 */
+    private List<Method> collectMethods(Class<?> clazz) {
+        List<Method> methods = new ArrayList<>();
+        for (Class<?> current = clazz; current != null && current != Object.class; current = current.getSuperclass()) {
+            for (Method method : current.getDeclaredMethods()) {
+                if (!method.isBridge() && !method.isSynthetic()) {
+                    methods.add(method);
+                }
+            }
+        }
+        return methods;
+    }
+
     private void registerController(Object controller, Class<?> clazz) {
         String basePath = "";
         RequestMapping classMapping = clazz.getAnnotation(RequestMapping.class);
@@ -60,7 +73,7 @@ public class RequestMappingHandlerMapping implements HandlerMapping, BeanFactory
         if (classMapping != null) {
             basePath = !classMapping.value().isEmpty() ? classMapping.value() : classMapping.path();
         }
-        for (Method method : clazz.getDeclaredMethods()) {
+        for (Method method : collectMethods(clazz)) {
             String path = null;
             HttpMethod[] httpMethods = null;
             // 1) 直接标注 @RequestMapping

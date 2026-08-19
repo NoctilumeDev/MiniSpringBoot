@@ -34,6 +34,9 @@ public final class JsonSerializer {
             writeNumber(sb, (Number) value);
         } else if (value instanceof Enum) {
             writeString(sb, ((Enum<?>) value).name());
+        } else if (value instanceof java.util.Date) {
+            // L10：Date 走 ISO-8601 字符串——否则反射吐 fastTime 等内部字段，前端拿到无意义结构
+            writeString(sb, ((java.util.Date) value).toInstant().toString());
         } else if (value instanceof JsonNode) {
             writeJsonNode(sb, (JsonNode) value);
         } else if (value.getClass().isArray()) {
@@ -61,18 +64,22 @@ public final class JsonSerializer {
         sb.append('{');
         boolean first = true;
         for (Field field : collectFields(obj.getClass())) {
+            Object value;
             try {
                 field.setAccessible(true);
-                if (!first) {
-                    sb.append(',');
-                }
-                writeString(sb, field.getName());
-                sb.append(':');
-                writeValue(sb, field.get(obj));
-                first = false;
+                value = field.get(obj);
             } catch (IllegalAccessException ignored) {
-                // 读取不到的字段跳过
+                // M8（M0-M9 复审第二轮）：先取值再写名——否则字段名+冒号已写出后取值失败，
+                // 会留下 {"a":, 的半写状态产出非法 JSON；读取不到的字段整体跳过
+                continue;
             }
+            if (!first) {
+                sb.append(',');
+            }
+            writeString(sb, field.getName());
+            sb.append(':');
+            writeValue(sb, value);
+            first = false;
         }
         sb.append('}');
     }
