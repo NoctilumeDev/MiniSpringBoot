@@ -15,6 +15,14 @@
 
 MiniSpringBoot 是一个 **从零手写** 的 Spring Boot 内核复刻项目。框架内核不依赖 Spring、不依赖任何第三方运行时库，只用 JDK 重新实现 Spring 家族最核心的那几块「魔法」：IoC 容器、AOP、Web/MVC、自动配置、外部化配置、JDBC 与声明式事务。
 
+| | |
+| :--- | :--- |
+| 内核模块 | 8 个（core → config → context → aop → web → jdbc → autoconfigure → boot，依赖严格单向） |
+| 内核代码 | 153 个 Java 文件 / 6,683 行（`src/main`，可 `git ls-files '**/*.java'` 复核） |
+| 内核第三方运行时依赖 | **0**（JSON / YAML / HTTP 服务器全部手写；HikariCP、MySQL 驱动只在 demo 层） |
+| 测试 | 69 个（本地与 [CI](https://github.com/NoctilumeDev/MiniSpringBoot/actions) 云端 MySQL 上均全绿；jdbc 单测真连库） |
+| 里程碑 | M0–M9 落地验收通过 + 三轮全量复审（累计修复 41 个真实缺陷，账目见 [roadmap](docs/06-roadmap.md)） |
+
 ---
 
 ## ⚠️ 重要声明：内核是脚手架，demo 是真应用
@@ -100,21 +108,21 @@ MiniSpringBoot 采用与 Spring 对齐的分层设计。下面是**框架内核*
 
 ---
 
-## 真能跑 —— 联调实拍
+## 真能跑 —— 今日实拍
 
-下面每一张都是浏览器真实打开后的截图（M9 验收实拍，对应章节见 [docs/09-frontend.md](docs/09-frontend.md)）；页面上的每条数据都能在 MySQL 里直查到（`docker exec` 对照），每一次写操作都真实落库。
+四张截图均为浏览器真实操作后截取（非 mock、非设计稿）：页面上的每条数据都同时在 MySQL 里直查得到（`docker exec minispring-mysql mysql ... minispring_demo` 三方对照），每一次写操作都真实落库。
 
-**用户管理页**：对 MySQL `users` 表真实 CRUD（新建 / 编辑 / 删除），写后列表即库。
+| 用户管理（CRUD 落 MySQL） | 转账演示（事务提交 / 回滚） |
+| :---: | :---: |
+| ![用户管理页](docs/screenshots/users-page.png) | ![转账演示页](docs/screenshots/transfer-page.png) |
+| 表中 id=23 / id=96 两行与 `users` 表逐行一致；新建、编辑、删除均真实落库（唯一键冲突会被 MySQL 约束拒绝并透出到 UI） | 余额卡 770 / 1230 即 `accounts` 表实时值；「中途失败转账」先扣款后抛异常 → 事务整体回滚，两账户分文不动 |
 
-![用户管理页](docs/screenshots/users-page.png)
+| 错误根因直达 UI（数据库断连） | 状态码语义（404，非一律 500） |
+| :---: | :---: |
+| ![错误横幅](docs/screenshots/error-banner.png) | ![404 证据](docs/screenshots/404-evidence.png) |
+| `docker stop mysql` 后转账：约 30s 有限阻塞（Hikari connectionTimeout），红色横幅逐字透出根因与连接池状态（`Connection is not available, request timed out after 30010ms (total=0, active=0, idle=0)`）；事务开启失败即回滚，余额零变动；`docker start` 后接口立即自愈 | 资源缺失返回 404、参数非法返回 400（如负数转账金额）、业务规则冲突才是 500——异常到状态码的内建映射，调用方不再靠猜 |
 
-**转账演示页**：两个余额卡 + 「正常转账（提交）」/「中途失败转账（回滚）」双按钮——前者验证事务提交（余额精确变动），后者验证回滚（先扣款后抛异常，两账户分文不动）。
-
-![转账演示页](docs/screenshots/transfer-page.png)
-
-**错误链路到 UI**：数据库断连时，红色横幅逐字透出后端异常根因（M8 B9 / M9 B10 修复后的可读错误，含连接池状态 `Connection is not available, request timed out…`），而非笼统的 500。
-
-![错误横幅](docs/screenshots/error-banner.png)
+> 以上四张图的取证过程（含断连前后 DB 快照差分）记录于 [docs/06-roadmap.md](docs/06-roadmap.md) 各轮验收章节。
 
 ---
 
