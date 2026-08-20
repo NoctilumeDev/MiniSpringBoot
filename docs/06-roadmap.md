@@ -133,7 +133,7 @@
 
 ### M9 · React 前端 + 联调
 
-- **产出**：`demo-frontend/`（React 18 + Vite 5，JavaScript/jsx，端口 9010；Vite proxy `/api`→9090 rewrite 去前缀——决策点 A①/B① 已批）；两页极简 UI（用户管理：列表/新建/编辑/删除；转账演示：双按钮 + 余额卡），零路由/状态/UI 库；fetch 统一封装 + 全局错误横幅（后端可读错误原样到 UI）。
+- **产出**：`demo-frontend/`（React 18；M9 初始验收使用 Vite 5，当前工具链已因公开安全公告升级并锁定为 Vite 8；JavaScript/jsx，端口 9010；Vite proxy `/api`→9090 rewrite 去前缀——决策点 A①/B① 已批）；两页极简 UI（用户管理：列表/新建/编辑/删除；转账演示：双按钮 + 余额卡），零路由/状态/UI 库；fetch 统一封装 + 全局错误横幅（后端可读错误原样到 UI）。
 - **落地证据（V1~V8，浏览器真实操作 + F12 Network + docker exec 直查三方对照）**：
   - V1 渲染：浏览器打开 :9010，标题/tab/表格骨架完整，控制台零报错（截图存档）；
   - V2 列表=库：页面唯一行（id=23/甲/dup@v8.com）与 `docker exec` 直查完全一致；`GET /api/users` 200，payload 与 UI 逐字段相等（StrictMode 双请求为开发模式特征）；
@@ -178,7 +178,14 @@
 - **意见①「slf4j NOP 警告（mysql-connector-j 间接拉）」**：现象属实（NOP、零行为影响），**归因错误**——`dependency:tree -Dincludes=org.slf4j` 唯一路径是 `HikariCP 5.1.0 → slf4j-api 1.7.36`，mysql-connector-j 不在其列。处置：demo 层补 `slf4j-simple 1.7.36`（双轨制允许），NOP 警告消除、Hikari 池启停/evict 诊断真实可见（V7 类断连排障受益）。
 - **意见②「pom 缺 maven-jar-plugin.version 警告」**：属实（Maven 原话「威胁构建稳定性」）。处置：boot pom 显式锁 `3.3.0`。
 - **意见③「业务异常全部 500 而非 400/404」**：属实（`/users/99999`→500、负数转账→500 实测复现），即登记在册的 D16。处置：D16 部分收口（详见债务表条目）——框架层 `ResponseStatusException` + `resolveStatus` 内建映射（含约束单测，直接断言映射结果），demo 层资源缺失改 404、参数校验走 400。
-- **工程配套观察（无 CI / 无 LICENSE / 无 .github）**：属实。处置：新增 `.github/workflows/ci.yml`（backend：JDK 17 + MySQL service 映射 13306 + init.sql 建表 + `mvn clean install`；frontend：Node 20 + `npm ci && npm run build`）；新增 `LICENSE`（MIT）。`groupId com.minispring` 与 Spring 疑似混淆：**不改**——改名牵动全部模块坐标与已发布 tag，且教学项目该命名属合理范畴（外审意见本身亦如此认定）。
+- **工程配套观察（无 CI / 无 LICENSE / 无 .github）**：属实。处置：新增 `.github/workflows/ci.yml`（backend：JDK 17 + MySQL service 映射 13306 + init.sql 建表 + `mvn clean install`；frontend 初始为 Node 20 + `npm ci && npm run build`，当前已升级为 Node 22，并增加 moderate 级依赖审计）；新增 `LICENSE`（MIT）。`groupId com.minispring` 与 Spring 疑似混淆：**不改**——改名牵动全部模块坐标与已发布 tag，且教学项目该命名属合理范畴（外审意见本身亦如此认定）。
+
+#### 公共依赖与 CI 门禁补强（2026-08-20）
+
+- Vite 5 / esbuild 旧依赖树命中公开安全公告；将当前前端构建工具升级并精确锁定为 `vite 8.2.2`、`@vitejs/plugin-react 6.1.0`，清理旧 Babel/esbuild 依赖树。
+- CI 前端环境升级至 Node 22，构建后执行 `npm audit --audit-level=moderate`；npm 安装与审计显式使用官方 registry，避免本机镜像站不实现 npm audit API 时形成假阴性或误判。
+- `pull_request` 增加 `edited` 触发类型，覆盖堆叠 PR 改 base 后的重新验证；Actions 固定到完整 commit SHA，并加入只读权限、并发取消与手动触发。
+- 新增 Dependabot，对 Maven、npm 与 GitHub Actions 分别进行每周 minor/patch 更新；major 版本继续由人工评估。
 
 ### M10 · 3 实例 + Nginx 高可用 + 全链路终验
 

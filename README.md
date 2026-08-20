@@ -174,7 +174,7 @@ graph TD
 MiniSpringBoot
 ├── README.md
 ├── LICENSE                   # MIT
-├── .github/workflows/ci.yml  # CI（backend: JDK17+MySQL service 真连库跑测试；frontend: Vite build）
+├── .github/                  # CI + Dependabot（backend 真连库；frontend build + dependency audit）
 ├── docs/                      # 设计文档
 │   ├── architecture.md        # 总体设计
 │   ├── 01-ioc-container.md    # IoC 容器
@@ -225,7 +225,7 @@ cd demo-frontend && npm install && npm run dev
 
 验证：浏览器打开 `http://localhost:9010`——用户管理页对 MySQL 真实 CRUD、转账页可视化事务提交/回滚；F12 Network 可见 `/api/*` 全链路请求。
 
-> 推送到 main 即触发 [GitHub Actions CI](.github/workflows/ci.yml)：backend 在云端起 MySQL service 跑全量 69 个测试（jdbc 单测真连库），frontend 跑 `npm ci && npm run build`——本地能跑的，云端同样验证。
+> 推送到 main 或更新 PR 即触发 [GitHub Actions CI](.github/workflows/ci.yml)：backend 在云端起 MySQL service 跑全量 69 个测试（jdbc 单测真连库），frontend 在 Node 22 上执行 `npm ci`、Vite build 与 moderate 级依赖审计——本地能跑的，云端同样验证。
 
 ---
 
