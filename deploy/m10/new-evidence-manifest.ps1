@@ -36,6 +36,24 @@ $failover = Get-Content -LiteralPath $failoverPath.FullName -Raw | ConvertFrom-J
 $transaction = Get-Content -LiteralPath $transactionPath.FullName -Raw | ConvertFrom-Json
 $readiness = Get-Content -LiteralPath $readinessPath.FullName -Raw | ConvertFrom-Json
 
+function Get-CanonicalTextDigest([string]$Path) {
+    # Git normalizes text line endings. Hash UTF-8/LF canonical bytes so the
+    # manifest remains valid on Windows, Linux and a clean clone alike.
+    $text = [System.IO.File]::ReadAllText($Path, [System.Text.Encoding]::UTF8)
+    $canonical = $text.Replace("`r`n", "`n").Replace("`r", "`n")
+    $bytes = (New-Object System.Text.UTF8Encoding($false)).GetBytes($canonical)
+    $sha = [System.Security.Cryptography.SHA256]::Create()
+    try {
+        $hash = ($sha.ComputeHash($bytes) | ForEach-Object { $_.ToString('x2') }) -join ''
+    } finally {
+        $sha.Dispose()
+    }
+    return [pscustomobject]@{
+        sizeBytes = [int64]$bytes.Length
+        sha256 = $hash
+    }
+}
+
 $capacityStages = @($capacity.stages | ForEach-Object {
     [ordered]@{
         concurrency = [int]$_.concurrency
@@ -53,10 +71,11 @@ $files = @(Get-ChildItem -LiteralPath $evidenceRoot -File |
     Where-Object { $_.Name -ne 'm10-evidence-manifest.json' } |
     Sort-Object Name |
     ForEach-Object {
+        $digest = Get-CanonicalTextDigest -Path $_.FullName
         [ordered]@{
             path = "docs/evidence/m10/$($_.Name)"
-            sizeBytes = [int64]$_.Length
-            sha256 = (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+            sizeBytes = $digest.sizeBytes
+            sha256 = $digest.sha256
         }
     })
 
@@ -65,6 +84,7 @@ $manifest = [ordered]@{
     generatedAt = (Get-Date).ToUniversalTime().ToString('o')
     subject = 'MiniSpringBoot M10 bounded high-availability verification'
     sourceCommit = $SourceCommit
+    hashMode = 'UTF8_LF_CANONICAL'
     status = 'SELF_VERIFIED'
     externalVerification = 'VERITRAIL_M12_PENDING'
     claims = [ordered]@{
