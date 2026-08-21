@@ -68,8 +68,7 @@ public class RequestMappingHandlerMapping implements HandlerMapping, BeanFactory
     private void registerController(Object controller, Class<?> clazz) {
         String basePath = "";
         RequestMapping classMapping = clazz.getAnnotation(RequestMapping.class);
-        // N2（M0-M9 复审）：类级与方法级对称——value/path 互为别名，此前类级只读 value()，
-        // @RequestMapping(path = "/x") 的前缀静默丢失
+        // 类级与方法级映射均将 value/path 视为别名。
         if (classMapping != null) {
             basePath = !classMapping.value().isEmpty() ? classMapping.value() : classMapping.path();
         }
@@ -82,9 +81,8 @@ public class RequestMappingHandlerMapping implements HandlerMapping, BeanFactory
                 path = !rm.value().isEmpty() ? rm.value() : rm.path();
                 httpMethods = rm.method();
             } else {
-                // 2) 派生映射注解（M8 修复：不再硬编码枚举 Get/PostMapping——Put/Delete 及自定义
-                //    @XxxMapping 统一走「注解自身携带元 @RequestMapping」路径：路径取派生注解的
-                //    value()，HTTP 方法取元 @RequestMapping 的 method()）
+                // 2) 派生映射注解统一读取自身的元 @RequestMapping：路径取派生注解的 value()，
+                //    HTTP 方法取元 @RequestMapping 的 method()，覆盖内置及自定义 @XxxMapping。
                 for (Annotation ann : method.getAnnotations()) {
                     RequestMapping meta = ann.annotationType().getAnnotation(RequestMapping.class);
                     if (meta == null) {
@@ -106,8 +104,7 @@ public class RequestMappingHandlerMapping implements HandlerMapping, BeanFactory
     }
 
     /**
-     * N1（M0-M9 复审）：同一「方法 + 路径」重复映射启动即报，不再静默取第一个
-     * （此前注册顺序依赖 ConcurrentHashMap 遍历序，跨运行不稳定；Spring 启动即抛 Ambiguous mapping）。
+     * 同一「HTTP 方法 + 路径」的重复映射在启动期抛出歧义错误，确保映射选择不依赖注册顺序。
      */
     private void detectAmbiguous(HttpMethod[] httpMethods, String fullPath, Method method) {
         for (MappingRegistration r : registrations) {

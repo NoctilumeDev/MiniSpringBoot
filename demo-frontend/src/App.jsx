@@ -30,7 +30,7 @@ function BrandContent({ highAvailability = false }) {
 
 /**
  * 应用骨架：顶部 tab（用户管理 / 转账演示）+ 全局错误横幅。
- * 横幅是 M9 错误链路的落点——后端 500 的可读消息在这里显示给用户。
+ * 横幅展示后端返回的可读错误消息。
  */
 export default function App() {
   const highAvailability = window.location.port === '9080';

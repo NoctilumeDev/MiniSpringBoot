@@ -19,10 +19,9 @@ class ConditionEvaluator {
     /**
      * @return {@code true} 表示该组件应跳过（不注册）。
      *
-     * <p>M8 修复：元素上可能有<b>多个</b>派生注解各自携带 {@code @Conditional}
-     * （如 {@code @ConditionalOnClass} + {@code @ConditionalOnBean} 同标一个类）——
-     * 此前只取第一个命中的 {@code @Conditional} 求值，后续条件被静默忽略；
-     * 现在收集全部实例逐一 AND，任一不命中即跳过。
+     * <p>元素上可能有<b>多个</b>派生注解各自携带 {@code @Conditional}
+     * （如 {@code @ConditionalOnClass} + {@code @ConditionalOnBean} 同标一个类）；
+     * 所有实例逐一参与 AND 求值，任一不命中即跳过。
      */
     boolean shouldSkip(AnnotatedTypeMetadata metadata) {
         List<java.lang.annotation.Annotation> conditionals = metadata.findAnnotations(Conditional.class);

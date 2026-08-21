@@ -12,7 +12,7 @@
 
     <artifactId>mini-spring-autoconfigure</artifactId>
     <name>mini-spring-autoconfigure</name>
-    <description>自动配置：@Conditional 派生 + AutoConfigurationImportSelector + SPI 读取 + 框架自动配置类归位（A-1）</description>
+    <description>自动配置：@Conditional 派生 + AutoConfigurationImportSelector + SPI 读取 + 框架自动配置类</description>
 
     <dependencies>
         <dependency>
@@ -20,11 +20,10 @@
             <artifactId>mini-spring-context</artifactId>
             <version>0.1.0-SNAPSHOT</version>
         </dependency>
-        <!-- A-1/D45：自动配置类从框架模块迁入本模块。三个框架依赖全部 optional——
+        <!-- 三个框架依赖全部设为 optional：
              编译期可见（本模块要写 @Bean 方法），但绝不向下游传递：
              应用按需引 web/aop/config，缺失时对应自动配置经 @ConditionalOnClass(name) 安全跳过。
-             事实核查（2026-08-19）：Spring Boot 3.2 的 spring-boot-autoconfigure 发布 pom 对下游
-             仅传递 spring-boot 本体一个 compile 依赖，spring-web 等全部 optional，本结构与其一致 -->
+             Spring Boot 的 autoconfigure 同样将具体能力依赖保持为 optional。 -->
         <dependency>
             <groupId>com.minispring</groupId>
             <artifactId>mini-spring-config</artifactId>
@@ -43,7 +42,7 @@
             <version>0.1.0-SNAPSHOT</version>
             <optional>true</optional>
         </dependency>
-        <!-- M8（D45 模式延续）：jdbc 模板与 HikariCP 均 optional——编译期可见、运行期不传递；
+        <!-- jdbc 模板与 HikariCP 均为 optional：编译期可见、运行期不传递；
              裁掉任一依赖，对应自动配置经 @ConditionalOnClass(name) 安全跳过 -->
         <dependency>
             <groupId>com.minispring</groupId>

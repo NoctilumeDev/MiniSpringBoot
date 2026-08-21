@@ -49,8 +49,7 @@ final class SunHttpRequest implements HttpRequest {
     public String getBody() {
         if (body == null) {
             try {
-                // 32（M0-M9 复审）：请求体设 1 MiB 上限——readAllBytes 会让超大请求体
-                // 全量进内存，单请求即可 OOM；多读 1 字节用于判定超限
+                // 请求体上限为 1 MiB，多读取 1 字节用于识别超限，避免无界缓冲占满内存。
                 byte[] bytes = exchange.getRequestBody().readNBytes(MAX_BODY_BYTES + 1);
                 if (bytes.length > MAX_BODY_BYTES) {
                     throw new IllegalStateException("请求体超过上限 " + MAX_BODY_BYTES

@@ -15,7 +15,7 @@ import java.lang.annotation.Target;
  * {@code JdbcTemplate} 执行的所有 SQL 共用同一连接、同一提交边界。
  *
  * <p><b>D8 约束</b>：标注方法所在类必须接口化（JDK 动态代理只代理接口方法）。
- * 支持方法级与实现类级标注（类级 = 该类全部方法命中，M0-M9 复审第二轮落地）；
+ * 支持方法级与实现类级标注（类级 = 该类全部方法命中）；
  * 接口级继承标注仍延后（见 roadmap）。
  */
 @Target({ElementType.METHOD, ElementType.TYPE})

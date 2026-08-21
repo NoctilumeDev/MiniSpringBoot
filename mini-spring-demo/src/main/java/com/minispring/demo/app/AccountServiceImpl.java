@@ -28,8 +28,7 @@ public class AccountServiceImpl implements AccountService {
     public Map<String, Object> transfer(long fromId, long toId, BigDecimal amount) {
         debit(fromId, amount);
         credit(toId, amount);
-        // P0-6：事务内读取双方余额（复用同一连接、同一快照，与“未读到的提交一致”），
-        // 而非提交后再读——那样在并发下可能返回不含本次转账的旧值。
+        // 在事务内使用同一连接与快照读取双方余额，使返回值与本次提交保持一致。
         return Map.of(
                 "from", fromId, "to", toId,
                 "fromBalance", balance(fromId),
@@ -49,26 +48,23 @@ public class AccountServiceImpl implements AccountService {
         BigDecimal value = jdbc.queryOne("SELECT balance FROM accounts WHERE id = ?",
                 rs -> rs.getBigDecimal("balance"), id);
         if (value == null) {
-            // 外审复核第三轮（D16 部分收口）：资源缺失 → 404
+            // 账户不存在返回 404。
             throw new ResponseStatusException(404, "账户不存在: " + id);
         }
         return value;
     }
 
     private void debit(long fromId, BigDecimal amount) {
-        // 29-31（负数转账修复）：负数金额会让 WHERE balance >= ? 恒真（余额 >= 负数），
-        // 变成「反向转账 + 余额可被打负」——前端拦截形同虚设，API 层必须自校验。
-        // IllegalArgumentException → 框架内建映射 400（参数校验是客户端错误，非 500）
+        // API 层独立校验正数金额，避免负值反转扣款语义；参数错误映射为 400。
         if (amount.compareTo(BigDecimal.ZERO) <= 0) {
             throw new IllegalArgumentException("转账金额必须为正数: " + amount);
         }
-        // P0-4（并发竞态修复）：不再「先 SELECT 余额再 UPDATE」的 check-then-act——
-        // RR 隔离下两个并发扣款可同时通过余额检查导致透支。改为单条原子 UPDATE
-        // 带 WHERE balance >= ? 约束：余额不足时影响行数为 0，由 MySQL 行锁保证原子性。
+        // 扣款使用带余额条件的单条原子 UPDATE，由 MySQL 行锁保证并发裁决；
+        // 账户不存在或余额不足时影响行数为 0。
         int updated = jdbc.update("UPDATE accounts SET balance = balance - ? WHERE id = ? AND balance >= ?",
                 amount, fromId, amount);
         if (updated != 1) {
-            // 外审复核第三轮：请求侧问题（账户不存在/余额不足）→ 400，不再与服务器故障混同 500
+            // 账户不存在或余额不足属于请求侧问题，返回 400。
             throw new ResponseStatusException(400, "扣款失败：账户 " + fromId + " 不存在或余额不足");
         }
     }

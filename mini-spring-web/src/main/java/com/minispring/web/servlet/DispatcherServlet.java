@@ -74,8 +74,7 @@ public class DispatcherServlet implements HttpHandler, BeanFactoryAware, Initial
     }
 
     private void writeError(HttpResponse response, Throwable e) {
-        // M4（M0-M9 复审第二轮）：响应头已发出（handler 中途 write 后再抛异常）时状态码不可改，
-        // 继续写会把错误文本追加进已提交的响应体形成「200 + 错误尾巴」的混合体——记日志并放弃改写
+        // 响应头已发出时不能改写状态码或追加错误体，只记录错误并保持已提交响应不变。
         if (response.isCommitted()) {
             System.err.println("请求处理异常（响应已提交，无法改写为错误状态）: " + e);
             return;
@@ -87,7 +86,7 @@ public class DispatcherServlet implements HttpHandler, BeanFactoryAware, Initial
     }
 
     /**
-     * 异常 → HTTP 状态码的内建映射（外审复核第三轮，D16 部分收口）：
+     * 异常 → HTTP 状态码的内建映射：
      * <ul>
      *   <li>{@link ResponseStatusException} → 自带状态码（资源缺失 404、明确指定的 4xx 等）；</li>
      *   <li>{@link IllegalArgumentException} → 400（参数/校验类错误是客户端的锅）；</li>

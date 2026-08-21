@@ -43,17 +43,16 @@ public class SimpleApplicationEventMulticaster {
      * 从 {@code ApplicationListener<E>} 的泛型实参里反解出关心的事件类型，覆盖四种声明形态：
      * <ul>
      *   <li>直接实现：{@code class L implements ApplicationListener<FooEvent>}</li>
-     *   <li>经父类固化（D39）：{@code class Sub extends Base}，Base 直接实现并固化泛型</li>
-     *   <li>经子接口固化（M2 初修，raw Class 形态）：{@code interface F extends ApplicationListener<FooEvent>}</li>
-     *   <li>经带自身类型参数的子接口 / 泛型父类（M2 追修）：
+     *   <li>经父类固化：{@code class Sub extends Base}，Base 直接实现并固化泛型</li>
+     *   <li>经子接口固化：{@code interface F extends ApplicationListener<FooEvent>}</li>
+     *   <li>经带自身类型参数的子接口 / 泛型父类：
      *       {@code interface S<E> extends ApplicationListener<E>} + {@code class L implements S<FooEvent>}，
      *       或 {@code class Sub extends Base<FooEvent>} + {@code class Base<E> implements ApplicationListener<E>}</li>
      * </ul>
      *
      * <p>包级可见：供同包单测<b>直接断言解析结果</b>。行为断言（received 计数）对「解析退化」
-     * 不构成约束——退化时监听器对一切事件放行，无关事件在桥接方法的 checkcast 处抛
-     * ClassCastException、被 {@code invoke} 的 B-4 catch 吞掉，计数碰巧仍为 0，用例假通过
-     * （M2 追修实测教训：初版用例全绿但过滤实际未生效）。
+     * 不构成约束：解析退化时监听器会接收全部事件，无关事件可能在桥接方法的 checkcast
+     * 处抛出 ClassCastException 并被调用层处理，导致计数断言无法识别过滤失效。
      */
     Class<?> resolveEventType(ApplicationListener<?> listener) {
         Class<?> clazz = listener.getClass();
@@ -82,11 +81,10 @@ public class SimpleApplicationEventMulticaster {
     /**
      * 沿接口继承树上溯解析 ApplicationListener 的泛型实参，携带「类型变量 → 实参」绑定表。
      *
-     * <p>M2 追修：带自身类型参数的子接口（{@code interface S<E> extends ApplicationListener<E>}）
+     * <p>带自身类型参数的子接口（{@code interface S<E> extends ApplicationListener<E>}）
      * 的实参在<b>实现处</b>给出（{@code implements S<FooEvent>}），上溯到
-     * {@code ApplicationListener<E>} 时 E 仍是类型变量——必须靠绑定表代入才能解出 FooEvent。
-     * 初版递归丢了绑定（从 raw Class 的 getGenericInterfaces() 重走，实参信息已丢失），
-     * 宣称覆盖该形态实未覆盖：静默退化「接收所有事件」，且行为用例因 CCE 被吞而假通过。
+     * {@code ApplicationListener<E>} 时 E 仍是类型变量，必须通过绑定表代入才能解出 FooEvent；
+     * 仅沿 raw Class 重新遍历会丢失实参映射。
      */
     private Class<?> resolveFromInterface(Type iface, Map<TypeVariable<?>, Type> bindings) {
         Class<?> raw;

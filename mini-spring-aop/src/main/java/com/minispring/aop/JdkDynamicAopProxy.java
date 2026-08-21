@@ -49,14 +49,8 @@ public class JdkDynamicAopProxy implements AopProxy, InvocationHandler {
     }
 
     /**
-     * 反射调用目标方法并拆包 {@link InvocationTargetException}（M8 修复）。
-     *
-     * <p>不命中切点的方法此前直接 {@code method.invoke} 上抛——目标异常被包成
-     * InvocationTargetException（其 message 为 null），到 DispatcherServlet 变成
-     * 「500 Internal Server Error: null」，原始异常类型与消息全部丢失。M3 只修了
-     * 命中切点的链路（ReflectiveMethodInvocation），此处为对称遗漏；M8 接口化
-     * Service + 仅部分方法 @Transactional 使「经代理但不命中切点」成为常态调用
-     * 路径，该缺陷被激活。
+     * 反射调用目标方法并拆包 {@link InvocationTargetException}，使所有代理调用路径
+     * 都保留目标异常的类型与消息。
      */
     private Object invokeTarget(Method method, Object[] arguments) throws Throwable {
         try {

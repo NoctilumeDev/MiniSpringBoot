@@ -14,9 +14,7 @@ public class PropertiesPropertySourceLoader {
 
     public Map<String, Object> load(InputStream in) {
         Properties props = new Properties();
-        // M3（M0-M9 复审第二轮）：必须经 Reader 按 UTF-8 读——Properties.load(InputStream)
-        // 按 JDBC 时代规范固定 ISO-8859-1，中文值必乱码；与 YamlPropertySourceLoader 的
-        // UTF-8 读取对称（此前 demo 无中文 properties 值所以未暴露）
+        // 配置契约统一使用 UTF-8 Reader；Properties.load(InputStream) 固定按 ISO-8859-1 解码。
         try (Reader reader = new InputStreamReader(in, StandardCharsets.UTF_8)) {
             props.load(reader);
         } catch (IOException e) {

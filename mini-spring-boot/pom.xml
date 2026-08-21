@@ -26,7 +26,7 @@
             <artifactId>mini-spring-config</artifactId>
             <version>0.1.0-SNAPSHOT</version>
         </dependency>
-        <!-- D45：boot 不依赖 web——服务器启动经 context 层 Lifecycle 接口驱动（web 存在时由
+        <!-- boot 不依赖 web：服务器启动经 context 层 Lifecycle 接口驱动（web 存在时由
              WebMvcAutoConfiguration 装配 Lifecycle 实现；缺失时自动跳过），与 spring-boot 同构 -->
         <!-- 仅测试期依赖；运行时保持零第三方依赖 -->
         <dependency>
@@ -51,14 +51,11 @@
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>3.2.5</version>
             </plugin>
-            <!-- 34（M0-M9 复审）：把 ${project.version} 写进 jar 清单，Banner 运行期读取，
-                 消除「Banner 硬编码版本 vs pom 版本」的永久漂移 -->
+            <!-- 把 ${project.version} 写入 jar 清单供 Banner 运行期读取，保持展示版本与构建元数据一致。 -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-jar-plugin</artifactId>
-                <!-- 版本必须显式锁死（外审复核第三轮）：不锁时 Maven 报
-                     'build.plugins.plugin.version is missing'——「威胁构建稳定性」，
-                     未来 Maven 版本可能拒绝构建或静默换行为 -->
+                <!-- 显式锁定插件版本，保证 Maven 构建行为可复现。 -->
                 <version>3.3.0</version>
                 <configuration>
                     <archive>
