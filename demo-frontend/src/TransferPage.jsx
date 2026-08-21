@@ -1,4 +1,14 @@
 import React, { useEffect, useState } from 'react';
+import {
+  ArrowRight,
+  ArrowRightLeft,
+  CircleDollarSign,
+  Database,
+  RefreshCw,
+  ShieldCheck,
+  Undo2,
+  WalletCards,
+} from 'lucide-react';
 import { api } from './api.js';
 
 /**
@@ -62,43 +72,99 @@ export default function TransferPage({ onError, onNotice }) {
     }
   };
 
-  const card = (id) => (
-    <div className="balance-card" key={id}>
-      <h3>账户 #{id}</h3>
-      <p className="amount">{balances[id] ? `${balances[id].balance}` : '…'}</p>
-      <button onClick={() => reloadBalances([id])}>刷新</button>
+  const account = (id) => (
+    <div className="balance-account" key={id}>
+      <span className="account-id"><WalletCards size={17} aria-hidden="true" />账户 #{id}</span>
+      <output className="amount" aria-label={`账户 ${id} 当前余额`}>
+        {balances[id] !== null ? balances[id].balance : '…'}
+      </output>
+      <button type="button" className="quiet-action" onClick={() => reloadBalances([id])}>
+        <RefreshCw size={15} aria-hidden="true" />刷新
+      </button>
     </div>
   );
 
   return (
-    <section>
-      <h2>转账（accounts 表，@Transactional）</h2>
+    <section className="workspace-view transfer-view" aria-labelledby="transfer-title">
+      <header className="view-heading">
+        <div>
+          <p className="eyebrow">TRANSACTION CONTROL · ACCOUNT DOMAIN</p>
+          <h2 id="transfer-title">转账 <span>@Transactional</span></h2>
+          <p>同一条真实链路观察事务提交与异常回滚，余额结果以 MySQL 为准。</p>
+        </div>
+        <div className="view-counter" aria-label="事务控制台">
+          <ArrowRightLeft size={20} aria-hidden="true" />
+          <span><small>模式</small><strong>TX</strong></span>
+        </div>
+      </header>
 
-      <div className="balance-row">
-        {card(1)}
-        {card(2)}
+      <div className="transfer-layout">
+        <div className="balance-ledger">
+          <div className="section-heading">
+            <Database size={18} aria-hidden="true" />
+            <div><span>账户余额</span><small>SELECT · accounts</small></div>
+          </div>
+          <div className="balance-row">
+            {account(1)}
+            {account(2)}
+          </div>
+        </div>
+
+        <div className="transfer-command">
+          <div className="section-heading">
+            <CircleDollarSign size={18} aria-hidden="true" />
+            <div><span>事务指令</span><small>COMMIT / ROLLBACK</small></div>
+          </div>
+
+          <form className="transaction-form" onSubmit={(e) => e.preventDefault()}>
+            <div className="field-group">
+              <label htmlFor="transfer-from">付款账户</label>
+              <input
+                id="transfer-from"
+                type="number"
+                min="1"
+                step="1"
+                value={from}
+                onChange={(e) => setFrom(e.target.value)}
+              />
+            </div>
+            <span className="transfer-direction" aria-hidden="true"><ArrowRight size={20} /></span>
+            <div className="field-group">
+              <label htmlFor="transfer-to">收款账户</label>
+              <input
+                id="transfer-to"
+                type="number"
+                min="1"
+                step="1"
+                value={to}
+                onChange={(e) => setTo(e.target.value)}
+              />
+            </div>
+            <div className="field-group amount-field">
+              <label htmlFor="transfer-amount">转账金额</label>
+              <input
+                id="transfer-amount"
+                type="number"
+                min="0.01"
+                step="0.01"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+              />
+            </div>
+            <div className="transaction-actions">
+              <button type="button" className="primary-action" disabled={busy} onClick={() => run('ok')}>
+                <ShieldCheck size={17} aria-hidden="true" />正常转账 · 提交
+              </button>
+              <button type="button" className="danger" disabled={busy} onClick={() => run('fail')}>
+                <Undo2 size={17} aria-hidden="true" />中途失败 · 回滚
+              </button>
+            </div>
+          </form>
+        </div>
       </div>
 
-      <form className="row-form" onSubmit={(e) => e.preventDefault()}>
-        <label>
-          from
-          <input value={from} onChange={(e) => setFrom(e.target.value)} size="4" />
-        </label>
-        <label>
-          to
-          <input value={to} onChange={(e) => setTo(e.target.value)} size="4" />
-        </label>
-        <label>
-          amount
-          <input value={amount} onChange={(e) => setAmount(e.target.value)} size="6" />
-        </label>
-        <button disabled={busy} onClick={() => run('ok')}>正常转账（提交）</button>
-        <button className="danger" disabled={busy} onClick={() => run('fail')}>中途失败转账（回滚）</button>
-      </form>
-
       <p className="hint">
-        「中途失败」：服务端先扣款再抛异常，事务整体回滚——余额卡与 MySQL 均应不变；
-        可用 <code>docker exec</code> 直查 <code>accounts</code> 表复核。
+        “中途失败”会在服务端扣款后主动抛出异常；事务整体回滚，界面余额与 MySQL 的 <code>accounts</code> 表均应保持不变。
       </p>
     </section>
   );
