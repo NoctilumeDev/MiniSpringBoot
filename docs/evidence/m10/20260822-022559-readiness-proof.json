@@ -1,0 +1,93 @@
+{
+  "schemaVersion": 1,
+  "capturedAt": "2026-08-22T02:25:59.0089453+08:00",
+  "baseUri": "http://127.0.0.1:9080",
+  "container": "minispring-mysql",
+  "passed": true,
+  "baselineAccounts": {
+    "account1": {
+      "id": 1,
+      "balance": 700.0
+    },
+    "account2": {
+      "id": 2,
+      "balance": 1300.0
+    }
+  },
+  "livenessDuringOutage": {
+    "status": "UP",
+    "instance": "msb-3",
+    "port": 9093,
+    "startedAt": "2026-08-21T17:51:14.108741200Z"
+  },
+  "readinessDuringOutage": {
+    "status": 500,
+    "elapsedMs": 30035,
+    "body": "500 Internal Server Error: SQL 执行失败: SELECT 1 AS probe — minispring-hikari - Connection is not available, request timed out after 30004ms (total=0, active=0, idle=0, waiting=0)"
+  },
+  "readinessAfterRecovery": {
+    "status": "UP",
+    "instance": "msb-3",
+    "port": 9093,
+    "startedAt": "2026-08-21T17:51:14.108741200Z",
+    "database": "UP"
+  },
+  "accountsAfterRecovery": {
+    "account1": {
+      "id": 1,
+      "balance": 700.0
+    },
+    "account2": {
+      "id": 2,
+      "balance": 1300.0
+    }
+  },
+  "timeline": [
+    {
+      "at": "2026-08-22T02:25:21.8186677+08:00",
+      "event": "MYSQL_STOPPED"
+    },
+    {
+      "at": "2026-08-22T02:25:21.8264097+08:00",
+      "event": "LIVENESS_REMAINED_UP",
+      "elapsedMs": 3,
+      "response": {
+        "status": "UP",
+        "instance": "msb-3",
+        "port": 9093,
+        "startedAt": "2026-08-21T17:51:14.108741200Z"
+      }
+    },
+    {
+      "at": "2026-08-22T02:25:51.8729611+08:00",
+      "event": "READINESS_FAILED_CLOSED",
+      "response": {
+        "status": 500,
+        "elapsedMs": 30035,
+        "body": "500 Internal Server Error: SQL 执行失败: SELECT 1 AS probe — minispring-hikari - Connection is not available, request timed out after 30004ms (total=0, active=0, idle=0, waiting=0)"
+      }
+    },
+    {
+      "at": "2026-08-22T02:25:59.0085259+08:00",
+      "event": "READINESS_RECOVERED",
+      "response": {
+        "status": "UP",
+        "instance": "msb-3",
+        "port": 9093,
+        "startedAt": "2026-08-21T17:51:14.108741200Z",
+        "database": "UP"
+      },
+      "accounts": {
+        "account1": {
+          "id": 1,
+          "balance": 700.0
+        },
+        "account2": {
+          "id": 2,
+          "balance": 1300.0
+        }
+      }
+    }
+  ],
+  "error": null
+}

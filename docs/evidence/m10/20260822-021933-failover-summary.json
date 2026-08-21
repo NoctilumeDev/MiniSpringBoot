@@ -1,0 +1,163 @@
+{
+  "schemaVersion": 1,
+  "startedAt": "2026-08-22T02:19:33.7193381+08:00",
+  "finishedAt": "2026-08-22T02:20:44.0300417+08:00",
+  "targetInstance": "msb-2",
+  "oldPid": 18408,
+  "newPid": 26964,
+  "proxyChecksDuringOutage": 20,
+  "proxyFailuresDuringOutage": 0,
+  "rejoined": true,
+  "accountsBefore": {
+    "account1": {
+      "id": 1,
+      "balance": 700.0
+    },
+    "account2": {
+      "id": 2,
+      "balance": 1300.0
+    }
+  },
+  "accountsAfter": {
+    "account1": {
+      "id": 1,
+      "balance": 700.0
+    },
+    "account2": {
+      "id": 2,
+      "balance": 1300.0
+    }
+  },
+  "timeline": [
+    {
+      "at": "2026-08-22T02:19:33.7193381+08:00",
+      "event": "LOAD_STARTED",
+      "pid": 33364,
+      "concurrency": 24
+    },
+    {
+      "at": "2026-08-22T02:19:53.7287551+08:00",
+      "event": "INSTANCE_STOP_REQUESTED",
+      "instance": "msb-2",
+      "pid": 18408
+    },
+    {
+      "at": "2026-08-22T02:19:54.0306455+08:00",
+      "event": "INSTANCE_STOPPED",
+      "instance": "msb-2"
+    },
+    {
+      "at": "2026-08-22T02:19:54.0399206+08:00",
+      "event": "PROXY_OK_DURING_OUTAGE",
+      "instance": "msb-1"
+    },
+    {
+      "at": "2026-08-22T02:19:54.2991453+08:00",
+      "event": "PROXY_OK_DURING_OUTAGE",
+      "instance": "msb-3"
+    },
+    {
+      "at": "2026-08-22T02:19:54.5603761+08:00",
+      "event": "PROXY_OK_DURING_OUTAGE",
+      "instance": "msb-3"
+    },
+    {
+      "at": "2026-08-22T02:19:54.8259594+08:00",
+      "event": "PROXY_OK_DURING_OUTAGE",
+      "instance": "msb-1"
+    },
+    {
+      "at": "2026-08-22T02:19:55.0956173+08:00",
+      "event": "PROXY_OK_DURING_OUTAGE",
+      "instance": "msb-1"
+    },
+    {
+      "at": "2026-08-22T02:19:55.3608223+08:00",
+      "event": "PROXY_OK_DURING_OUTAGE",
+      "instance": "msb-1"
+    },
+    {
+      "at": "2026-08-22T02:19:55.6207127+08:00",
+      "event": "PROXY_OK_DURING_OUTAGE",
+      "instance": "msb-3"
+    },
+    {
+      "at": "2026-08-22T02:19:55.8809812+08:00",
+      "event": "PROXY_OK_DURING_OUTAGE",
+      "instance": "msb-1"
+    },
+    {
+      "at": "2026-08-22T02:19:56.1430725+08:00",
+      "event": "PROXY_OK_DURING_OUTAGE",
+      "instance": "msb-3"
+    },
+    {
+      "at": "2026-08-22T02:19:56.4057274+08:00",
+      "event": "PROXY_OK_DURING_OUTAGE",
+      "instance": "msb-1"
+    },
+    {
+      "at": "2026-08-22T02:19:56.6711412+08:00",
+      "event": "PROXY_OK_DURING_OUTAGE",
+      "instance": "msb-1"
+    },
+    {
+      "at": "2026-08-22T02:19:56.9324066+08:00",
+      "event": "PROXY_OK_DURING_OUTAGE",
+      "instance": "msb-3"
+    },
+    {
+      "at": "2026-08-22T02:19:57.195069+08:00",
+      "event": "PROXY_OK_DURING_OUTAGE",
+      "instance": "msb-1"
+    },
+    {
+      "at": "2026-08-22T02:19:57.4539674+08:00",
+      "event": "PROXY_OK_DURING_OUTAGE",
+      "instance": "msb-1"
+    },
+    {
+      "at": "2026-08-22T02:19:57.7132566+08:00",
+      "event": "PROXY_OK_DURING_OUTAGE",
+      "instance": "msb-3"
+    },
+    {
+      "at": "2026-08-22T02:19:57.9704386+08:00",
+      "event": "PROXY_OK_DURING_OUTAGE",
+      "instance": "msb-1"
+    },
+    {
+      "at": "2026-08-22T02:19:58.2321101+08:00",
+      "event": "PROXY_OK_DURING_OUTAGE",
+      "instance": "msb-1"
+    },
+    {
+      "at": "2026-08-22T02:19:58.4908627+08:00",
+      "event": "PROXY_OK_DURING_OUTAGE",
+      "instance": "msb-1"
+    },
+    {
+      "at": "2026-08-22T02:19:58.7515688+08:00",
+      "event": "PROXY_OK_DURING_OUTAGE",
+      "instance": "msb-3"
+    },
+    {
+      "at": "2026-08-22T02:19:59.0188132+08:00",
+      "event": "PROXY_OK_DURING_OUTAGE",
+      "instance": "msb-3"
+    },
+    {
+      "at": "2026-08-22T02:20:03.7887414+08:00",
+      "event": "INSTANCE_RESTARTED",
+      "instance": "msb-2",
+      "pid": 26964
+    },
+    {
+      "at": "2026-08-22T02:20:05.2999522+08:00",
+      "event": "INSTANCE_REJOIN_OBSERVED",
+      "instance": "msb-2"
+    }
+  ],
+  "loadStdout": "20260822-021933-failover-load.out.log",
+  "loadStderr": "20260822-021933-failover-load.err.log"
+}

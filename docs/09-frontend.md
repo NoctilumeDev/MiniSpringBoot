@@ -68,5 +68,5 @@ fetch 统一封装：非 2xx → 读 body 文本 → 页面顶部错误提示显
 
 - 不做：react-router、状态管理库、UI 组件库、CSS 框架、前端单测（demo 轨道，联调为唯一目的）；`lucide-react` 仅承担图标，不承载布局或业务状态；
 - CORS 显式不做（决策点 A ① 的推论）：dev 用 Vite proxy、生产用 M10 Nginx 同源反代；若未来真要跨源部署再登记新债务；
-- 前端不做构建产物部署：`vite build` 的 dist 留给 M10 Nginx 托管，本里程碑只验 dev 联调链路；
+- M9 本身不做构建产物部署，只验 dev 联调链路；其 `vite build` 产物已在 M10 由 Nginx `:9080` 同源托管，见 [`10-high-availability.md`](10-high-availability.md)；
 - D1（JAR 扫描）维持 M10；D47（Hikari 参数面）维持 M10 评估。

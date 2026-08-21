@@ -1,0 +1,131 @@
+{
+    "schemaVersion":  1,
+    "generatedAt":  "2026-08-21T19:22:32.2933913Z",
+    "subject":  "MiniSpringBoot M10 bounded high-availability verification",
+    "sourceCommit":  "85c2b22dfdcb17cd2527f068f85542aca25d694c",
+    "hashMode":  "UTF8_LF_CANONICAL",
+    "status":  "SELF_VERIFIED",
+    "externalVerification":  "VERITRAIL_M12_PENDING",
+    "claims":  {
+                   "capacity":  {
+                                    "passed":  true,
+                                    "recommendedSingleMachineConcurrency":  24,
+                                    "stages":  [
+                                                   {
+                                                       "concurrency":  1,
+                                                       "requests":  56312,
+                                                       "throughputRps":  938.51,
+                                                       "p95Ms":  1.5,
+                                                       "errorRatePercent":  0,
+                                                       "cpuMaxPercent":  39.4,
+                                                       "freeMemoryMinGiB":  3.653,
+                                                       "passed":  true
+                                                   },
+                                                   {
+                                                       "concurrency":  8,
+                                                       "requests":  274859,
+                                                       "throughputRps":  4580.85,
+                                                       "p95Ms":  2.45,
+                                                       "errorRatePercent":  0,
+                                                       "cpuMaxPercent":  67.7,
+                                                       "freeMemoryMinGiB":  4.002,
+                                                       "passed":  true
+                                                   },
+                                                   {
+                                                       "concurrency":  24,
+                                                       "requests":  376558,
+                                                       "throughputRps":  6275.64,
+                                                       "p95Ms":  5.14,
+                                                       "errorRatePercent":  0,
+                                                       "cpuMaxPercent":  77.5,
+                                                       "freeMemoryMinGiB":  3.804,
+                                                       "passed":  true
+                                                   },
+                                                   {
+                                                       "concurrency":  48,
+                                                       "requests":  359121,
+                                                       "throughputRps":  5985.1,
+                                                       "p95Ms":  10.06,
+                                                       "errorRatePercent":  0,
+                                                       "cpuMaxPercent":  79.1,
+                                                       "freeMemoryMinGiB":  3.671,
+                                                       "passed":  true
+                                                   },
+                                                   {
+                                                       "concurrency":  72,
+                                                       "requests":  349348,
+                                                       "throughputRps":  5822.26,
+                                                       "p95Ms":  15.17,
+                                                       "errorRatePercent":  0,
+                                                       "cpuMaxPercent":  79.8,
+                                                       "freeMemoryMinGiB":  3.547,
+                                                       "passed":  true
+                                                   }
+                                               ]
+                                },
+                   "failover":  {
+                                    "passed":  true,
+                                    "targetInstance":  "msb-2",
+                                    "proxyChecksDuringOutage":  20,
+                                    "proxyFailuresDuringOutage":  0,
+                                    "rejoined":  true
+                                },
+                   "transaction":  {
+                                       "passed":  true,
+                                       "baselineRestored":  true
+                                   },
+                   "readiness":  {
+                                     "passed":  true,
+                                     "livenessDuringDatabaseOutage":  "UP",
+                                     "readinessDuringDatabaseOutageHttpStatus":  500,
+                                     "readinessAfterRecovery":  "UP"
+                                 }
+               },
+    "files":  [
+                  {
+                      "path":  "docs/evidence/m10/2026-08-21T18-09-10-746Z-capacity-baseline.json",
+                      "sizeBytes":  98095,
+                      "sha256":  "8169dcac01dbfd5256909e32eaa5da38b484235a57553a0059c15f5837fb2079"
+                  },
+                  {
+                      "path":  "docs/evidence/m10/2026-08-21T18-09-10-746Z-capacity-baseline.md",
+                      "sizeBytes":  1551,
+                      "sha256":  "b95e8762abaaca4bba21e4e72ea39e9a0fe0376e204df0c7dcea3291fbd5b7b5"
+                  },
+                  {
+                      "path":  "docs/evidence/m10/2026-08-21T18-19-33-816Z-failover.json",
+                      "sizeBytes":  16221,
+                      "sha256":  "97515f3c3af3d02efdc509aa9572c1e4ca9a527adb724e0d1977e360c809749b"
+                  },
+                  {
+                      "path":  "docs/evidence/m10/2026-08-21T18-19-33-816Z-failover.md",
+                      "sizeBytes":  724,
+                      "sha256":  "a2540b08041764a03731abf87e139ce164449fde517f479eb175fb99188e3cf0"
+                  },
+                  {
+                      "path":  "docs/evidence/m10/20260822-021933-failover-load.err.log",
+                      "sizeBytes":  0,
+                      "sha256":  "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+                  },
+                  {
+                      "path":  "docs/evidence/m10/20260822-021933-failover-load.out.log",
+                      "sizeBytes":  283,
+                      "sha256":  "e22c5a1bf30891ef9ffd7e74d73d58b3394bead4784f6503c01649510a9f7d7c"
+                  },
+                  {
+                      "path":  "docs/evidence/m10/20260822-021933-failover-summary.json",
+                      "sizeBytes":  3988,
+                      "sha256":  "518521d538472edf0d47a4552dd16f2ecdcb1f081c0497c45ea5d65cb14b3e54"
+                  },
+                  {
+                      "path":  "docs/evidence/m10/20260822-022314-transaction-proof.json",
+                      "sizeBytes":  2572,
+                      "sha256":  "ec48ef7d239ac12ac14b7857680381613828bc696165fe782bc8f0ac9048a423"
+                  },
+                  {
+                      "path":  "docs/evidence/m10/20260822-022559-readiness-proof.json",
+                      "sizeBytes":  2346,
+                      "sha256":  "f59fbe4e06e9fc06a3127843ca1a24b47922c50b8cdaa1829a5c879670d9f027"
+                  }
+              ]
+}

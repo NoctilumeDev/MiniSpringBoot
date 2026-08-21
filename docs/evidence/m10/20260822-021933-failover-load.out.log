@@ -1,0 +1,5 @@
+[M10] target=http://127.0.0.1:9080 stages=24 guard=2GiB/85%CPU/1%errors
+[M10] C=24 warmup 10s
+[M10] C=24 steady 60s
+[M10] C=24 requests=390309 rps=6504.54 p95=5.26ms errors=0% freeMin=3.489GiB cpuMax=81.4%
+[M10] evidence=docs\evidence\m10\2026-08-21T18-19-33-816Z-failover.{json,md}
