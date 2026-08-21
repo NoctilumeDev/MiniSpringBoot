@@ -12,7 +12,7 @@ import {
 import UsersPage from './UsersPage.jsx';
 import TransferPage from './TransferPage.jsx';
 
-function BrandContent() {
+function BrandContent({ highAvailability = false }) {
   return (
     <>
       <span className="brand-mark" aria-hidden="true">
@@ -20,7 +20,9 @@ function BrandContent() {
       </span>
       <span>
         <span className="brand-name">MiniSpringBoot</span>
-        <span className="brand-kicker">APPLICATION KERNEL · M9</span>
+        <span className="brand-kicker">
+          APPLICATION KERNEL · {highAvailability ? 'M10 HA' : 'M9'}
+        </span>
       </span>
     </>
   );
@@ -31,6 +33,7 @@ function BrandContent() {
  * 横幅是 M9 错误链路的落点——后端 500 的可读消息在这里显示给用户。
  */
 export default function App() {
+  const highAvailability = window.location.port === '9080';
   const [tab, setTab] = useState('users');
   const [error, setError] = useState(null);
   const [notice, setNotice] = useState(null);
@@ -66,11 +69,11 @@ export default function App() {
               title="展开界面"
               onClick={toggleCollapsed}
             >
-              <BrandContent />
+              <BrandContent highAvailability={highAvailability} />
             </button>
           ) : (
             <div className="brand-lockup">
-              <BrandContent />
+              <BrandContent highAvailability={highAvailability} />
             </div>
           )}
 
@@ -139,16 +142,30 @@ export default function App() {
           )}
         </main>
 
-        <footer className="system-rail" aria-label="运行链路" hidden={collapsed}>
+        <footer
+          className={`system-rail${highAvailability ? ' system-rail--ha' : ''}`}
+          aria-label="运行链路"
+          hidden={collapsed}
+        >
           <div className="rail-node">
             <Globe2 size={22} aria-hidden="true" />
-            <span><strong>浏览器</strong><small>:9010</small></span>
+            <span><strong>浏览器</strong><small>{highAvailability ? ':9080' : ':9010'}</small></span>
           </div>
           <span className="rail-link" aria-hidden="true">/api</span>
           <div className="rail-node">
             <ServerCog size={22} aria-hidden="true" />
-            <span><strong>MiniSpring</strong><small>:9090</small></span>
+            <span>
+              <strong>{highAvailability ? 'Nginx' : 'MiniSpring'}</strong>
+              <small>{highAvailability ? 'least_conn' : ':9090'}</small>
+            </span>
           </div>
+          {highAvailability && <span className="rail-link" aria-hidden="true">proxy</span>}
+          {highAvailability && (
+            <div className="rail-node">
+              <Activity size={22} aria-hidden="true" />
+              <span><strong>MiniSpring ×3</strong><small>:9091 · :9092 · :9093</small></span>
+            </div>
+          )}
           <span className="rail-link" aria-hidden="true">JDBC</span>
           <div className="rail-node">
             <Database size={22} aria-hidden="true" />

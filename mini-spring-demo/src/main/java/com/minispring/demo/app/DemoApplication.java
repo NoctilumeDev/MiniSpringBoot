@@ -23,6 +23,7 @@ public class DemoApplication {
         System.out.println("  [event] 已收到事件: " + listener.getRecordedEvents());
 
         System.out.println("  [http] 接口: GET /hello | /users CRUD（GET 列表/单查, POST, PUT, DELETE /users）| GET /void | GET /sleep | GET /（静态资源）");
+        System.out.println("  [http] 健康: GET /health/live（进程）| GET /health（连接池 + MySQL 就绪）");
         System.out.println("  [http] 事务: POST /accounts/transfer?from=1&to=2&amount=100 | POST /accounts/transfer-fail（回滚取证）| GET /accounts/{id}");
         System.out.println("  [http] 全链路能力: GET /capability/aop/order | GET /capability/aop/fail | GET /capability/autoconfig | GET /capability/starter/format");
     }
