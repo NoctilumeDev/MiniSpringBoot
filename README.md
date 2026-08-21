@@ -126,12 +126,12 @@ graph TD
 | 用户管理（CRUD 落 MySQL） | 转账演示（事务提交 / 回滚） |
 | :---: | :---: |
 | <img src="docs/screenshots/users-page.png" width="640" alt="用户管理页"/> | <img src="docs/screenshots/transfer-page.png" width="640" alt="转账演示页"/> |
-| 表中 id=23 / id=96 两行与 `users` 表逐行一致；新建、编辑、删除均真实落库（唯一键冲突会被 MySQL 约束拒绝并透出到 UI） | 余额卡 770 / 1230 即 `accounts` 表实时值；「中途失败转账」先扣款后抛异常 → 事务整体回滚，两账户分文不动 |
+| 表中 id=23 / id=96 两行与 `users` 表逐行一致；新建、编辑、删除均真实落库（唯一键冲突会被 MySQL 约束拒绝并透出到 UI） | 余额卡 700 / 1300 即 `accounts` 表实时值；「中途失败转账」先扣款后抛异常 → 事务整体回滚，两账户分文不动 |
 
 | 错误根因直达 UI（数据库断连） | 状态码语义（404，非一律 500） |
 | :---: | :---: |
-| <img src="docs/screenshots/error-banner.png" width="640" alt="错误横幅"/> | <img src="docs/screenshots/404-evidence.png" width="640" alt="404 证据"/> |
-| `docker stop mysql` 后转账：约 30s 有限阻塞（Hikari connectionTimeout），红色横幅逐字透出根因与连接池状态（`Connection is not available, request timed out after 30010ms`）；事务开启失败即回滚，余额零变动；`docker start` 后接口立即自愈 | 向不存在的账户（#99999）转账 → 后端返回 **HTTP 404**（非 500），错误消息「入款失败，账户 99999 不存在」逐层透出到红色横幅；事务同步回滚，余额 770/1230 不变。参数非法返回 400（如负数金额），业务规则冲突才是 500——状态码语义清晰，调用方不再靠猜 |
+| <img src="docs/screenshots/error-banner.png" width="640" alt="数据库断连错误提示"/> | <img src="docs/screenshots/404-evidence.png" width="640" alt="404 证据"/> |
+| `docker stop minispring-mysql` 后转账：约 30s 有限阻塞（Hikari connectionTimeout），错误提示条逐字透出根因与连接池状态（`Connection is not available, request timed out after 30003ms`）；事务开启失败即回滚，余额零变动；容器恢复健康后页面刷新立即自愈 | 向不存在的账户（#99999）转账 → 后端返回 **HTTP 404**（非 500），错误消息「入款失败，账户 99999 不存在」逐层透出到错误提示条；事务同步回滚，余额 700/1300 不变。参数非法返回 400（如负数金额），业务规则冲突才是 500——状态码语义清晰，调用方不再靠猜 |
 
 > 以上四张图的取证过程（含断连前后 DB 快照差分）记录于 [docs/06-roadmap.md](docs/06-roadmap.md) 各轮验收章节。
 
