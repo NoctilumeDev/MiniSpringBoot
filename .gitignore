@@ -32,3 +32,6 @@ logs/
 # Node（demo-frontend，M9）
 node_modules/
 demo-frontend/dist/
+
+# M10 本机三实例运行态（PID、日志、临时 classpath）
+deploy/m10/.runtime/

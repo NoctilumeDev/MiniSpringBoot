@@ -13,11 +13,18 @@ public class AppProperties {
     @Value("${server.port}")
     private int port;
 
+    @Value("${app.instance-id:local}")
+    private String instanceId;
+
     public String getName() {
         return name;
     }
 
     public int getPort() {
         return port;
+    }
+
+    public String getInstanceId() {
+        return instanceId;
     }
 }
