@@ -21,7 +21,7 @@ MiniSpringBoot 是一个 **从零手写** 的 Spring Boot 内核复刻项目。�
 | 内核代码 | 153 个 Java 文件 / 6,683 行（`src/main`，可 `git ls-files '**/*.java'` 复核） |
 | 内核第三方运行时依赖 | **0**（JSON / YAML / HTTP 服务器全部手写；HikariCP、MySQL 驱动只在 demo 层） |
 | 测试 | 69 个（本地与 [CI](https://github.com/NoctilumeDev/MiniSpringBoot/actions) 云端 MySQL 上均全绿；jdbc 单测真连库） |
-| 里程碑 | M0–M10 本机落地自验通过；M10 VeriTrail 导入证据复验 15/15 HARD 断言通过（账目见 [roadmap](docs/06-roadmap.md)） |
+| 里程碑 | M0–M10 本机落地自验通过；M10 VeriTrail 导入证据复验 15/15 HARD 断言通过（[v0.m10 Release](https://github.com/NoctilumeDev/MiniSpringBoot/releases/tag/v0.m10)；账目见 [roadmap](docs/06-roadmap.md)） |
 
 ---
 
@@ -276,7 +276,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File deploy/m10/stop-cluster.
 - **M8** ✅：数据库接入（MySQL + HikariCP + JdbcTemplate + 声明式事务；V1~V10 唯一事实验收）
 - **M9** ✅：React 前端 + 前后端联调（Vite proxy 同源；浏览器/Network/MySQL 三方对照验收）
 - **M0–M9 三轮全量复审** ✅：外审 + 自审 + 他机环境复核，累计揪出并修复 40+ 真实缺陷（详见 [docs/06-roadmap.md](docs/06-roadmap.md) 各轮记录），测试 45→69
-- **M10** ✅：Nginx + 3 实例 + 前端 `dist` 同源托管；有界容量、单实例故障切换、事务与 MySQL 就绪演练本机通过；VeriTrail 导入证据复验 15/15 HARD 断言通过（全拓扑生命周期所有权仍明确为 `NOT_PROVEN`）
+- **M10** ✅：Nginx + 3 实例 + 前端 `dist` 同源托管；有界容量、单实例故障切换、事务与 MySQL 就绪演练本机通过；VeriTrail 导入证据复验 15/15 HARD 断言通过（[`v0.m10`](https://github.com/NoctilumeDev/MiniSpringBoot/releases/tag/v0.m10)；全拓扑生命周期所有权仍明确为 `NOT_PROVEN`）
 
 ---
 
