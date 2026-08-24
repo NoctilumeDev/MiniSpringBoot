@@ -2,7 +2,9 @@
 
 M10 把 M9 的单实例开发链路推进为一套可复现的本机生产形态：浏览器只访问 Nginx `:9080`，Nginx 同源托管 React `dist`，并以 `least_conn` 把 API 请求分发到三个 MiniSpringBoot 实例 `:9091/:9092/:9093`；三个实例共享 MySQL，但不共享进程内状态。
 
-本章同时记录 **M10 自验证结论**与后续的 **VeriTrail 0.12 导入证据复验**。代码与原始证据契约冻结到源码提交 `85c2b22`，证据清单见 [`docs/evidence/m10/m10-evidence-manifest.json`](evidence/m10/m10-evidence-manifest.json)；2026-08-24 又重新执行故障切换、事务和数据库就绪恢复，并由 VeriTrail 对原始证据哈希与新鲜回放事实执行 15 项 HARD 断言，裁决为 `PASS`。完整 Bundle 见 [`docs/evidence/m10/veritrail/bundle`](evidence/m10/veritrail/bundle)，复现说明见 [`docs/evidence/m10/veritrail/README.md`](evidence/m10/veritrail/README.md)。
+本章同时记录 **M10 自验证结论**与后续的 **VeriTrail 0.12 导入证据复验**。代码与原始证据契约冻结到源码提交 [`85c2b22`](https://github.com/NoctilumeDev/MiniSpringBoot/commit/85c2b22dfdcb17cd2527f068f85542aca25d694c)，并由专用标签 [`m10-evidence-source-v1`](https://github.com/NoctilumeDev/MiniSpringBoot/tree/m10-evidence-source-v1) 永久公开；该对象与主线等价提交 [`582b0f5`](https://github.com/NoctilumeDev/MiniSpringBoot/commit/582b0f53a57844c359724424b869c75088b61b50) 的 tree 均为 `137a0cebc49dca22508abd540c162c62f7edc5cd`，逐文件差异为 0，因此冻结证据无需改写。
+
+证据清单见 [`docs/evidence/m10/m10-evidence-manifest.json`](evidence/m10/m10-evidence-manifest.json)；2026-08-24 又重新执行故障切换、事务和数据库就绪恢复，并由 VeriTrail 对原始证据哈希与新鲜回放事实执行 15 项 HARD 断言，裁决为 `PASS`。完整 Bundle 见 [`docs/evidence/m10/veritrail/bundle`](evidence/m10/veritrail/bundle)，复现说明见 [`docs/evidence/m10/veritrail/README.md`](evidence/m10/veritrail/README.md)，最终发布坐标见 [`v0.m10`](https://github.com/NoctilumeDev/MiniSpringBoot/releases/tag/v0.m10)。
 
 这次复验的范围是 `IMPORTED_EVIDENCE_AUDIT`：VeriTrail 验证冻结事实和边界，但 Core 0.12 没有接管 Docker、Nginx、MySQL 与三个 Java 进程的完整生命周期，因此生命周期所有权仍明确为 `NOT_PROVEN`。这不是缩写成“全拓扑由 VeriTrail 托管”，也不能替代下面列出的单机与生产边界。
 
@@ -153,7 +155,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File deploy/m10/invoke-readin
 | 层级 | 状态 |
 | --- | --- |
 | M10 本机实现与自验证 | `SELF_VERIFIED` |
-| 原始证据哈希与源码坐标 | 已冻结到 `85c2b22` |
+| 原始证据哈希与源码坐标 | 已冻结到 [`85c2b22`](https://github.com/NoctilumeDev/MiniSpringBoot/commit/85c2b22dfdcb17cd2527f068f85542aca25d694c)，公开标签为 [`m10-evidence-source-v1`](https://github.com/NoctilumeDev/MiniSpringBoot/tree/m10-evidence-source-v1) |
 | VeriTrail 导入证据复验 | `PASS`（15/15 HARD 断言） |
 | 导入复验范围 | `IMPORTED_EVIDENCE_AUDIT` |
 | 全拓扑生命周期所有权 | `NOT_PROVEN` |
