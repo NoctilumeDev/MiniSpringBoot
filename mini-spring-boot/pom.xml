@@ -32,7 +32,7 @@
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter</artifactId>
-            <version>5.10.2</version>
+            <version>5.14.4</version>
             <scope>test</scope>
         </dependency>
         <!-- 仅测试期：run() 起 web 服务器的用例需要 WebServer 接口做停服清理（运行期 boot 不依赖 web） -->
@@ -49,14 +49,14 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
-                <version>3.2.5</version>
+                <version>3.5.6</version>
             </plugin>
             <!-- 把 ${project.version} 写入 jar 清单供 Banner 运行期读取，保持展示版本与构建元数据一致。 -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-jar-plugin</artifactId>
                 <!-- 显式锁定插件版本，保证 Maven 构建行为可复现。 -->
-                <version>3.3.0</version>
+                <version>3.5.1</version>
                 <configuration>
                     <archive>
                         <manifestEntries>
