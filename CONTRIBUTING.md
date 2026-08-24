@@ -1,13 +1,14 @@
 # 贡献指南
 
-MiniSpringBoot 是一个教学向的 Spring Boot 机制复刻。框架内核保持零第三方运行时依赖；
-React、MySQL、HikariCP、Nginx 等真实依赖只属于 demo 与部署验证轨道。M0–M10 已完成，
+MiniSpringBoot 是一个教学向的 Spring Boot 机制复刻。八个框架内核模块对使用方保持零强制传递的
+第三方运行时依赖；`mini-spring-autoconfigure` 直接以 optional 依赖提供 HikariCP 集成，demo 再显式
+提供 HikariCP、MySQL、React、Nginx 等真实运行依赖。M0–M10 已完成，
 现阶段优先接受可复现缺陷、安全修复、依赖维护、测试增强和文档订正。
 
 ## 提交前先确认边界
 
 - 不把教学子集描述成生产级 Spring Boot 替代品。
-- 不为 demo 便利把第三方运行时依赖倒灌进框架内核。
+- 不为 demo 便利给框架内核新增强制传递的第三方运行时依赖；新增 optional 集成必须如实记录直接依赖与启用条件。
 - 不把本机自验证、导入证据复验或单机三实例演练扩大成未经证明的生产结论。
 - 新增框架能力前，先说明教学收益、兼容影响、失败路径和不实现的边界。
 - 不提交凭据、私有日志、代理配置、机器专属绝对路径或本地视觉验收截图集。

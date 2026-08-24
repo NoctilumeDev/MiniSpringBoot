@@ -52,7 +52,7 @@
             <version>8.4.0</version>
         </dependency>
         <!-- HikariCP 传递引入 slf4j-api；simple 绑定让连接池启停与 evict 诊断可见。
-             该实现依赖只存在于 demo 层，框架内核继续保持零第三方依赖。 -->
+             demo 显式提供运行时实现；autoconfigure 另有不向使用方传递的 direct optional 集成。 -->
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-simple</artifactId>

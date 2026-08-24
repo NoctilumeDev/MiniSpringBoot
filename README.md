@@ -6,20 +6,20 @@
 [![CI](https://github.com/NoctilumeDev/MiniSpringBoot/actions/workflows/ci.yml/badge.svg)](https://github.com/NoctilumeDev/MiniSpringBoot/actions/workflows/ci.yml)
 ![JDK](https://img.shields.io/badge/JDK-17-2c3e50?logo=java&logoColor=white)
 ![Maven](https://img.shields.io/badge/Maven-3.9-2c3e50?logo=apachemaven&logoColor=white)
-![内核依赖](https://img.shields.io/badge/内核-零第三方运行时依赖-2e7d32)
+![内核依赖](https://img.shields.io/badge/内核-零强制传递第三方运行时依赖-2e7d32)
 ![里程碑](https://img.shields.io/badge/M0~M10-本机落地自验通过-2e7d32)
 ![数据库](https://img.shields.io/badge/MySQL-8%2FHikariCP-2c3e50?logo=mysql&logoColor=white)
 ![前端](https://img.shields.io/badge/React-18%2FVite-61dafb?logo=react&logoColor=black)
 ![Tests](https://img.shields.io/badge/tests-69%2F69-brightgreen)
 ![License](https://img.shields.io/badge/license-MIT-blue)
 
-MiniSpringBoot 是一个 **从零手写** 的 Spring Boot 内核复刻项目。框架内核不依赖 Spring、不依赖任何第三方运行时库，只用 JDK 重新实现 Spring 家族最核心的那几块「魔法」：IoC 容器、AOP、Web/MVC、自动配置、外部化配置、JDBC 与声明式事务。
+MiniSpringBoot 是一个 **从零手写** 的 Spring Boot 内核复刻项目。八个框架内核模块不依赖 Spring，并对使用方保持**零个强制传递的第三方运行时依赖**；JSON、YAML、HTTP 等核心机制由 JDK 实现。`mini-spring-autoconfigure` 同时提供 HikariCP 可选集成：它直接以 `<optional>true>` 编译依赖 HikariCP，只有消费方（包括 demo）显式提供 HikariCP 时才启用。
 
 | | |
 | :--- | :--- |
 | 内核模块 | 8 个（core → config → context → aop → web → jdbc → autoconfigure → boot，依赖严格单向） |
-| 内核代码 | 153 个 Java 文件 / 6,683 行（`src/main`，可 `git ls-files '**/*.java'` 复核） |
-| 内核第三方运行时依赖 | **0**（JSON / YAML / HTTP 服务器全部手写；HikariCP、MySQL 驱动只在 demo 层） |
+| 内核代码 | 153 个 Java 文件 / 7,618 个物理行（八个内核模块的 `src/main`；运行 `python scripts/verify_repository_contracts.py --metrics` 精确复核） |
+| 内核强制传递的第三方运行时依赖 | **0**（HikariCP 是 `autoconfigure` 的直接 optional 集成，不会传递给使用方；demo 显式提供 HikariCP 与 MySQL 驱动） |
 | 测试 | 69 个（本地与 [CI](https://github.com/NoctilumeDev/MiniSpringBoot/actions) 云端 MySQL 上均全绿；jdbc 单测真连库） |
 | 里程碑 | M0–M10 本机落地自验通过；M10 VeriTrail 导入证据复验 15/15 HARD 断言通过（[v0.m10 Release](https://github.com/NoctilumeDev/MiniSpringBoot/releases/tag/v0.m10)；账目见 [roadmap](docs/06-roadmap.md)） |
 
@@ -64,10 +64,10 @@ MiniSpringBoot 采用与 Spring 对齐的分层设计。箭头方向 = 依赖方
 
 ```mermaid
 graph TD
-    subgraph KERNEL["框架内核 · 全部基于 JDK 17，零第三方运行时依赖"]
+    subgraph KERNEL["框架内核 · 基于 JDK 17，零强制传递第三方运行时依赖"]
         direction TB
         BOOT["boot · 启动器<br/>MiniSpringApplication.run() / Lifecycle 驱动<br/>关闭钩子 / Banner / StartedEvent（不依赖 web）"]
-        AUTO["autoconfigure · 自动配置<br/>@Conditional 派生 / SPI 读取<br/>web · aop · config · jdbc 均 optional：裁掉即消失"]
+        AUTO["autoconfigure · 自动配置<br/>@Conditional 派生 / SPI 读取<br/>web · aop · config · jdbc · HikariCP 均 optional：裁掉即消失"]
         WEB["web · Web/MVC<br/>DispatcherServlet / HandlerMapping / 参数绑定 / 自写 JSON<br/>内嵌 HTTP 服务器（零第三方，经 Lifecycle 由 boot 启动）"]
         JDBC["jdbc · JDBC 与事务<br/>JdbcTemplate / RowMapper / DataAccessException<br/>编程式 · 声明式事务（@Transactional，纯 java.sql.*）"]
         AOP["aop · AOP<br/>Pointcut / Advice / JDK 动态代理 / 自动代理创建器"]
@@ -117,7 +117,7 @@ graph TD
 | `autoconfigure` | spring-boot-autoconfigure | `@Conditional` 派生、SPI 装配、框架自动配置类归位（optional + name 探测） |
 | `boot` | spring-boot | 启动入口（Lifecycle 驱动内嵌服务器）、事件、Banner |
 
-> **双轨制**：上表是**框架内核**（零第三方依赖，用于教学）。在它之上还有一条「demo 应用」轨道——业务代码 + React 前端 + MySQL + Nginx，用它证明内核「真能用」，并跑通全链路、3 实例高可用。详见 [docs/architecture.md](docs/architecture.md)。
+> **双轨制**：上表是**框架内核**（对使用方零强制传递的第三方运行时依赖，用于教学；`autoconfigure` 保留 HikariCP 直接 optional 集成）。在它之上还有一条「demo 应用」轨道——业务代码 + React 前端 + MySQL + Nginx，并显式提供 HikariCP 与 MySQL 驱动，用它证明内核「真能用」，并跑通全链路、3 实例高可用。详见 [docs/architecture.md](docs/architecture.md)。
 
 ---
 

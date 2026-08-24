@@ -56,7 +56,7 @@
             <version>5.1.0</version>
             <optional>true</optional>
         </dependency>
-        <!-- 仅测试期依赖；运行时保持零第三方依赖 -->
+        <!-- 仅测试期依赖；上方 HikariCP 是 direct optional 集成，不向使用方强制传递 -->
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter</artifactId>
