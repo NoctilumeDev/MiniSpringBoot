@@ -35,3 +35,7 @@ demo-frontend/dist/
 
 # M10 本机三实例运行态（PID、日志、临时 classpath）
 deploy/m10/.runtime/
+
+# 本机视觉验收工作台（截图与带绝对路径的临时审查账本）
+/design-qa-evidence/
+/design-qa.md
