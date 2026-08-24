@@ -1,0 +1,136 @@
+{
+  "schemaVersion": 1,
+  "capturedAt": "2026-08-24T21:59:47.0882550+08:00",
+  "baseUri": "http://127.0.0.1:9080",
+  "amount": 1.0,
+  "passed": true,
+  "baselineApi": {
+    "account1": {
+      "id": 1,
+      "balance": 700.0
+    },
+    "account2": {
+      "id": 2,
+      "balance": 1300.0
+    }
+  },
+  "baselineDatabase": {
+    "account1": {
+      "id": 1,
+      "balance": 700.0
+    },
+    "account2": {
+      "id": 2,
+      "balance": 1300.0
+    }
+  },
+  "restoredApi": {
+    "account1": {
+      "id": 1,
+      "balance": 700.0
+    },
+    "account2": {
+      "id": 2,
+      "balance": 1300.0
+    }
+  },
+  "restoredDatabase": {
+    "account1": {
+      "id": 1,
+      "balance": 700.0
+    },
+    "account2": {
+      "id": 2,
+      "balance": 1300.0
+    }
+  },
+  "timeline": [
+    {
+      "at": "2026-08-24T21:59:46.8185411+08:00",
+      "event": "COMMIT_VERIFIED",
+      "response": {
+        "toBalance": 1301.0,
+        "from": 1,
+        "to": 2,
+        "fromBalance": 699.0
+      },
+      "api": {
+        "account1": {
+          "id": 1,
+          "balance": 699.0
+        },
+        "account2": {
+          "id": 2,
+          "balance": 1301.0
+        }
+      },
+      "database": {
+        "account1": {
+          "id": 1,
+          "balance": 699.0
+        },
+        "account2": {
+          "id": 2,
+          "balance": 1301.0
+        }
+      }
+    },
+    {
+      "at": "2026-08-24T21:59:46.9490259+08:00",
+      "event": "ROLLBACK_VERIFIED",
+      "httpStatus": 500,
+      "message": "500 Internal Server Error: transfer-fail-in-middle（V3 回滚验收的刻意异常）",
+      "api": {
+        "account1": {
+          "id": 1,
+          "balance": 699.0
+        },
+        "account2": {
+          "id": 2,
+          "balance": 1301.0
+        }
+      },
+      "database": {
+        "account1": {
+          "id": 1,
+          "balance": 699.0
+        },
+        "account2": {
+          "id": 2,
+          "balance": 1301.0
+        }
+      }
+    },
+    {
+      "at": "2026-08-24T21:59:47.0881668+08:00",
+      "event": "BASELINE_RESTORED",
+      "response": {
+        "toBalance": 700.0,
+        "from": 2,
+        "to": 1,
+        "fromBalance": 1300.0
+      },
+      "api": {
+        "account1": {
+          "id": 1,
+          "balance": 700.0
+        },
+        "account2": {
+          "id": 2,
+          "balance": 1300.0
+        }
+      },
+      "database": {
+        "account1": {
+          "id": 1,
+          "balance": 700.0
+        },
+        "account2": {
+          "id": 2,
+          "balance": 1300.0
+        }
+      }
+    }
+  ],
+  "error": null
+}

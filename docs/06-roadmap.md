@@ -197,14 +197,14 @@
 
 ### M10 · 3 实例 + Nginx 高可用 + 全链路终验
 
-- **状态（2026-08-22）**：实现与本机事实自验已完成；源码坐标 `85c2b22`，规范证据清单为 [`docs/evidence/m10/m10-evidence-manifest.json`](evidence/m10/m10-evidence-manifest.json)。验迹 M12 尚未冻结，独立复跑明确为 `VERITRAIL_M12_PENDING`，不计入当前已完成项。
+- **状态（2026-08-24）**：实现与本机事实自验已完成；源码坐标 `85c2b22`，规范证据清单为 [`docs/evidence/m10/m10-evidence-manifest.json`](evidence/m10/m10-evidence-manifest.json)。在 VeriTrail Core 0.12 冻结后又执行一次有界故障切换、事务和就绪恢复回放，15 项 HARD 断言全部通过；冻结 Bundle 见 [`docs/evidence/m10/veritrail/bundle`](evidence/m10/veritrail/bundle)。复验范围固定为 `IMPORTED_EVIDENCE_AUDIT`，全拓扑生命周期所有权仍为 `NOT_PROVEN`。
 - **已落地产出**：Nginx `upstream` + 被动健康摘除、3 个无状态实例、实例可辨识的 live/ready 探针、前端 `dist` 同源托管、有界容量脚本、精确 PID 启停、故障/事务/就绪演练与 SHA-256 证据清单；操作手册见 [`docs/10-high-availability.md`](10-high-availability.md)。
 - **本机预算（2026-08-22 复测）**：i7-14650HX（16C/24T）、15.78 GiB RAM；M9 服务运行时可用内存约 4.7 GiB，MySQL 容器固定 512 MiB。M10 后端三实例统一 `-Xms128m -Xmx256m`，Nginx 预算 64 MiB；压测期间硬性保留 ≥2 GiB 可用内存，CPU 持续目标 ≤70%，若 CPU ≥85% 持续 10s、可用内存 <2 GiB、系统分页明显增长或非预期错误率 >1%，立即停止升阶并保留现场证据。
 - **阶梯压测（已完成，不做无上限“轰炸”）**：每阶预热 30s、稳态 60s；并发 `1 → 8 → 24 → 48 → 72` 均为 0% 非预期错误，止损线未触发，96 未运行。24 并发达到曲线峰值 6,275.64 RPS / p95 5.14ms；48/72 吞吐回落且延迟上升，因此本机推荐上限冻结为 24，后两阶只算压力边界。
 - **故障切换演练（已完成）**：24 并发时终止 `msb-2`；390,309 请求、6,504.54 RPS、p95 5.26ms、0 非预期错误；故障窗口 20 次独立代理检查 0 失败，实例以新 PID 恢复并重新加入，账户快照保持 700 / 1300。
 - **事务与就绪演练（已完成）**：正常提交、刻意 HTTP 500 回滚、API/MySQL 对账和反向恢复基线全部通过；MySQL 下线时 `/health/live=UP`、`/health=500`，恢复后回到 `UP/UP`，应用 PID 与账户快照均未变化。当前 30 秒 ready 失败时延来自 HikariCP 默认 `connectionTimeout`，D47 维持为显式教学边界。
 - **验迹证据契约**：保存每阶请求数、吞吐、p50/p95/p99、HTTP 状态分布、三实例命中分布、CPU/内存/线程/连接池快照；故障窗口单列请求时间线；事务前后保存 `accounts` 表快照与回滚不变量。证据包只记录可复核事实，不用压测工具日志代替浏览器、Nginx、后端和 MySQL 四层实测。
-- **落地证据**：真实浏览器经 Nginx `:9080` 访问，页面展示 M10 HA 链路且控制台无 warning/error；三实例同时服务，冷启动、Compose、Nginx 配置、PowerShell 5.1、Node、69 个 Java 测试、前端构建与官方 npm audit 均通过。验迹复跑属于下一阶段外部验证，不与本机自验证混写。
+- **落地证据**：真实浏览器经 Nginx `:9080` 访问，页面展示 M10 HA 链路且控制台无 warning/error；三实例同时服务，冷启动、Compose、Nginx 配置、PowerShell 5.1、Node、69 个 Java 测试、前端构建与官方 npm audit 均通过。VeriTrail 导入证据复验与本机自验证分层记录：前者验证冻结哈希、新鲜回放事实和诚实边界，不宣称接管 Docker/Nginx/MySQL/三 Java 进程生命周期。
 
 ---
 

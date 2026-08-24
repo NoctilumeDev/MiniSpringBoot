@@ -2,7 +2,9 @@
 
 M10 把 M9 的单实例开发链路推进为一套可复现的本机生产形态：浏览器只访问 Nginx `:9080`，Nginx 同源托管 React `dist`，并以 `least_conn` 把 API 请求分发到三个 MiniSpringBoot 实例 `:9091/:9092/:9093`；三个实例共享 MySQL，但不共享进程内状态。
 
-本章记录的是 **M10 自验证结论**。代码与证据契约已冻结到源码提交 `85c2b22`，证据清单见 [`docs/evidence/m10/m10-evidence-manifest.json`](evidence/m10/m10-evidence-manifest.json)。验迹 M12 尚未冻结，因此独立复跑状态明确保留为 `VERITRAIL_M12_PENDING`，不能把本机自验冒充外部验收。
+本章同时记录 **M10 自验证结论**与后续的 **VeriTrail 0.12 导入证据复验**。代码与原始证据契约冻结到源码提交 `85c2b22`，证据清单见 [`docs/evidence/m10/m10-evidence-manifest.json`](evidence/m10/m10-evidence-manifest.json)；2026-08-24 又重新执行故障切换、事务和数据库就绪恢复，并由 VeriTrail 对原始证据哈希与新鲜回放事实执行 15 项 HARD 断言，裁决为 `PASS`。完整 Bundle 见 [`docs/evidence/m10/veritrail/bundle`](evidence/m10/veritrail/bundle)，复现说明见 [`docs/evidence/m10/veritrail/README.md`](evidence/m10/veritrail/README.md)。
+
+这次复验的范围是 `IMPORTED_EVIDENCE_AUDIT`：VeriTrail 验证冻结事实和边界，但 Core 0.12 没有接管 Docker、Nginx、MySQL 与三个 Java 进程的完整生命周期，因此生命周期所有权仍明确为 `NOT_PROVEN`。这不是缩写成“全拓扑由 VeriTrail 托管”，也不能替代下面列出的单机与生产边界。
 
 ---
 
@@ -117,6 +119,16 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File deploy/m10/invoke-readin
 
 30 秒就绪失败窗口来自当前 HikariCP 默认 `connectionTimeout`，是已登记的 D47 教学边界：它会有限失败，但不是生产环境理想的快速摘除时延。
 
+### 4.4 VeriTrail 导入证据复验
+
+2026-08-24 在同一有界拓扑上重新执行三条关键链路：
+
+- 故障切换：8 并发、12 秒稳态、5 秒时停止 `msb-2`；52,788 个请求、0 非预期错误、19 次代理检查 0 失败，实例恢复后重新加入，账户保持 700 / 1300；
+- 事务：真实提交、刻意 HTTP 500 回滚、反向恢复和 API/MySQL 对账全部通过，最终基线恢复为 700 / 1300；
+- 就绪：MySQL 下线时 `live=UP`、`ready=500`，MySQL 恢复后回到 `UP/UP`，账户不变。
+
+适配器 [`deploy/m10/new-veritrail-imported-evidence.ps1`](../deploy/m10/new-veritrail-imported-evidence.ps1) 先复核冻结清单的 UTF-8/LF 规范哈希，再把本轮回放事实映射成结构化 Evidence。VeriTrail 0.12 的 15 项 HARD 断言全部通过，Bundle 随后又通过 `catalog-build` 完整性校验：1 个 Run、0 个目录问题、0 个冲突。
+
 ---
 
 ## 5. 浏览器与构建验收
@@ -142,6 +154,8 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File deploy/m10/invoke-readin
 | --- | --- |
 | M10 本机实现与自验证 | `SELF_VERIFIED` |
 | 原始证据哈希与源码坐标 | 已冻结到 `85c2b22` |
-| 验迹 M12 独立复跑 | `VERITRAIL_M12_PENDING` |
+| VeriTrail 导入证据复验 | `PASS`（15/15 HARD 断言） |
+| 导入复验范围 | `IMPORTED_EVIDENCE_AUDIT` |
+| 全拓扑生命周期所有权 | `NOT_PROVEN` |
 
 这套结构证明的是**单机内一个后端实例故障时的服务连续性**，不是生产级多机容灾：Nginx、MySQL、Docker Desktop 与宿主机仍然是单点；没有跨主机副本、数据库主从、服务发现、TLS、限流或跨地域恢复。高可用能力留在 demo 部署层，没有污染教学内核。

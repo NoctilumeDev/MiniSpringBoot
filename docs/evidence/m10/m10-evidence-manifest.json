@@ -5,7 +5,11 @@
     "sourceCommit":  "85c2b22dfdcb17cd2527f068f85542aca25d694c",
     "hashMode":  "UTF8_LF_CANONICAL",
     "status":  "SELF_VERIFIED",
-    "externalVerification":  "VERITRAIL_M12_PENDING",
+    "externalVerification":  "VERITRAIL_IMPORTED_EVIDENCE_PASS",
+    "externalVerificationScope":  "IMPORTED_EVIDENCE_AUDIT",
+    "externalVerificationRunId":  "minispringboot-m10-external-20260824",
+    "externalVerificationBundle":  "docs/evidence/m10/veritrail/bundle",
+    "externalLifecycleOwnership":  "NOT_PROVEN",
     "claims":  {
                    "capacity":  {
                                     "passed":  true,
