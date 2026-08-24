@@ -52,9 +52,8 @@ public class TransactionManager {
         } finally {
             // 回滚收敛到唯一位置：任何未到达 commit 的路径（Exception、Error 乃至其他
             // Throwable——catch(Exception) 拦不住 Error）都必须先终结半开事务再归还连接。
-            // 否则 closeQuietly 的 setAutoCommit(true) 按 JDBC 规范构成<b>隐式提交</b>
-            // （「事务进行中切换 auto-commit 会先提交」），扣款半途的转账会被静默提交
-            // 而非回滚——审查修复（M9 复审 I2），与 Spring 对 Error 同样回滚的语义对齐。
+            // 未提交事务必须先回滚，再恢复 auto-commit；JDBC 在事务中切换 auto-commit
+            // 会构成隐式提交。该路径也保证 Error 与 Exception 采用相同的回滚语义。
             if (!committed) {
                 rollbackQuietly(connection);
             }

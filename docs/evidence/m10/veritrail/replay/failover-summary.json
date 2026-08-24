@@ -1,0 +1,158 @@
+{
+  "schemaVersion": 1,
+  "startedAt": "2026-08-24T21:59:32.1528666+08:00",
+  "finishedAt": "2026-08-24T21:59:46.4014433+08:00",
+  "targetInstance": "msb-2",
+  "oldPid": 26428,
+  "newPid": 16832,
+  "proxyChecksDuringOutage": 19,
+  "proxyFailuresDuringOutage": 0,
+  "rejoined": true,
+  "accountsBefore": {
+    "account1": {
+      "id": 1,
+      "balance": 700.0
+    },
+    "account2": {
+      "id": 2,
+      "balance": 1300.0
+    }
+  },
+  "accountsAfter": {
+    "account1": {
+      "id": 1,
+      "balance": 700.0
+    },
+    "account2": {
+      "id": 2,
+      "balance": 1300.0
+    }
+  },
+  "timeline": [
+    {
+      "at": "2026-08-24T21:59:32.1528666+08:00",
+      "event": "LOAD_STARTED",
+      "pid": 14428,
+      "concurrency": 8
+    },
+    {
+      "at": "2026-08-24T21:59:37.1718507+08:00",
+      "event": "INSTANCE_STOP_REQUESTED",
+      "instance": "msb-2",
+      "pid": 26428
+    },
+    {
+      "at": "2026-08-24T21:59:37.4331596+08:00",
+      "event": "INSTANCE_STOPPED",
+      "instance": "msb-2"
+    },
+    {
+      "at": "2026-08-24T21:59:37.4412023+08:00",
+      "event": "PROXY_OK_DURING_OUTAGE",
+      "instance": "msb-1"
+    },
+    {
+      "at": "2026-08-24T21:59:37.7142250+08:00",
+      "event": "PROXY_OK_DURING_OUTAGE",
+      "instance": "msb-3"
+    },
+    {
+      "at": "2026-08-24T21:59:37.9933852+08:00",
+      "event": "PROXY_OK_DURING_OUTAGE",
+      "instance": "msb-3"
+    },
+    {
+      "at": "2026-08-24T21:59:38.2502834+08:00",
+      "event": "PROXY_OK_DURING_OUTAGE",
+      "instance": "msb-1"
+    },
+    {
+      "at": "2026-08-24T21:59:38.5115582+08:00",
+      "event": "PROXY_OK_DURING_OUTAGE",
+      "instance": "msb-3"
+    },
+    {
+      "at": "2026-08-24T21:59:38.7779248+08:00",
+      "event": "PROXY_OK_DURING_OUTAGE",
+      "instance": "msb-3"
+    },
+    {
+      "at": "2026-08-24T21:59:39.0361320+08:00",
+      "event": "PROXY_OK_DURING_OUTAGE",
+      "instance": "msb-1"
+    },
+    {
+      "at": "2026-08-24T21:59:39.3040874+08:00",
+      "event": "PROXY_OK_DURING_OUTAGE",
+      "instance": "msb-1"
+    },
+    {
+      "at": "2026-08-24T21:59:39.5646916+08:00",
+      "event": "PROXY_OK_DURING_OUTAGE",
+      "instance": "msb-3"
+    },
+    {
+      "at": "2026-08-24T21:59:39.8246555+08:00",
+      "event": "PROXY_OK_DURING_OUTAGE",
+      "instance": "msb-3"
+    },
+    {
+      "at": "2026-08-24T21:59:40.0840698+08:00",
+      "event": "PROXY_OK_DURING_OUTAGE",
+      "instance": "msb-3"
+    },
+    {
+      "at": "2026-08-24T21:59:40.3408791+08:00",
+      "event": "PROXY_OK_DURING_OUTAGE",
+      "instance": "msb-3"
+    },
+    {
+      "at": "2026-08-24T21:59:40.6032752+08:00",
+      "event": "PROXY_OK_DURING_OUTAGE",
+      "instance": "msb-1"
+    },
+    {
+      "at": "2026-08-24T21:59:40.8649058+08:00",
+      "event": "PROXY_OK_DURING_OUTAGE",
+      "instance": "msb-3"
+    },
+    {
+      "at": "2026-08-24T21:59:41.1282163+08:00",
+      "event": "PROXY_OK_DURING_OUTAGE",
+      "instance": "msb-1"
+    },
+    {
+      "at": "2026-08-24T21:59:41.3906876+08:00",
+      "event": "PROXY_OK_DURING_OUTAGE",
+      "instance": "msb-1"
+    },
+    {
+      "at": "2026-08-24T21:59:41.6558731+08:00",
+      "event": "PROXY_OK_DURING_OUTAGE",
+      "instance": "msb-3"
+    },
+    {
+      "at": "2026-08-24T21:59:41.9211595+08:00",
+      "event": "PROXY_OK_DURING_OUTAGE",
+      "instance": "msb-3"
+    },
+    {
+      "at": "2026-08-24T21:59:42.1901924+08:00",
+      "event": "PROXY_OK_DURING_OUTAGE",
+      "instance": "msb-1"
+    },
+    {
+      "at": "2026-08-24T21:59:45.4395045+08:00",
+      "event": "INSTANCE_RESTARTED",
+      "instance": "msb-2",
+      "pid": 16832
+    },
+    {
+      "at": "2026-08-24T21:59:46.0978489+08:00",
+      "event": "INSTANCE_REJOIN_OBSERVED",
+      "instance": "msb-2"
+    }
+  ],
+  "loadStdout": "20260824-215932-failover-load.out.log",
+  "loadStderr": "20260824-215932-failover-load.err.log"
+}

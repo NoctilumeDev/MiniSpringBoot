@@ -13,7 +13,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * {@link Autowired} 注入处理器（A-4/D3 收口：字段 / 构造器 / 方法注入全部落地，@Target 不再撒谎）。
+ * {@link Autowired} 注入处理器，支持字段、构造器、方法和参数四种注入位置。
  *
  * <ul>
  *   <li>构造器注入：{@link #determineCandidateConstructors} 选出 {@code @Autowired} 构造器，
@@ -125,7 +125,7 @@ public class AutowiredAnnotationBeanPostProcessor implements InstantiationAwareB
      * 字段 / 方法参数共用的依赖解析：@Qualifier 限定名 → beanName → 唯一类型 → @Primary；
      * required=false 允许返回 null。
      *
-     * <p>D34（M8 收口）：@Qualifier(v) 不再只当 beanName 用——先在候选类型里匹配
+     * <p>@Qualifier(v) 先在候选类型里匹配
      * {@code BeanDefinition.qualifier}（支持「限定名 ≠ beanName」，多数据源场景的关键），
      * 匹配不到再回退按 beanName。
      */
@@ -136,8 +136,7 @@ public class AutowiredAnnotationBeanPostProcessor implements InstantiationAwareB
             try {
                 return resolveByQualifier(qualifier, requiredType, description);
             } catch (BeansException e) {
-                // D51 收口：required=false 且限定名未命中 → null 注入（与方法注入/构造器参数对称，
-                // 此前与方法注入「解析按非必需」的注释自相矛盾）
+                // required=false 且限定名未命中时返回 null，与其他注入位置保持一致。
                 if (!required) {
                     return null;
                 }
@@ -159,7 +158,7 @@ public class AutowiredAnnotationBeanPostProcessor implements InstantiationAwareB
         return null;
     }
 
-    /** D34：限定名裁决——先匹配候选的 BeanDefinition.qualifier，再回退 beanName，两层都空给可读错误。 */
+    /** 限定名先匹配候选的 BeanDefinition.qualifier，再回退 beanName；两层均未命中时给出可读错误。 */
     private Object resolveByQualifier(String qualifier, Class<?> requiredType, String description) {
         String matched = null;
         for (String name : beanFactory.getBeanNamesForType(requiredType)) {

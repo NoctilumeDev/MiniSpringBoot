@@ -1,7 +1,7 @@
 /**
  * 后端 API 封装（唯一出口）：所有请求经 Vite proxy（/api → :9090）。
- * 错误纪律：非 2xx 一律读出响应体文本抛 Error——后端可读错误消息
- * （如 M8 B9 修复后的「SQL 执行失败: …」）必须原样到达 UI，不许吞。
+ * 错误纪律：非 2xx 一律读取响应体文本并抛出 Error，确保后端的可读错误消息
+ * 原样到达 UI。
  */
 async function request(method, path, body) {
   const res = await fetch(path, {
@@ -23,8 +23,8 @@ export const api = {
   createUser: (user) => request('POST', '/api/users', user),
   updateUser: (id, user) => request('PUT', `/api/users/${id}`, user),
   deleteUser: (id) => request('DELETE', `/api/users/${id}`),
-  // accounts（MySQL accounts 表，转账事务）。query 一律 encodeURIComponent——
-  // 审查修复（M9 复审 I3）：裸拼会因 '&'/'#' 破坏参数结构，且让非法输入直达后端
+  // accounts（MySQL accounts 表，转账事务）。query 参数统一编码，确保 '&'/'#'
+  // 等字符不会改变 URL 结构。
   transfer: (from, to, amount) =>
     request('POST', `/api/accounts/transfer?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}&amount=${encodeURIComponent(amount)}`),
   transferFail: (from, to, amount) =>

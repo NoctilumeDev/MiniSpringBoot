@@ -1,0 +1,3466 @@
+{
+  "schemaVersion": 1,
+  "label": "capacity-baseline",
+  "startedAt": "2026-08-21T18:09:10.746Z",
+  "host": {
+    "platform": "win32",
+    "logicalCpu": 24,
+    "totalMemoryGiB": 15.78
+  },
+  "options": {
+    "target": "http://127.0.0.1:9080",
+    "stages": [
+      1,
+      8,
+      24,
+      48,
+      72
+    ],
+    "endpoints": [
+      "/health/live",
+      "/api/users",
+      "/api/accounts/1",
+      "/api/accounts/2"
+    ],
+    "warmupSeconds": 30,
+    "durationSeconds": 60,
+    "restSeconds": 5,
+    "requestTimeoutMs": 5000,
+    "minFreeMemoryGiB": 2,
+    "maxCpuPercent": 85,
+    "cpuBreachSeconds": 10,
+    "maxErrorRate": 0.01,
+    "label": "capacity-baseline"
+  },
+  "stages": [
+    {
+      "concurrency": 1,
+      "startedAt": "2026-08-21T18:09:40.754Z",
+      "finishedAt": "2026-08-21T18:10:40.771Z",
+      "requestedSteadySeconds": 60,
+      "actualSteadySeconds": 60.001,
+      "aborted": false,
+      "abortReason": null,
+      "requests": 56312,
+      "ok": 56312,
+      "unexpected": 0,
+      "errorRatePercent": 0,
+      "throughputRps": 938.51,
+      "latencyMs": {
+        "sampleCount": 56312,
+        "sampling": "exact",
+        "p50": 1.05,
+        "p95": 1.5,
+        "p99": 1.88,
+        "max": 9.18
+      },
+      "status": {
+        "200": 56312
+      },
+      "endpoints": {
+        "/health/live": 14078,
+        "/api/users": 14078,
+        "/api/accounts/1": 14078,
+        "/api/accounts/2": 14078
+      },
+      "upstreams": {
+        "192.168.65.254:9093": 18772,
+        "192.168.65.254:9092": 18769,
+        "192.168.65.254:9091": 18771
+      },
+      "retryChains": 0,
+      "errors": {},
+      "endpointErrors": {},
+      "resources": {
+        "sampleCount": 91,
+        "cpuAveragePercent": 17.7,
+        "cpuMaxPercent": 39.4,
+        "freeMemoryMinGiB": 3.653,
+        "samples": [
+          {
+            "at": "2026-08-21T18:09:10.754Z",
+            "cpuPercent": 0,
+            "freeMemoryGiB": 4.374,
+            "requestTotal": 0,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:09:11.754Z",
+            "cpuPercent": 14.5,
+            "freeMemoryGiB": 4.379,
+            "requestTotal": 0,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:09:12.755Z",
+            "cpuPercent": 14.1,
+            "freeMemoryGiB": 4.397,
+            "requestTotal": 0,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:09:13.754Z",
+            "cpuPercent": 14.9,
+            "freeMemoryGiB": 4.408,
+            "requestTotal": 0,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:09:14.754Z",
+            "cpuPercent": 12.3,
+            "freeMemoryGiB": 4.415,
+            "requestTotal": 0,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:09:15.755Z",
+            "cpuPercent": 19.2,
+            "freeMemoryGiB": 4.393,
+            "requestTotal": 0,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:09:16.755Z",
+            "cpuPercent": 12.5,
+            "freeMemoryGiB": 4.409,
+            "requestTotal": 0,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:09:17.755Z",
+            "cpuPercent": 14.7,
+            "freeMemoryGiB": 4.41,
+            "requestTotal": 0,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:09:18.755Z",
+            "cpuPercent": 12.3,
+            "freeMemoryGiB": 4.413,
+            "requestTotal": 0,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:09:19.754Z",
+            "cpuPercent": 13.5,
+            "freeMemoryGiB": 4.412,
+            "requestTotal": 0,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:09:20.754Z",
+            "cpuPercent": 13.8,
+            "freeMemoryGiB": 4.383,
+            "requestTotal": 0,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:09:21.754Z",
+            "cpuPercent": 13.6,
+            "freeMemoryGiB": 4.383,
+            "requestTotal": 0,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:09:22.754Z",
+            "cpuPercent": 16.5,
+            "freeMemoryGiB": 4.401,
+            "requestTotal": 0,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:09:23.754Z",
+            "cpuPercent": 14.8,
+            "freeMemoryGiB": 4.41,
+            "requestTotal": 0,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:09:24.755Z",
+            "cpuPercent": 15,
+            "freeMemoryGiB": 4.412,
+            "requestTotal": 0,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:09:25.754Z",
+            "cpuPercent": 18.2,
+            "freeMemoryGiB": 4.39,
+            "requestTotal": 0,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:09:26.754Z",
+            "cpuPercent": 18.7,
+            "freeMemoryGiB": 4.418,
+            "requestTotal": 0,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:09:27.754Z",
+            "cpuPercent": 16.8,
+            "freeMemoryGiB": 4.425,
+            "requestTotal": 0,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:09:28.754Z",
+            "cpuPercent": 13.6,
+            "freeMemoryGiB": 4.415,
+            "requestTotal": 0,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:09:29.756Z",
+            "cpuPercent": 12.6,
+            "freeMemoryGiB": 4.421,
+            "requestTotal": 0,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:09:30.754Z",
+            "cpuPercent": 18.2,
+            "freeMemoryGiB": 4.374,
+            "requestTotal": 0,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:09:31.754Z",
+            "cpuPercent": 14.1,
+            "freeMemoryGiB": 4.393,
+            "requestTotal": 0,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:09:32.754Z",
+            "cpuPercent": 15.3,
+            "freeMemoryGiB": 4.408,
+            "requestTotal": 0,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:09:33.754Z",
+            "cpuPercent": 15.2,
+            "freeMemoryGiB": 4.415,
+            "requestTotal": 0,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:09:34.754Z",
+            "cpuPercent": 16.9,
+            "freeMemoryGiB": 4.387,
+            "requestTotal": 0,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:09:35.755Z",
+            "cpuPercent": 15.8,
+            "freeMemoryGiB": 4.414,
+            "requestTotal": 0,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:09:36.755Z",
+            "cpuPercent": 12.4,
+            "freeMemoryGiB": 4.411,
+            "requestTotal": 0,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:09:37.756Z",
+            "cpuPercent": 23.9,
+            "freeMemoryGiB": 4.395,
+            "requestTotal": 0,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:09:38.758Z",
+            "cpuPercent": 29.9,
+            "freeMemoryGiB": 4.35,
+            "requestTotal": 0,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:09:39.757Z",
+            "cpuPercent": 32.2,
+            "freeMemoryGiB": 4.379,
+            "requestTotal": 0,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:09:40.758Z",
+            "cpuPercent": 35.9,
+            "freeMemoryGiB": 4.094,
+            "requestTotal": 2,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:09:41.758Z",
+            "cpuPercent": 30.3,
+            "freeMemoryGiB": 4.081,
+            "requestTotal": 848,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:09:42.759Z",
+            "cpuPercent": 39.4,
+            "freeMemoryGiB": 4.063,
+            "requestTotal": 1683,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:09:43.758Z",
+            "cpuPercent": 19.3,
+            "freeMemoryGiB": 4.002,
+            "requestTotal": 2605,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:09:44.758Z",
+            "cpuPercent": 25.4,
+            "freeMemoryGiB": 3.971,
+            "requestTotal": 3438,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:09:45.759Z",
+            "cpuPercent": 27.6,
+            "freeMemoryGiB": 3.92,
+            "requestTotal": 4290,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:09:46.759Z",
+            "cpuPercent": 20.1,
+            "freeMemoryGiB": 3.945,
+            "requestTotal": 5229,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:09:47.759Z",
+            "cpuPercent": 21.4,
+            "freeMemoryGiB": 3.939,
+            "requestTotal": 6170,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:09:48.758Z",
+            "cpuPercent": 14.4,
+            "freeMemoryGiB": 3.931,
+            "requestTotal": 7145,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:09:49.759Z",
+            "cpuPercent": 26.5,
+            "freeMemoryGiB": 3.899,
+            "requestTotal": 7999,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:09:50.758Z",
+            "cpuPercent": 24.5,
+            "freeMemoryGiB": 3.885,
+            "requestTotal": 8893,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:09:51.758Z",
+            "cpuPercent": 16.2,
+            "freeMemoryGiB": 3.838,
+            "requestTotal": 9856,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:09:52.758Z",
+            "cpuPercent": 19.4,
+            "freeMemoryGiB": 3.869,
+            "requestTotal": 10826,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:09:53.758Z",
+            "cpuPercent": 16.3,
+            "freeMemoryGiB": 3.891,
+            "requestTotal": 11794,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:09:54.758Z",
+            "cpuPercent": 23.4,
+            "freeMemoryGiB": 3.95,
+            "requestTotal": 12716,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:09:55.758Z",
+            "cpuPercent": 21.1,
+            "freeMemoryGiB": 3.94,
+            "requestTotal": 13681,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:09:56.759Z",
+            "cpuPercent": 20,
+            "freeMemoryGiB": 3.916,
+            "requestTotal": 14646,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:09:57.758Z",
+            "cpuPercent": 14.5,
+            "freeMemoryGiB": 4.046,
+            "requestTotal": 15612,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:09:58.758Z",
+            "cpuPercent": 13.1,
+            "freeMemoryGiB": 4.145,
+            "requestTotal": 16546,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:09:59.759Z",
+            "cpuPercent": 21.7,
+            "freeMemoryGiB": 4.107,
+            "requestTotal": 17471,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:10:00.759Z",
+            "cpuPercent": 21.4,
+            "freeMemoryGiB": 4.079,
+            "requestTotal": 18376,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:10:01.759Z",
+            "cpuPercent": 15.8,
+            "freeMemoryGiB": 4.094,
+            "requestTotal": 19347,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:10:02.76Z",
+            "cpuPercent": 14.6,
+            "freeMemoryGiB": 4.156,
+            "requestTotal": 20290,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:10:03.759Z",
+            "cpuPercent": 12.3,
+            "freeMemoryGiB": 4.16,
+            "requestTotal": 21255,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:10:04.76Z",
+            "cpuPercent": 16.3,
+            "freeMemoryGiB": 4.147,
+            "requestTotal": 22233,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:10:05.759Z",
+            "cpuPercent": 17.3,
+            "freeMemoryGiB": 4.162,
+            "requestTotal": 23171,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:10:06.759Z",
+            "cpuPercent": 13.5,
+            "freeMemoryGiB": 4.163,
+            "requestTotal": 24125,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:10:07.76Z",
+            "cpuPercent": 16.5,
+            "freeMemoryGiB": 4.161,
+            "requestTotal": 25092,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:10:08.759Z",
+            "cpuPercent": 15.9,
+            "freeMemoryGiB": 4.162,
+            "requestTotal": 26063,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:10:09.759Z",
+            "cpuPercent": 17.7,
+            "freeMemoryGiB": 4.167,
+            "requestTotal": 27045,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:10:10.759Z",
+            "cpuPercent": 19.7,
+            "freeMemoryGiB": 4.145,
+            "requestTotal": 27995,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:10:11.759Z",
+            "cpuPercent": 13.8,
+            "freeMemoryGiB": 4.139,
+            "requestTotal": 28954,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:10:12.759Z",
+            "cpuPercent": 16,
+            "freeMemoryGiB": 4.161,
+            "requestTotal": 29912,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:10:13.759Z",
+            "cpuPercent": 15.8,
+            "freeMemoryGiB": 4.165,
+            "requestTotal": 30887,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:10:14.759Z",
+            "cpuPercent": 12.9,
+            "freeMemoryGiB": 4.153,
+            "requestTotal": 31860,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:10:15.759Z",
+            "cpuPercent": 19.6,
+            "freeMemoryGiB": 4.158,
+            "requestTotal": 32806,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:10:16.759Z",
+            "cpuPercent": 13.6,
+            "freeMemoryGiB": 4.161,
+            "requestTotal": 33783,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:10:17.76Z",
+            "cpuPercent": 11.9,
+            "freeMemoryGiB": 4.164,
+            "requestTotal": 34762,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:10:18.761Z",
+            "cpuPercent": 16,
+            "freeMemoryGiB": 4.162,
+            "requestTotal": 35730,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:10:19.76Z",
+            "cpuPercent": 17.5,
+            "freeMemoryGiB": 4.164,
+            "requestTotal": 36690,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:10:20.76Z",
+            "cpuPercent": 18.4,
+            "freeMemoryGiB": 4.14,
+            "requestTotal": 37589,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:10:21.76Z",
+            "cpuPercent": 14.3,
+            "freeMemoryGiB": 4.137,
+            "requestTotal": 38556,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:10:22.761Z",
+            "cpuPercent": 12.7,
+            "freeMemoryGiB": 4.166,
+            "requestTotal": 39527,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:10:23.76Z",
+            "cpuPercent": 14.7,
+            "freeMemoryGiB": 4.17,
+            "requestTotal": 40501,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:10:24.76Z",
+            "cpuPercent": 13.6,
+            "freeMemoryGiB": 4.166,
+            "requestTotal": 41472,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:10:25.76Z",
+            "cpuPercent": 13.4,
+            "freeMemoryGiB": 4.166,
+            "requestTotal": 42428,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:10:26.76Z",
+            "cpuPercent": 11.4,
+            "freeMemoryGiB": 4.172,
+            "requestTotal": 43416,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:10:27.76Z",
+            "cpuPercent": 15.4,
+            "freeMemoryGiB": 4.166,
+            "requestTotal": 44380,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:10:28.76Z",
+            "cpuPercent": 17.3,
+            "freeMemoryGiB": 4.166,
+            "requestTotal": 45345,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:10:29.76Z",
+            "cpuPercent": 19.3,
+            "freeMemoryGiB": 4.141,
+            "requestTotal": 46301,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:10:30.76Z",
+            "cpuPercent": 25,
+            "freeMemoryGiB": 4.113,
+            "requestTotal": 47136,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:10:31.76Z",
+            "cpuPercent": 13.7,
+            "freeMemoryGiB": 4.133,
+            "requestTotal": 48122,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:10:32.76Z",
+            "cpuPercent": 17.1,
+            "freeMemoryGiB": 3.953,
+            "requestTotal": 49055,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:10:33.76Z",
+            "cpuPercent": 22.4,
+            "freeMemoryGiB": 3.936,
+            "requestTotal": 49914,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:10:34.76Z",
+            "cpuPercent": 18.6,
+            "freeMemoryGiB": 3.882,
+            "requestTotal": 50846,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:10:35.761Z",
+            "cpuPercent": 33.1,
+            "freeMemoryGiB": 3.653,
+            "requestTotal": 51579,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:10:36.76Z",
+            "cpuPercent": 18.5,
+            "freeMemoryGiB": 3.71,
+            "requestTotal": 52528,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:10:37.76Z",
+            "cpuPercent": 18.2,
+            "freeMemoryGiB": 3.782,
+            "requestTotal": 53467,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:10:38.76Z",
+            "cpuPercent": 14.4,
+            "freeMemoryGiB": 3.815,
+            "requestTotal": 54433,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:10:39.76Z",
+            "cpuPercent": 13.1,
+            "freeMemoryGiB": 3.815,
+            "requestTotal": 55405,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:10:40.756Z",
+            "cpuPercent": 17.8,
+            "freeMemoryGiB": 3.975,
+            "requestTotal": 56312,
+            "unexpected": 0
+          }
+        ]
+      }
+    },
+    {
+      "concurrency": 8,
+      "startedAt": "2026-08-21T18:11:15.782Z",
+      "finishedAt": "2026-08-21T18:12:15.863Z",
+      "requestedSteadySeconds": 60,
+      "actualSteadySeconds": 60.002,
+      "aborted": false,
+      "abortReason": null,
+      "requests": 274859,
+      "ok": 274859,
+      "unexpected": 0,
+      "errorRatePercent": 0,
+      "throughputRps": 4580.85,
+      "latencyMs": {
+        "sampleCount": 200000,
+        "sampling": "reservoir-200000",
+        "p50": 1.71,
+        "p95": 2.45,
+        "p99": 3.2,
+        "max": 10
+      },
+      "status": {
+        "200": 274859
+      },
+      "endpoints": {
+        "/health/live": 68715,
+        "/api/accounts/1": 68715,
+        "/api/accounts/2": 68714,
+        "/api/users": 68715
+      },
+      "upstreams": {
+        "192.168.65.254:9091": 91290,
+        "192.168.65.254:9092": 92559,
+        "192.168.65.254:9093": 91010
+      },
+      "retryChains": 0,
+      "errors": {},
+      "endpointErrors": {},
+      "resources": {
+        "sampleCount": 92,
+        "cpuAveragePercent": 50.8,
+        "cpuMaxPercent": 67.7,
+        "freeMemoryMinGiB": 4.002,
+        "samples": [
+          {
+            "at": "2026-08-21T18:10:45.781Z",
+            "cpuPercent": 0,
+            "freeMemoryGiB": 4.52,
+            "requestTotal": 0,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:10:46.781Z",
+            "cpuPercent": 49.2,
+            "freeMemoryGiB": 4.508,
+            "requestTotal": 0,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:10:47.782Z",
+            "cpuPercent": 45.5,
+            "freeMemoryGiB": 4.505,
+            "requestTotal": 0,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:10:48.781Z",
+            "cpuPercent": 49.1,
+            "freeMemoryGiB": 4.496,
+            "requestTotal": 0,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:10:49.781Z",
+            "cpuPercent": 47.8,
+            "freeMemoryGiB": 4.603,
+            "requestTotal": 0,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:10:50.782Z",
+            "cpuPercent": 53.6,
+            "freeMemoryGiB": 4.586,
+            "requestTotal": 0,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:10:51.781Z",
+            "cpuPercent": 50,
+            "freeMemoryGiB": 4.59,
+            "requestTotal": 0,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:10:52.781Z",
+            "cpuPercent": 47.9,
+            "freeMemoryGiB": 4.639,
+            "requestTotal": 0,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:10:53.781Z",
+            "cpuPercent": 47.4,
+            "freeMemoryGiB": 4.644,
+            "requestTotal": 0,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:10:54.782Z",
+            "cpuPercent": 51.1,
+            "freeMemoryGiB": 4.62,
+            "requestTotal": 0,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:10:55.782Z",
+            "cpuPercent": 54.8,
+            "freeMemoryGiB": 4.623,
+            "requestTotal": 0,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:10:56.782Z",
+            "cpuPercent": 53.8,
+            "freeMemoryGiB": 4.621,
+            "requestTotal": 0,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:10:57.782Z",
+            "cpuPercent": 47.1,
+            "freeMemoryGiB": 4.616,
+            "requestTotal": 0,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:10:58.782Z",
+            "cpuPercent": 51.9,
+            "freeMemoryGiB": 4.654,
+            "requestTotal": 0,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:10:59.782Z",
+            "cpuPercent": 50.8,
+            "freeMemoryGiB": 4.645,
+            "requestTotal": 0,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:11:00.782Z",
+            "cpuPercent": 54.6,
+            "freeMemoryGiB": 4.538,
+            "requestTotal": 0,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:11:01.781Z",
+            "cpuPercent": 48.8,
+            "freeMemoryGiB": 4.539,
+            "requestTotal": 0,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:11:02.782Z",
+            "cpuPercent": 49.5,
+            "freeMemoryGiB": 4.554,
+            "requestTotal": 0,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:11:03.782Z",
+            "cpuPercent": 53.6,
+            "freeMemoryGiB": 4.546,
+            "requestTotal": 0,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:11:04.781Z",
+            "cpuPercent": 52.3,
+            "freeMemoryGiB": 4.511,
+            "requestTotal": 0,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:11:05.781Z",
+            "cpuPercent": 51.3,
+            "freeMemoryGiB": 4.533,
+            "requestTotal": 0,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:11:06.781Z",
+            "cpuPercent": 50.8,
+            "freeMemoryGiB": 4.534,
+            "requestTotal": 0,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:11:07.782Z",
+            "cpuPercent": 53.6,
+            "freeMemoryGiB": 4.533,
+            "requestTotal": 0,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:11:08.781Z",
+            "cpuPercent": 50.2,
+            "freeMemoryGiB": 4.532,
+            "requestTotal": 0,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:11:09.782Z",
+            "cpuPercent": 48,
+            "freeMemoryGiB": 4.528,
+            "requestTotal": 0,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:11:10.782Z",
+            "cpuPercent": 52,
+            "freeMemoryGiB": 4.506,
+            "requestTotal": 0,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:11:11.782Z",
+            "cpuPercent": 51.3,
+            "freeMemoryGiB": 4.507,
+            "requestTotal": 0,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:11:12.782Z",
+            "cpuPercent": 56.6,
+            "freeMemoryGiB": 4.537,
+            "requestTotal": 0,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:11:13.781Z",
+            "cpuPercent": 53.3,
+            "freeMemoryGiB": 4.53,
+            "requestTotal": 0,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:11:14.781Z",
+            "cpuPercent": 51.2,
+            "freeMemoryGiB": 4.517,
+            "requestTotal": 0,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:11:15.782Z",
+            "cpuPercent": 53.9,
+            "freeMemoryGiB": 4.512,
+            "requestTotal": 0,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:11:16.782Z",
+            "cpuPercent": 47,
+            "freeMemoryGiB": 4.509,
+            "requestTotal": 4563,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:11:17.781Z",
+            "cpuPercent": 49.5,
+            "freeMemoryGiB": 4.506,
+            "requestTotal": 9190,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:11:18.782Z",
+            "cpuPercent": 54.3,
+            "freeMemoryGiB": 4.503,
+            "requestTotal": 13953,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:11:19.781Z",
+            "cpuPercent": 49.2,
+            "freeMemoryGiB": 4.5,
+            "requestTotal": 18455,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:11:20.782Z",
+            "cpuPercent": 51.5,
+            "freeMemoryGiB": 4.473,
+            "requestTotal": 23106,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:11:21.782Z",
+            "cpuPercent": 52.5,
+            "freeMemoryGiB": 4.467,
+            "requestTotal": 27391,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:11:22.782Z",
+            "cpuPercent": 53.5,
+            "freeMemoryGiB": 4.387,
+            "requestTotal": 32067,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:11:23.782Z",
+            "cpuPercent": 57.2,
+            "freeMemoryGiB": 4.291,
+            "requestTotal": 36473,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:11:24.782Z",
+            "cpuPercent": 51.1,
+            "freeMemoryGiB": 4.278,
+            "requestTotal": 41015,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:11:25.782Z",
+            "cpuPercent": 52.4,
+            "freeMemoryGiB": 4.229,
+            "requestTotal": 45695,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:11:26.782Z",
+            "cpuPercent": 50.7,
+            "freeMemoryGiB": 4.235,
+            "requestTotal": 50432,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:11:27.782Z",
+            "cpuPercent": 53.9,
+            "freeMemoryGiB": 4.176,
+            "requestTotal": 55088,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:11:28.782Z",
+            "cpuPercent": 49.9,
+            "freeMemoryGiB": 4.168,
+            "requestTotal": 59607,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:11:29.782Z",
+            "cpuPercent": 53,
+            "freeMemoryGiB": 4.159,
+            "requestTotal": 64255,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:11:30.782Z",
+            "cpuPercent": 54.6,
+            "freeMemoryGiB": 4.134,
+            "requestTotal": 68873,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:11:31.782Z",
+            "cpuPercent": 52,
+            "freeMemoryGiB": 4.126,
+            "requestTotal": 73364,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:11:32.782Z",
+            "cpuPercent": 49.8,
+            "freeMemoryGiB": 4.122,
+            "requestTotal": 78070,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:11:33.782Z",
+            "cpuPercent": 50.9,
+            "freeMemoryGiB": 4.141,
+            "requestTotal": 82532,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:11:34.782Z",
+            "cpuPercent": 52.6,
+            "freeMemoryGiB": 4.123,
+            "requestTotal": 87206,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:11:35.782Z",
+            "cpuPercent": 54.5,
+            "freeMemoryGiB": 4.129,
+            "requestTotal": 91742,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:11:36.782Z",
+            "cpuPercent": 49.4,
+            "freeMemoryGiB": 4.149,
+            "requestTotal": 96277,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:11:37.782Z",
+            "cpuPercent": 55.1,
+            "freeMemoryGiB": 4.149,
+            "requestTotal": 101070,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:11:38.781Z",
+            "cpuPercent": 48.5,
+            "freeMemoryGiB": 4.152,
+            "requestTotal": 105495,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:11:39.781Z",
+            "cpuPercent": 56.9,
+            "freeMemoryGiB": 4.132,
+            "requestTotal": 109960,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:11:40.782Z",
+            "cpuPercent": 53.8,
+            "freeMemoryGiB": 4.109,
+            "requestTotal": 114658,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:11:41.781Z",
+            "cpuPercent": 56.1,
+            "freeMemoryGiB": 4.19,
+            "requestTotal": 119314,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:11:42.782Z",
+            "cpuPercent": 53.9,
+            "freeMemoryGiB": 4.25,
+            "requestTotal": 123763,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:11:43.782Z",
+            "cpuPercent": 67.7,
+            "freeMemoryGiB": 4.097,
+            "requestTotal": 128006,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:11:44.782Z",
+            "cpuPercent": 57.7,
+            "freeMemoryGiB": 4.086,
+            "requestTotal": 132652,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:11:45.782Z",
+            "cpuPercent": 49.1,
+            "freeMemoryGiB": 4.132,
+            "requestTotal": 137161,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:11:46.781Z",
+            "cpuPercent": 51.4,
+            "freeMemoryGiB": 4.131,
+            "requestTotal": 141842,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:11:47.782Z",
+            "cpuPercent": 52.7,
+            "freeMemoryGiB": 4.134,
+            "requestTotal": 146488,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:11:48.782Z",
+            "cpuPercent": 49,
+            "freeMemoryGiB": 4.134,
+            "requestTotal": 151052,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:11:49.782Z",
+            "cpuPercent": 53.7,
+            "freeMemoryGiB": 4.127,
+            "requestTotal": 155782,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:11:50.782Z",
+            "cpuPercent": 50.2,
+            "freeMemoryGiB": 4.111,
+            "requestTotal": 160257,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:11:51.782Z",
+            "cpuPercent": 53.7,
+            "freeMemoryGiB": 4.112,
+            "requestTotal": 164947,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:11:52.781Z",
+            "cpuPercent": 54,
+            "freeMemoryGiB": 4.107,
+            "requestTotal": 169363,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:11:53.782Z",
+            "cpuPercent": 48.6,
+            "freeMemoryGiB": 4.136,
+            "requestTotal": 174009,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:11:54.782Z",
+            "cpuPercent": 50.7,
+            "freeMemoryGiB": 4.136,
+            "requestTotal": 178770,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:11:55.782Z",
+            "cpuPercent": 48.4,
+            "freeMemoryGiB": 4.13,
+            "requestTotal": 183288,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:11:56.782Z",
+            "cpuPercent": 58.8,
+            "freeMemoryGiB": 4.142,
+            "requestTotal": 187798,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:11:57.782Z",
+            "cpuPercent": 49.4,
+            "freeMemoryGiB": 4.13,
+            "requestTotal": 192365,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:11:58.782Z",
+            "cpuPercent": 51,
+            "freeMemoryGiB": 4.198,
+            "requestTotal": 197114,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:11:59.782Z",
+            "cpuPercent": 53.1,
+            "freeMemoryGiB": 4.189,
+            "requestTotal": 201793,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:12:00.782Z",
+            "cpuPercent": 51.1,
+            "freeMemoryGiB": 4.164,
+            "requestTotal": 206407,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:12:01.782Z",
+            "cpuPercent": 56.6,
+            "freeMemoryGiB": 4.17,
+            "requestTotal": 211044,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:12:02.782Z",
+            "cpuPercent": 55.2,
+            "freeMemoryGiB": 4.167,
+            "requestTotal": 215589,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:12:03.782Z",
+            "cpuPercent": 49.6,
+            "freeMemoryGiB": 4.195,
+            "requestTotal": 220102,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:12:04.782Z",
+            "cpuPercent": 52.4,
+            "freeMemoryGiB": 4.179,
+            "requestTotal": 224796,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:12:05.782Z",
+            "cpuPercent": 52.5,
+            "freeMemoryGiB": 4.179,
+            "requestTotal": 229165,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:12:06.781Z",
+            "cpuPercent": 50.4,
+            "freeMemoryGiB": 4.176,
+            "requestTotal": 233902,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:12:07.782Z",
+            "cpuPercent": 46,
+            "freeMemoryGiB": 4.169,
+            "requestTotal": 238466,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:12:08.782Z",
+            "cpuPercent": 53.3,
+            "freeMemoryGiB": 4.171,
+            "requestTotal": 243091,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:12:09.782Z",
+            "cpuPercent": 50.2,
+            "freeMemoryGiB": 4.168,
+            "requestTotal": 247734,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:12:10.782Z",
+            "cpuPercent": 56.9,
+            "freeMemoryGiB": 4.158,
+            "requestTotal": 252013,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:12:11.782Z",
+            "cpuPercent": 53.4,
+            "freeMemoryGiB": 4.146,
+            "requestTotal": 256629,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:12:12.781Z",
+            "cpuPercent": 50.6,
+            "freeMemoryGiB": 4.143,
+            "requestTotal": 261214,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:12:13.782Z",
+            "cpuPercent": 50.9,
+            "freeMemoryGiB": 4.175,
+            "requestTotal": 265886,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:12:14.782Z",
+            "cpuPercent": 52.7,
+            "freeMemoryGiB": 4.169,
+            "requestTotal": 270566,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:12:15.782Z",
+            "cpuPercent": 52.1,
+            "freeMemoryGiB": 4.013,
+            "requestTotal": 274849,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:12:15.785Z",
+            "cpuPercent": 0,
+            "freeMemoryGiB": 4.002,
+            "requestTotal": 274859,
+            "unexpected": 0
+          }
+        ]
+      }
+    },
+    {
+      "concurrency": 24,
+      "startedAt": "2026-08-21T18:12:50.871Z",
+      "finishedAt": "2026-08-21T18:13:50.972Z",
+      "requestedSteadySeconds": 60,
+      "actualSteadySeconds": 60.003,
+      "aborted": false,
+      "abortReason": null,
+      "requests": 376558,
+      "ok": 376558,
+      "unexpected": 0,
+      "errorRatePercent": 0,
+      "throughputRps": 6275.64,
+      "latencyMs": {
+        "sampleCount": 200000,
+        "sampling": "reservoir-200000",
+        "p50": 3.75,
+        "p95": 5.14,
+        "p99": 6.29,
+        "max": 26.03
+      },
+      "status": {
+        "200": 376558
+      },
+      "endpoints": {
+        "/health/live": 94140,
+        "/api/accounts/2": 94139,
+        "/api/accounts/1": 94139,
+        "/api/users": 94140
+      },
+      "upstreams": {
+        "192.168.65.254:9092": 126040,
+        "192.168.65.254:9091": 125457,
+        "192.168.65.254:9093": 125061
+      },
+      "retryChains": 0,
+      "errors": {},
+      "endpointErrors": {},
+      "resources": {
+        "sampleCount": 91,
+        "cpuAveragePercent": 70,
+        "cpuMaxPercent": 77.5,
+        "freeMemoryMinGiB": 3.804,
+        "samples": [
+          {
+            "at": "2026-08-21T18:12:20.869Z",
+            "cpuPercent": 0,
+            "freeMemoryGiB": 3.824,
+            "requestTotal": 0,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:12:21.87Z",
+            "cpuPercent": 67.6,
+            "freeMemoryGiB": 3.833,
+            "requestTotal": 0,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:12:22.869Z",
+            "cpuPercent": 70.1,
+            "freeMemoryGiB": 3.845,
+            "requestTotal": 0,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:12:23.87Z",
+            "cpuPercent": 73.5,
+            "freeMemoryGiB": 3.853,
+            "requestTotal": 0,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:12:24.871Z",
+            "cpuPercent": 75.9,
+            "freeMemoryGiB": 3.837,
+            "requestTotal": 0,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:12:25.872Z",
+            "cpuPercent": 74.4,
+            "freeMemoryGiB": 3.83,
+            "requestTotal": 0,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:12:26.871Z",
+            "cpuPercent": 68.1,
+            "freeMemoryGiB": 3.834,
+            "requestTotal": 0,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:12:27.871Z",
+            "cpuPercent": 68.9,
+            "freeMemoryGiB": 3.853,
+            "requestTotal": 0,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:12:28.872Z",
+            "cpuPercent": 71.4,
+            "freeMemoryGiB": 3.868,
+            "requestTotal": 0,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:12:29.872Z",
+            "cpuPercent": 68.3,
+            "freeMemoryGiB": 3.868,
+            "requestTotal": 0,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:12:30.872Z",
+            "cpuPercent": 74.7,
+            "freeMemoryGiB": 3.836,
+            "requestTotal": 0,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:12:31.872Z",
+            "cpuPercent": 71.3,
+            "freeMemoryGiB": 3.843,
+            "requestTotal": 0,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:12:32.872Z",
+            "cpuPercent": 68.9,
+            "freeMemoryGiB": 3.845,
+            "requestTotal": 0,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:12:33.872Z",
+            "cpuPercent": 69.4,
+            "freeMemoryGiB": 3.974,
+            "requestTotal": 0,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:12:34.872Z",
+            "cpuPercent": 72.5,
+            "freeMemoryGiB": 4.038,
+            "requestTotal": 0,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:12:35.873Z",
+            "cpuPercent": 73.4,
+            "freeMemoryGiB": 4.04,
+            "requestTotal": 0,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:12:36.875Z",
+            "cpuPercent": 76,
+            "freeMemoryGiB": 4.195,
+            "requestTotal": 0,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:12:37.875Z",
+            "cpuPercent": 69.3,
+            "freeMemoryGiB": 4.196,
+            "requestTotal": 0,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:12:38.876Z",
+            "cpuPercent": 68.6,
+            "freeMemoryGiB": 4.2,
+            "requestTotal": 0,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:12:39.876Z",
+            "cpuPercent": 72.6,
+            "freeMemoryGiB": 4.193,
+            "requestTotal": 0,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:12:40.876Z",
+            "cpuPercent": 69,
+            "freeMemoryGiB": 4.176,
+            "requestTotal": 0,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:12:41.877Z",
+            "cpuPercent": 67,
+            "freeMemoryGiB": 4.18,
+            "requestTotal": 0,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:12:42.878Z",
+            "cpuPercent": 68.9,
+            "freeMemoryGiB": 4.208,
+            "requestTotal": 0,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:12:43.877Z",
+            "cpuPercent": 71,
+            "freeMemoryGiB": 4.215,
+            "requestTotal": 0,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:12:44.877Z",
+            "cpuPercent": 71.2,
+            "freeMemoryGiB": 4.206,
+            "requestTotal": 0,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:12:45.877Z",
+            "cpuPercent": 71.4,
+            "freeMemoryGiB": 4.197,
+            "requestTotal": 0,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:12:46.878Z",
+            "cpuPercent": 70.8,
+            "freeMemoryGiB": 4.203,
+            "requestTotal": 0,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:12:47.879Z",
+            "cpuPercent": 71.7,
+            "freeMemoryGiB": 4.199,
+            "requestTotal": 0,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:12:48.88Z",
+            "cpuPercent": 70.9,
+            "freeMemoryGiB": 4.192,
+            "requestTotal": 0,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:12:49.881Z",
+            "cpuPercent": 67.4,
+            "freeMemoryGiB": 4.187,
+            "requestTotal": 0,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:12:50.881Z",
+            "cpuPercent": 69.9,
+            "freeMemoryGiB": 4.158,
+            "requestTotal": 39,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:12:51.881Z",
+            "cpuPercent": 71.6,
+            "freeMemoryGiB": 4.162,
+            "requestTotal": 6655,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:12:52.882Z",
+            "cpuPercent": 66.8,
+            "freeMemoryGiB": 4.168,
+            "requestTotal": 13208,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:12:53.882Z",
+            "cpuPercent": 70.1,
+            "freeMemoryGiB": 4.174,
+            "requestTotal": 19700,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:12:54.882Z",
+            "cpuPercent": 66,
+            "freeMemoryGiB": 4.174,
+            "requestTotal": 26188,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:12:55.883Z",
+            "cpuPercent": 69.6,
+            "freeMemoryGiB": 4.164,
+            "requestTotal": 32523,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:12:56.882Z",
+            "cpuPercent": 71.4,
+            "freeMemoryGiB": 4.159,
+            "requestTotal": 38620,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:12:57.882Z",
+            "cpuPercent": 72.5,
+            "freeMemoryGiB": 4.164,
+            "requestTotal": 45168,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:12:58.882Z",
+            "cpuPercent": 68.5,
+            "freeMemoryGiB": 4.195,
+            "requestTotal": 51799,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:12:59.883Z",
+            "cpuPercent": 65.5,
+            "freeMemoryGiB": 4.196,
+            "requestTotal": 58319,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:13:00.883Z",
+            "cpuPercent": 71.8,
+            "freeMemoryGiB": 4.16,
+            "requestTotal": 64515,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:13:01.884Z",
+            "cpuPercent": 69.5,
+            "freeMemoryGiB": 4.168,
+            "requestTotal": 71050,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:13:02.884Z",
+            "cpuPercent": 66.8,
+            "freeMemoryGiB": 4.166,
+            "requestTotal": 77585,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:13:03.884Z",
+            "cpuPercent": 71.3,
+            "freeMemoryGiB": 4.182,
+            "requestTotal": 84206,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:13:04.884Z",
+            "cpuPercent": 70.3,
+            "freeMemoryGiB": 4.181,
+            "requestTotal": 90608,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:13:05.884Z",
+            "cpuPercent": 74,
+            "freeMemoryGiB": 4.168,
+            "requestTotal": 96586,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:13:06.886Z",
+            "cpuPercent": 72,
+            "freeMemoryGiB": 4.015,
+            "requestTotal": 102645,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:13:07.886Z",
+            "cpuPercent": 67.9,
+            "freeMemoryGiB": 3.971,
+            "requestTotal": 108851,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:13:08.886Z",
+            "cpuPercent": 71.4,
+            "freeMemoryGiB": 3.961,
+            "requestTotal": 115002,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:13:09.886Z",
+            "cpuPercent": 69.1,
+            "freeMemoryGiB": 3.912,
+            "requestTotal": 121289,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:13:10.887Z",
+            "cpuPercent": 70.8,
+            "freeMemoryGiB": 3.878,
+            "requestTotal": 127278,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:13:11.887Z",
+            "cpuPercent": 70.2,
+            "freeMemoryGiB": 3.834,
+            "requestTotal": 133571,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:13:12.89Z",
+            "cpuPercent": 73.7,
+            "freeMemoryGiB": 3.828,
+            "requestTotal": 140140,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:13:13.89Z",
+            "cpuPercent": 77.5,
+            "freeMemoryGiB": 3.83,
+            "requestTotal": 146354,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:13:14.892Z",
+            "cpuPercent": 70,
+            "freeMemoryGiB": 3.846,
+            "requestTotal": 152687,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:13:15.894Z",
+            "cpuPercent": 69.1,
+            "freeMemoryGiB": 3.832,
+            "requestTotal": 159157,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:13:16.895Z",
+            "cpuPercent": 72.3,
+            "freeMemoryGiB": 3.827,
+            "requestTotal": 165716,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:13:17.894Z",
+            "cpuPercent": 66.7,
+            "freeMemoryGiB": 3.825,
+            "requestTotal": 172326,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:13:18.895Z",
+            "cpuPercent": 67.3,
+            "freeMemoryGiB": 3.827,
+            "requestTotal": 178905,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:13:19.896Z",
+            "cpuPercent": 68.2,
+            "freeMemoryGiB": 3.833,
+            "requestTotal": 185438,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:13:20.896Z",
+            "cpuPercent": 71.6,
+            "freeMemoryGiB": 3.813,
+            "requestTotal": 191638,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:13:21.897Z",
+            "cpuPercent": 70.8,
+            "freeMemoryGiB": 3.804,
+            "requestTotal": 198331,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:13:22.899Z",
+            "cpuPercent": 68.3,
+            "freeMemoryGiB": 3.806,
+            "requestTotal": 204973,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:13:23.9Z",
+            "cpuPercent": 67.9,
+            "freeMemoryGiB": 3.94,
+            "requestTotal": 211201,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:13:24.9Z",
+            "cpuPercent": 71.4,
+            "freeMemoryGiB": 3.964,
+            "requestTotal": 217379,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:13:25.901Z",
+            "cpuPercent": 72.5,
+            "freeMemoryGiB": 3.977,
+            "requestTotal": 223589,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:13:26.902Z",
+            "cpuPercent": 66.6,
+            "freeMemoryGiB": 3.985,
+            "requestTotal": 230129,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:13:27.901Z",
+            "cpuPercent": 71.3,
+            "freeMemoryGiB": 4.026,
+            "requestTotal": 236626,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:13:28.903Z",
+            "cpuPercent": 68.9,
+            "freeMemoryGiB": 4.03,
+            "requestTotal": 243281,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:13:29.904Z",
+            "cpuPercent": 69.3,
+            "freeMemoryGiB": 4.032,
+            "requestTotal": 249868,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:13:30.905Z",
+            "cpuPercent": 72.4,
+            "freeMemoryGiB": 4.008,
+            "requestTotal": 256000,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:13:31.905Z",
+            "cpuPercent": 69.3,
+            "freeMemoryGiB": 3.981,
+            "requestTotal": 262158,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:13:32.906Z",
+            "cpuPercent": 71.8,
+            "freeMemoryGiB": 3.99,
+            "requestTotal": 268289,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:13:33.908Z",
+            "cpuPercent": 71.2,
+            "freeMemoryGiB": 4.01,
+            "requestTotal": 274465,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:13:34.91Z",
+            "cpuPercent": 75.3,
+            "freeMemoryGiB": 4.014,
+            "requestTotal": 280408,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:13:35.908Z",
+            "cpuPercent": 72,
+            "freeMemoryGiB": 4.005,
+            "requestTotal": 286814,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:13:36.908Z",
+            "cpuPercent": 71.1,
+            "freeMemoryGiB": 4.004,
+            "requestTotal": 292924,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:13:37.909Z",
+            "cpuPercent": 68.1,
+            "freeMemoryGiB": 3.976,
+            "requestTotal": 298944,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:13:38.909Z",
+            "cpuPercent": 70.6,
+            "freeMemoryGiB": 3.977,
+            "requestTotal": 304789,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:13:39.908Z",
+            "cpuPercent": 75.8,
+            "freeMemoryGiB": 3.971,
+            "requestTotal": 310363,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:13:40.908Z",
+            "cpuPercent": 71,
+            "freeMemoryGiB": 3.958,
+            "requestTotal": 316113,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:13:41.91Z",
+            "cpuPercent": 72.3,
+            "freeMemoryGiB": 3.958,
+            "requestTotal": 322130,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:13:42.911Z",
+            "cpuPercent": 70.7,
+            "freeMemoryGiB": 3.963,
+            "requestTotal": 328004,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:13:43.91Z",
+            "cpuPercent": 73.1,
+            "freeMemoryGiB": 3.992,
+            "requestTotal": 334239,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:13:44.911Z",
+            "cpuPercent": 74,
+            "freeMemoryGiB": 3.984,
+            "requestTotal": 340308,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:13:45.912Z",
+            "cpuPercent": 77,
+            "freeMemoryGiB": 3.991,
+            "requestTotal": 346333,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:13:46.913Z",
+            "cpuPercent": 70.9,
+            "freeMemoryGiB": 3.992,
+            "requestTotal": 352266,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:13:47.914Z",
+            "cpuPercent": 72.1,
+            "freeMemoryGiB": 3.999,
+            "requestTotal": 358284,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:13:48.915Z",
+            "cpuPercent": 70.6,
+            "freeMemoryGiB": 3.99,
+            "requestTotal": 364592,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:13:49.916Z",
+            "cpuPercent": 72,
+            "freeMemoryGiB": 3.987,
+            "requestTotal": 370631,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:13:50.876Z",
+            "cpuPercent": 73.2,
+            "freeMemoryGiB": 3.975,
+            "requestTotal": 376558,
+            "unexpected": 0
+          }
+        ]
+      }
+    },
+    {
+      "concurrency": 48,
+      "startedAt": "2026-08-21T18:14:25.989Z",
+      "finishedAt": "2026-08-21T18:15:26.072Z",
+      "requestedSteadySeconds": 60,
+      "actualSteadySeconds": 60.003,
+      "aborted": false,
+      "abortReason": null,
+      "requests": 359121,
+      "ok": 359121,
+      "unexpected": 0,
+      "errorRatePercent": 0,
+      "throughputRps": 5985.1,
+      "latencyMs": {
+        "sampleCount": 200000,
+        "sampling": "reservoir-200000",
+        "p50": 7.91,
+        "p95": 10.06,
+        "p99": 11.44,
+        "max": 23.07
+      },
+      "status": {
+        "200": 359121
+      },
+      "endpoints": {
+        "/health/live": 89781,
+        "/api/accounts/1": 89780,
+        "/api/users": 89780,
+        "/api/accounts/2": 89780
+      },
+      "upstreams": {
+        "192.168.65.254:9092": 120165,
+        "192.168.65.254:9091": 119762,
+        "192.168.65.254:9093": 119194
+      },
+      "retryChains": 0,
+      "errors": {},
+      "endpointErrors": {},
+      "resources": {
+        "sampleCount": 91,
+        "cpuAveragePercent": 70.9,
+        "cpuMaxPercent": 79.1,
+        "freeMemoryMinGiB": 3.671,
+        "samples": [
+          {
+            "at": "2026-08-21T18:13:55.987Z",
+            "cpuPercent": 0,
+            "freeMemoryGiB": 3.942,
+            "requestTotal": 0,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:13:56.991Z",
+            "cpuPercent": 73.3,
+            "freeMemoryGiB": 3.955,
+            "requestTotal": 0,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:13:57.992Z",
+            "cpuPercent": 75.2,
+            "freeMemoryGiB": 3.757,
+            "requestTotal": 0,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:13:58.996Z",
+            "cpuPercent": 72.2,
+            "freeMemoryGiB": 3.827,
+            "requestTotal": 0,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:13:59.996Z",
+            "cpuPercent": 68,
+            "freeMemoryGiB": 3.819,
+            "requestTotal": 0,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:14:01.001Z",
+            "cpuPercent": 71.8,
+            "freeMemoryGiB": 3.755,
+            "requestTotal": 0,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:14:02.004Z",
+            "cpuPercent": 72.9,
+            "freeMemoryGiB": 3.73,
+            "requestTotal": 0,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:14:03.005Z",
+            "cpuPercent": 71.6,
+            "freeMemoryGiB": 3.832,
+            "requestTotal": 0,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:14:04.008Z",
+            "cpuPercent": 66.5,
+            "freeMemoryGiB": 3.843,
+            "requestTotal": 0,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:14:05.009Z",
+            "cpuPercent": 69.5,
+            "freeMemoryGiB": 3.825,
+            "requestTotal": 0,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:14:06.011Z",
+            "cpuPercent": 72,
+            "freeMemoryGiB": 3.826,
+            "requestTotal": 0,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:14:07.014Z",
+            "cpuPercent": 71.6,
+            "freeMemoryGiB": 3.819,
+            "requestTotal": 0,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:14:08.019Z",
+            "cpuPercent": 67.4,
+            "freeMemoryGiB": 3.818,
+            "requestTotal": 0,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:14:09.023Z",
+            "cpuPercent": 69.5,
+            "freeMemoryGiB": 3.816,
+            "requestTotal": 0,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:14:10.027Z",
+            "cpuPercent": 64.8,
+            "freeMemoryGiB": 3.814,
+            "requestTotal": 0,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:14:11.028Z",
+            "cpuPercent": 70.2,
+            "freeMemoryGiB": 3.787,
+            "requestTotal": 0,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:14:12.028Z",
+            "cpuPercent": 68.5,
+            "freeMemoryGiB": 3.8,
+            "requestTotal": 0,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:14:13.032Z",
+            "cpuPercent": 69.1,
+            "freeMemoryGiB": 3.826,
+            "requestTotal": 0,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:14:14.035Z",
+            "cpuPercent": 69.1,
+            "freeMemoryGiB": 3.833,
+            "requestTotal": 0,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:14:15.037Z",
+            "cpuPercent": 73.4,
+            "freeMemoryGiB": 3.828,
+            "requestTotal": 0,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:14:16.039Z",
+            "cpuPercent": 69.3,
+            "freeMemoryGiB": 3.939,
+            "requestTotal": 0,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:14:17.042Z",
+            "cpuPercent": 70.6,
+            "freeMemoryGiB": 4.008,
+            "requestTotal": 0,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:14:18.045Z",
+            "cpuPercent": 76.5,
+            "freeMemoryGiB": 3.997,
+            "requestTotal": 0,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:14:19.046Z",
+            "cpuPercent": 79.1,
+            "freeMemoryGiB": 3.985,
+            "requestTotal": 0,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:14:20.047Z",
+            "cpuPercent": 74.6,
+            "freeMemoryGiB": 3.989,
+            "requestTotal": 0,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:14:21.048Z",
+            "cpuPercent": 75.7,
+            "freeMemoryGiB": 4.009,
+            "requestTotal": 0,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:14:22.05Z",
+            "cpuPercent": 69.6,
+            "freeMemoryGiB": 3.999,
+            "requestTotal": 0,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:14:23.054Z",
+            "cpuPercent": 67.6,
+            "freeMemoryGiB": 4.022,
+            "requestTotal": 0,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:14:24.054Z",
+            "cpuPercent": 70.8,
+            "freeMemoryGiB": 4.025,
+            "requestTotal": 0,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:14:25.058Z",
+            "cpuPercent": 76,
+            "freeMemoryGiB": 4.021,
+            "requestTotal": 0,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:14:26.059Z",
+            "cpuPercent": 70.5,
+            "freeMemoryGiB": 4.023,
+            "requestTotal": 355,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:14:27.06Z",
+            "cpuPercent": 75.8,
+            "freeMemoryGiB": 4.017,
+            "requestTotal": 5966,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:14:28.062Z",
+            "cpuPercent": 71.3,
+            "freeMemoryGiB": 4.023,
+            "requestTotal": 12059,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:14:29.062Z",
+            "cpuPercent": 72.5,
+            "freeMemoryGiB": 4.019,
+            "requestTotal": 18042,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:14:30.065Z",
+            "cpuPercent": 71.1,
+            "freeMemoryGiB": 4.019,
+            "requestTotal": 24038,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:14:31.07Z",
+            "cpuPercent": 75.9,
+            "freeMemoryGiB": 3.995,
+            "requestTotal": 29693,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:14:32.073Z",
+            "cpuPercent": 72.4,
+            "freeMemoryGiB": 3.997,
+            "requestTotal": 35748,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:14:33.073Z",
+            "cpuPercent": 73.4,
+            "freeMemoryGiB": 4.013,
+            "requestTotal": 41705,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:14:34.076Z",
+            "cpuPercent": 71.3,
+            "freeMemoryGiB": 4.014,
+            "requestTotal": 47169,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:14:35.081Z",
+            "cpuPercent": 72.2,
+            "freeMemoryGiB": 4.012,
+            "requestTotal": 52733,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:14:36.083Z",
+            "cpuPercent": 72.9,
+            "freeMemoryGiB": 4.006,
+            "requestTotal": 58752,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:14:37.085Z",
+            "cpuPercent": 77,
+            "freeMemoryGiB": 3.993,
+            "requestTotal": 63963,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:14:38.087Z",
+            "cpuPercent": 69.5,
+            "freeMemoryGiB": 3.995,
+            "requestTotal": 69728,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:14:39.091Z",
+            "cpuPercent": 72,
+            "freeMemoryGiB": 3.988,
+            "requestTotal": 75240,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:14:40.095Z",
+            "cpuPercent": 76.6,
+            "freeMemoryGiB": 3.984,
+            "requestTotal": 80695,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:14:41.098Z",
+            "cpuPercent": 76.7,
+            "freeMemoryGiB": 3.951,
+            "requestTotal": 86154,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:14:42.105Z",
+            "cpuPercent": 75.6,
+            "freeMemoryGiB": 3.95,
+            "requestTotal": 91583,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:14:43.106Z",
+            "cpuPercent": 78.9,
+            "freeMemoryGiB": 3.964,
+            "requestTotal": 96805,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:14:44.107Z",
+            "cpuPercent": 77.1,
+            "freeMemoryGiB": 3.971,
+            "requestTotal": 102479,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:14:45.108Z",
+            "cpuPercent": 75.7,
+            "freeMemoryGiB": 3.97,
+            "requestTotal": 108209,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:14:46.113Z",
+            "cpuPercent": 72.6,
+            "freeMemoryGiB": 3.968,
+            "requestTotal": 114054,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:14:47.12Z",
+            "cpuPercent": 72.5,
+            "freeMemoryGiB": 3.962,
+            "requestTotal": 120009,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:14:48.121Z",
+            "cpuPercent": 69.9,
+            "freeMemoryGiB": 3.962,
+            "requestTotal": 125976,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:14:49.127Z",
+            "cpuPercent": 75.5,
+            "freeMemoryGiB": 3.962,
+            "requestTotal": 131881,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:14:50.13Z",
+            "cpuPercent": 70.8,
+            "freeMemoryGiB": 3.956,
+            "requestTotal": 137709,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:14:51.13Z",
+            "cpuPercent": 71,
+            "freeMemoryGiB": 3.731,
+            "requestTotal": 143247,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:14:52.133Z",
+            "cpuPercent": 70.1,
+            "freeMemoryGiB": 3.755,
+            "requestTotal": 149434,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:14:53.136Z",
+            "cpuPercent": 66.8,
+            "freeMemoryGiB": 3.715,
+            "requestTotal": 155593,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:14:54.137Z",
+            "cpuPercent": 73,
+            "freeMemoryGiB": 3.711,
+            "requestTotal": 161984,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:14:55.137Z",
+            "cpuPercent": 72.3,
+            "freeMemoryGiB": 3.723,
+            "requestTotal": 167996,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:14:56.139Z",
+            "cpuPercent": 71.6,
+            "freeMemoryGiB": 3.722,
+            "requestTotal": 174254,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:14:57.144Z",
+            "cpuPercent": 68.2,
+            "freeMemoryGiB": 3.714,
+            "requestTotal": 180531,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:14:58.149Z",
+            "cpuPercent": 66.3,
+            "freeMemoryGiB": 3.704,
+            "requestTotal": 186843,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:14:59.15Z",
+            "cpuPercent": 69.4,
+            "freeMemoryGiB": 3.698,
+            "requestTotal": 192972,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:15:00.154Z",
+            "cpuPercent": 67.6,
+            "freeMemoryGiB": 3.698,
+            "requestTotal": 199149,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:15:01.158Z",
+            "cpuPercent": 70.1,
+            "freeMemoryGiB": 3.671,
+            "requestTotal": 205291,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:15:02.16Z",
+            "cpuPercent": 69.3,
+            "freeMemoryGiB": 3.68,
+            "requestTotal": 211842,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:15:03.164Z",
+            "cpuPercent": 72.5,
+            "freeMemoryGiB": 3.692,
+            "requestTotal": 217855,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:15:04.166Z",
+            "cpuPercent": 71.8,
+            "freeMemoryGiB": 3.723,
+            "requestTotal": 224221,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:15:05.167Z",
+            "cpuPercent": 71.9,
+            "freeMemoryGiB": 3.717,
+            "requestTotal": 230362,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:15:06.17Z",
+            "cpuPercent": 70,
+            "freeMemoryGiB": 3.724,
+            "requestTotal": 236452,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:15:07.172Z",
+            "cpuPercent": 67.4,
+            "freeMemoryGiB": 3.726,
+            "requestTotal": 242714,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:15:08.174Z",
+            "cpuPercent": 70.8,
+            "freeMemoryGiB": 3.85,
+            "requestTotal": 249207,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:15:09.179Z",
+            "cpuPercent": 73.4,
+            "freeMemoryGiB": 3.907,
+            "requestTotal": 255332,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:15:10.184Z",
+            "cpuPercent": 74.4,
+            "freeMemoryGiB": 3.898,
+            "requestTotal": 261165,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:15:11.187Z",
+            "cpuPercent": 73.5,
+            "freeMemoryGiB": 3.931,
+            "requestTotal": 267023,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:15:12.189Z",
+            "cpuPercent": 69.9,
+            "freeMemoryGiB": 3.947,
+            "requestTotal": 273426,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:15:13.191Z",
+            "cpuPercent": 70.3,
+            "freeMemoryGiB": 3.957,
+            "requestTotal": 279544,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:15:14.198Z",
+            "cpuPercent": 70.6,
+            "freeMemoryGiB": 3.963,
+            "requestTotal": 285613,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:15:15.202Z",
+            "cpuPercent": 71.5,
+            "freeMemoryGiB": 3.96,
+            "requestTotal": 291609,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:15:16.205Z",
+            "cpuPercent": 73.4,
+            "freeMemoryGiB": 3.959,
+            "requestTotal": 298208,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:15:17.208Z",
+            "cpuPercent": 69,
+            "freeMemoryGiB": 3.96,
+            "requestTotal": 304768,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:15:18.209Z",
+            "cpuPercent": 66.3,
+            "freeMemoryGiB": 3.951,
+            "requestTotal": 311106,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:15:19.209Z",
+            "cpuPercent": 67.5,
+            "freeMemoryGiB": 3.948,
+            "requestTotal": 317671,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:15:20.213Z",
+            "cpuPercent": 70.6,
+            "freeMemoryGiB": 3.952,
+            "requestTotal": 324164,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:15:21.213Z",
+            "cpuPercent": 74.1,
+            "freeMemoryGiB": 3.919,
+            "requestTotal": 329947,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:15:22.215Z",
+            "cpuPercent": 71.7,
+            "freeMemoryGiB": 3.942,
+            "requestTotal": 335801,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:15:23.215Z",
+            "cpuPercent": 69.4,
+            "freeMemoryGiB": 3.935,
+            "requestTotal": 342041,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:15:24.217Z",
+            "cpuPercent": 71,
+            "freeMemoryGiB": 3.936,
+            "requestTotal": 348555,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:15:25.217Z",
+            "cpuPercent": 74.2,
+            "freeMemoryGiB": 3.932,
+            "requestTotal": 354541,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:15:25.993Z",
+            "cpuPercent": 74.1,
+            "freeMemoryGiB": 3.929,
+            "requestTotal": 359121,
+            "unexpected": 0
+          }
+        ]
+      }
+    },
+    {
+      "concurrency": 72,
+      "startedAt": "2026-08-21T18:16:01.087Z",
+      "finishedAt": "2026-08-21T18:17:01.143Z",
+      "requestedSteadySeconds": 60,
+      "actualSteadySeconds": 60.002,
+      "aborted": false,
+      "abortReason": null,
+      "requests": 349348,
+      "ok": 349348,
+      "unexpected": 0,
+      "errorRatePercent": 0,
+      "throughputRps": 5822.26,
+      "latencyMs": {
+        "sampleCount": 200000,
+        "sampling": "reservoir-200000",
+        "p50": 12.21,
+        "p95": 15.17,
+        "p99": 16.95,
+        "max": 36.41
+      },
+      "status": {
+        "200": 349348
+      },
+      "endpoints": {
+        "/health/live": 87337,
+        "/api/accounts/2": 87337,
+        "/api/accounts/1": 87337,
+        "/api/users": 87337
+      },
+      "upstreams": {
+        "192.168.65.254:9092": 117048,
+        "192.168.65.254:9091": 116289,
+        "192.168.65.254:9093": 116011
+      },
+      "retryChains": 0,
+      "errors": {},
+      "endpointErrors": {},
+      "resources": {
+        "sampleCount": 91,
+        "cpuAveragePercent": 71,
+        "cpuMaxPercent": 79.8,
+        "freeMemoryMinGiB": 3.547,
+        "samples": [
+          {
+            "at": "2026-08-21T18:15:31.085Z",
+            "cpuPercent": 0,
+            "freeMemoryGiB": 3.891,
+            "requestTotal": 0,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:15:32.087Z",
+            "cpuPercent": 72,
+            "freeMemoryGiB": 3.893,
+            "requestTotal": 0,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:15:33.09Z",
+            "cpuPercent": 74.8,
+            "freeMemoryGiB": 3.906,
+            "requestTotal": 0,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:15:34.092Z",
+            "cpuPercent": 73.2,
+            "freeMemoryGiB": 3.905,
+            "requestTotal": 0,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:15:35.096Z",
+            "cpuPercent": 72.7,
+            "freeMemoryGiB": 3.905,
+            "requestTotal": 0,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:15:36.097Z",
+            "cpuPercent": 75.2,
+            "freeMemoryGiB": 3.917,
+            "requestTotal": 0,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:15:37.1Z",
+            "cpuPercent": 71.1,
+            "freeMemoryGiB": 3.904,
+            "requestTotal": 0,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:15:38.104Z",
+            "cpuPercent": 71.6,
+            "freeMemoryGiB": 3.918,
+            "requestTotal": 0,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:15:39.105Z",
+            "cpuPercent": 72.7,
+            "freeMemoryGiB": 3.911,
+            "requestTotal": 0,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:15:40.109Z",
+            "cpuPercent": 70.4,
+            "freeMemoryGiB": 3.907,
+            "requestTotal": 0,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:15:41.117Z",
+            "cpuPercent": 75,
+            "freeMemoryGiB": 3.768,
+            "requestTotal": 0,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:15:42.123Z",
+            "cpuPercent": 76.5,
+            "freeMemoryGiB": 3.763,
+            "requestTotal": 0,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:15:43.129Z",
+            "cpuPercent": 74.8,
+            "freeMemoryGiB": 3.767,
+            "requestTotal": 0,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:15:44.136Z",
+            "cpuPercent": 71.4,
+            "freeMemoryGiB": 3.694,
+            "requestTotal": 0,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:15:45.14Z",
+            "cpuPercent": 71.5,
+            "freeMemoryGiB": 3.713,
+            "requestTotal": 0,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:15:46.146Z",
+            "cpuPercent": 68.8,
+            "freeMemoryGiB": 3.681,
+            "requestTotal": 0,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:15:47.149Z",
+            "cpuPercent": 71.2,
+            "freeMemoryGiB": 3.7,
+            "requestTotal": 0,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:15:48.154Z",
+            "cpuPercent": 70.3,
+            "freeMemoryGiB": 3.689,
+            "requestTotal": 0,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:15:49.159Z",
+            "cpuPercent": 72.3,
+            "freeMemoryGiB": 3.674,
+            "requestTotal": 0,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:15:50.168Z",
+            "cpuPercent": 70.4,
+            "freeMemoryGiB": 3.674,
+            "requestTotal": 0,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:15:51.172Z",
+            "cpuPercent": 72.2,
+            "freeMemoryGiB": 3.643,
+            "requestTotal": 0,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:15:52.172Z",
+            "cpuPercent": 71.4,
+            "freeMemoryGiB": 3.644,
+            "requestTotal": 0,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:15:53.173Z",
+            "cpuPercent": 72.8,
+            "freeMemoryGiB": 3.649,
+            "requestTotal": 0,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:15:54.177Z",
+            "cpuPercent": 72.9,
+            "freeMemoryGiB": 3.66,
+            "requestTotal": 0,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:15:55.181Z",
+            "cpuPercent": 70.5,
+            "freeMemoryGiB": 3.66,
+            "requestTotal": 0,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:15:56.189Z",
+            "cpuPercent": 73.8,
+            "freeMemoryGiB": 3.673,
+            "requestTotal": 0,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:15:57.191Z",
+            "cpuPercent": 70.7,
+            "freeMemoryGiB": 3.671,
+            "requestTotal": 0,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:15:58.192Z",
+            "cpuPercent": 70.6,
+            "freeMemoryGiB": 3.664,
+            "requestTotal": 0,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:15:59.193Z",
+            "cpuPercent": 74.6,
+            "freeMemoryGiB": 3.812,
+            "requestTotal": 0,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:16:00.199Z",
+            "cpuPercent": 74.1,
+            "freeMemoryGiB": 3.876,
+            "requestTotal": 0,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:16:01.202Z",
+            "cpuPercent": 79.8,
+            "freeMemoryGiB": 3.845,
+            "requestTotal": 577,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:16:02.208Z",
+            "cpuPercent": 78.9,
+            "freeMemoryGiB": 3.856,
+            "requestTotal": 5863,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:16:03.21Z",
+            "cpuPercent": 68.3,
+            "freeMemoryGiB": 3.858,
+            "requestTotal": 11662,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:16:04.213Z",
+            "cpuPercent": 72.3,
+            "freeMemoryGiB": 3.91,
+            "requestTotal": 17605,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:16:05.224Z",
+            "cpuPercent": 73.7,
+            "freeMemoryGiB": 3.915,
+            "requestTotal": 22687,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:16:06.228Z",
+            "cpuPercent": 76.9,
+            "freeMemoryGiB": 3.915,
+            "requestTotal": 28255,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:16:07.234Z",
+            "cpuPercent": 72.7,
+            "freeMemoryGiB": 3.915,
+            "requestTotal": 34000,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:16:08.239Z",
+            "cpuPercent": 69.3,
+            "freeMemoryGiB": 3.911,
+            "requestTotal": 40256,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:16:09.242Z",
+            "cpuPercent": 68.9,
+            "freeMemoryGiB": 3.91,
+            "requestTotal": 46225,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:16:10.245Z",
+            "cpuPercent": 69.4,
+            "freeMemoryGiB": 3.911,
+            "requestTotal": 51924,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:16:11.254Z",
+            "cpuPercent": 77.6,
+            "freeMemoryGiB": 3.882,
+            "requestTotal": 57218,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:16:12.257Z",
+            "cpuPercent": 71.8,
+            "freeMemoryGiB": 3.879,
+            "requestTotal": 62784,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:16:13.264Z",
+            "cpuPercent": 68.9,
+            "freeMemoryGiB": 3.911,
+            "requestTotal": 69033,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:16:14.265Z",
+            "cpuPercent": 71.7,
+            "freeMemoryGiB": 3.904,
+            "requestTotal": 74887,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:16:15.272Z",
+            "cpuPercent": 72.1,
+            "freeMemoryGiB": 3.897,
+            "requestTotal": 80698,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:16:16.28Z",
+            "cpuPercent": 71.8,
+            "freeMemoryGiB": 3.901,
+            "requestTotal": 86757,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:16:17.292Z",
+            "cpuPercent": 70.3,
+            "freeMemoryGiB": 3.901,
+            "requestTotal": 93329,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:16:18.293Z",
+            "cpuPercent": 70.2,
+            "freeMemoryGiB": 3.898,
+            "requestTotal": 98927,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:16:19.297Z",
+            "cpuPercent": 72.5,
+            "freeMemoryGiB": 3.895,
+            "requestTotal": 104586,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:16:20.298Z",
+            "cpuPercent": 71.5,
+            "freeMemoryGiB": 3.899,
+            "requestTotal": 110738,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:16:21.302Z",
+            "cpuPercent": 72.6,
+            "freeMemoryGiB": 3.864,
+            "requestTotal": 117024,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:16:22.308Z",
+            "cpuPercent": 71.6,
+            "freeMemoryGiB": 3.873,
+            "requestTotal": 122775,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:16:23.312Z",
+            "cpuPercent": 74.6,
+            "freeMemoryGiB": 3.901,
+            "requestTotal": 128392,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:16:24.318Z",
+            "cpuPercent": 75.3,
+            "freeMemoryGiB": 3.862,
+            "requestTotal": 134060,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:16:25.326Z",
+            "cpuPercent": 71.3,
+            "freeMemoryGiB": 3.885,
+            "requestTotal": 139899,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:16:26.332Z",
+            "cpuPercent": 66.4,
+            "freeMemoryGiB": 3.883,
+            "requestTotal": 145867,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:16:27.336Z",
+            "cpuPercent": 72.5,
+            "freeMemoryGiB": 3.885,
+            "requestTotal": 151993,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:16:28.335Z",
+            "cpuPercent": 73.5,
+            "freeMemoryGiB": 3.886,
+            "requestTotal": 157996,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:16:29.337Z",
+            "cpuPercent": 73,
+            "freeMemoryGiB": 3.88,
+            "requestTotal": 163605,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:16:30.345Z",
+            "cpuPercent": 67.3,
+            "freeMemoryGiB": 3.879,
+            "requestTotal": 169482,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:16:31.348Z",
+            "cpuPercent": 72.6,
+            "freeMemoryGiB": 3.856,
+            "requestTotal": 175331,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:16:32.353Z",
+            "cpuPercent": 68.6,
+            "freeMemoryGiB": 3.867,
+            "requestTotal": 181334,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:16:33.361Z",
+            "cpuPercent": 75.3,
+            "freeMemoryGiB": 3.785,
+            "requestTotal": 186952,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:16:34.366Z",
+            "cpuPercent": 76.2,
+            "freeMemoryGiB": 3.68,
+            "requestTotal": 192423,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:16:35.371Z",
+            "cpuPercent": 75.7,
+            "freeMemoryGiB": 3.672,
+            "requestTotal": 197961,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:16:36.373Z",
+            "cpuPercent": 70,
+            "freeMemoryGiB": 3.633,
+            "requestTotal": 203584,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:16:37.379Z",
+            "cpuPercent": 70.1,
+            "freeMemoryGiB": 3.632,
+            "requestTotal": 209376,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:16:38.387Z",
+            "cpuPercent": 69.5,
+            "freeMemoryGiB": 3.593,
+            "requestTotal": 215441,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:16:39.392Z",
+            "cpuPercent": 65.9,
+            "freeMemoryGiB": 3.588,
+            "requestTotal": 221166,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:16:40.398Z",
+            "cpuPercent": 70,
+            "freeMemoryGiB": 3.584,
+            "requestTotal": 227635,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:16:41.401Z",
+            "cpuPercent": 77.2,
+            "freeMemoryGiB": 3.547,
+            "requestTotal": 233051,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:16:42.409Z",
+            "cpuPercent": 72.9,
+            "freeMemoryGiB": 3.555,
+            "requestTotal": 238770,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:16:43.414Z",
+            "cpuPercent": 70.7,
+            "freeMemoryGiB": 3.57,
+            "requestTotal": 244274,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:16:44.415Z",
+            "cpuPercent": 67.3,
+            "freeMemoryGiB": 3.56,
+            "requestTotal": 250711,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:16:45.421Z",
+            "cpuPercent": 69.7,
+            "freeMemoryGiB": 3.559,
+            "requestTotal": 256522,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:16:46.423Z",
+            "cpuPercent": 68.7,
+            "freeMemoryGiB": 3.555,
+            "requestTotal": 262613,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:16:47.43Z",
+            "cpuPercent": 70.6,
+            "freeMemoryGiB": 3.573,
+            "requestTotal": 268368,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:16:48.434Z",
+            "cpuPercent": 72.7,
+            "freeMemoryGiB": 3.59,
+            "requestTotal": 274363,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:16:49.441Z",
+            "cpuPercent": 65.2,
+            "freeMemoryGiB": 3.572,
+            "requestTotal": 280229,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:16:50.448Z",
+            "cpuPercent": 69.1,
+            "freeMemoryGiB": 3.579,
+            "requestTotal": 286430,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:16:51.451Z",
+            "cpuPercent": 69.3,
+            "freeMemoryGiB": 3.669,
+            "requestTotal": 292633,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:16:52.457Z",
+            "cpuPercent": 69.6,
+            "freeMemoryGiB": 3.74,
+            "requestTotal": 298865,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:16:53.46Z",
+            "cpuPercent": 69.1,
+            "freeMemoryGiB": 3.765,
+            "requestTotal": 305227,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:16:54.464Z",
+            "cpuPercent": 70.4,
+            "freeMemoryGiB": 3.755,
+            "requestTotal": 311244,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:16:55.471Z",
+            "cpuPercent": 70.3,
+            "freeMemoryGiB": 3.754,
+            "requestTotal": 316919,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:16:56.48Z",
+            "cpuPercent": 71.2,
+            "freeMemoryGiB": 3.75,
+            "requestTotal": 322953,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:16:57.483Z",
+            "cpuPercent": 73.2,
+            "freeMemoryGiB": 3.753,
+            "requestTotal": 328768,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:16:58.491Z",
+            "cpuPercent": 66.7,
+            "freeMemoryGiB": 3.753,
+            "requestTotal": 335155,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:16:59.498Z",
+            "cpuPercent": 75.2,
+            "freeMemoryGiB": 3.781,
+            "requestTotal": 340825,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:17:00.504Z",
+            "cpuPercent": 71.4,
+            "freeMemoryGiB": 3.788,
+            "requestTotal": 346382,
+            "unexpected": 0
+          },
+          {
+            "at": "2026-08-21T18:17:01.09Z",
+            "cpuPercent": 72.9,
+            "freeMemoryGiB": 3.768,
+            "requestTotal": 349348,
+            "unexpected": 0
+          }
+        ]
+      }
+    }
+  ],
+  "finishedAt": "2026-08-21T18:17:01.144Z",
+  "completedAllStages": true
+}

@@ -6,7 +6,7 @@
 
 ## 2. 模块边界与依赖方向
 
-- `demo-frontend/`：demo 轨道（双轨制），真实依赖 React + Vite；**不入 Maven modules**，与后端唯一耦合点是 HTTP JSON 契约 + Vite proxy 配置。
+- `demo-frontend/`：demo 轨道（双轨制），真实依赖 React + Vite，并以 `lucide-react` 提供统一线性图标；**不入 Maven modules**，与后端唯一耦合点是 HTTP JSON 契约 + Vite proxy 配置。
 - 后端**零改动**为前提（联调是前端接入，不是后端改造）；验收中若暴露后端契约缺陷，按 bug 修后端而非前端绕。
 - 数据流：`浏览器 → :9010（Vite dev）→ proxy /api → :9090（mini-spring）→ MySQL 容器`。
 
@@ -26,15 +26,17 @@
 | ① JavaScript（jsx） | 本里程碑焦点是「前后端联调链路」而非类型系统；两三个组件的类型收益撑不起样板成本 |
 | ② TypeScript | 类型安全，但 demo 轨道规模下收益有限 |
 
-### 3.3 页面清单（决策点 C，推荐极简两页 + 无路由库）
+### 3.3 页面清单（决策点 C，双页操作台 + 无路由库）
 
 - **用户管理**：列表（GET /users）+ 新建（POST）+ 编辑（PUT）+ 删除（DELETE），每次写后刷新列表；
 - **转账演示**：from/to/amount 表单 + [正常转账]（验提交）/ [中途失败转账]（验回滚）双按钮 + 两账户余额卡（GET /accounts/{id}）；
-- 顶部 tab 切换两页；**不引** react-router / 状态管理库 / UI 组件库（原生 fetch + 手写 CSS）。
+- 顶部 tab 切换两页；**不引** react-router / 状态管理库 / UI 组件库（原生 fetch + 手写 CSS，图标仅用 `lucide-react`）。
+- 两页共享一套低饱和星际控制舱背景和玻璃材质，但仍以数据可读性为第一约束；桌面为左右分区，窄屏按 DOM 顺序自然堆叠。
+- “收起界面”是纯观景态：退出时清空当次操作反馈，隐藏 tab、工作区与运行链路，只留下可点击/可键盘展开的居中品牌，不把一套业务状态带进另一套展示逻辑。
 
 ### 3.4 错误链路（B9 修复的前端视角闭环）
 
-fetch 统一封装：非 2xx → 读 body 文本 → 页面顶部红色横幅显示「HTTP 500: SQL 执行失败…」——M8 修的「可读错误消息」必须能一路显示到浏览器 UI，不能被前端吞掉。
+fetch 统一封装：非 2xx → 读 body 文本 → 页面顶部错误提示显示「HTTP 500: SQL 执行失败…」——M8 修的「可读错误消息」必须能一路显示到浏览器 UI，不能被前端吞掉。成功提示与错误提示互斥；新操作开始、手工关闭或进入观景态都会结束旧反馈，避免多条消息互相覆盖或跨状态残留。
 
 ## 4. demo 数据流
 
@@ -49,14 +51,14 @@ fetch 统一封装：非 2xx → 读 body 文本 → 页面顶部红色横幅显
 | V3 | 新建落库 | 页面表单新建（唯一 email 锚点）→ MySQL 直查出现该行 |
 | V4 | 编辑/删除落库 | PUT 后 name 变化、DELETE 后行消失（docker exec 前后对比） |
 | V5 | 转账提交（前端视角） | [正常转账] → 页面两余额卡 = MySQL balance 精确变动 |
-| V6 | 转账回滚（前端视角） | [中途失败转账] → 横幅显示错误 + 余额卡不变（docker exec 复核） |
-| V7 | 断库自愈（前端视角） | `docker stop mysql` → 页面操作显示可读 500（B9 链路）→ restart 后刷新即恢复 |
+| V6 | 转账回滚（前端视角） | [中途失败转账] → 错误提示完整显示 + 余额卡不变（docker exec 复核） |
+| V7 | 断库自愈（前端视角） | `docker stop minispring-mysql` → 页面操作显示可读 500（B9 链路）→ `docker start minispring-mysql` 后刷新即恢复 |
 | V8 | F12 Network 全链路 | F12 看到 `/api/users` 等请求：200 + JSON 响应体（含 payload 记录为证） |
 
 ## 6. 任务清单（严格串行）
 
 1. 脚手架：Vite + React（端口 9010、proxy `/api`→9090 + rewrite、`node_modules` 入 .gitignore）
-2. fetch 封装 + 错误横幅 + tab 骨架
+2. fetch 封装 + 互斥操作消息 + tab 骨架
 3. 用户管理页（列表/新建/编辑/删除，写后刷新）
 4. 转账页（双按钮 + 余额卡，操作后刷新余额）
 5. V1~V8 全跑（浏览器 F12 + docker exec 逐一对比）+ M0~M8 回归（后端 44 单测 + demo 接口冒烟）
@@ -64,7 +66,7 @@ fetch 统一封装：非 2xx → 读 body 文本 → 页面顶部红色横幅显
 
 ## 7. 边界与债务
 
-- 不做：react-router、状态管理库、UI 组件库、CSS 框架、前端单测（demo 轨道，联调为唯一目的）；
+- 不做：react-router、状态管理库、UI 组件库、CSS 框架、前端单测（demo 轨道，联调为唯一目的）；`lucide-react` 仅承担图标，不承载布局或业务状态；
 - CORS 显式不做（决策点 A ① 的推论）：dev 用 Vite proxy、生产用 M10 Nginx 同源反代；若未来真要跨源部署再登记新债务；
-- 前端不做构建产物部署：`vite build` 的 dist 留给 M10 Nginx 托管，本里程碑只验 dev 联调链路；
+- M9 本身不做构建产物部署，只验 dev 联调链路；其 `vite build` 产物已在 M10 由 Nginx `:9080` 同源托管，见 [`10-high-availability.md`](10-high-availability.md)；
 - D1（JAR 扫描）维持 M10；D47（Hikari 参数面）维持 M10 评估。

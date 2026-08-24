@@ -14,7 +14,7 @@ import com.zaxxer.hikari.HikariDataSource;
  * 数据源自动配置：classpath 上有 HikariCP 且配置了 {@code minispring.datasource.url} 时，
  * 自动装配连接池数据源。
  *
- * <p>D45 模式（M8 首个第三方能力落点）：autoconfigure 对 HikariCP 是 optional 依赖——
+ * <p>autoconfigure 对 HikariCP 使用 optional 依赖：
  * 类级条件必须用 {@code name} 字符串（注解里出现 {@code HikariDataSource.class} 类字面量的话，
  * HikariCP 缺失时注解代理解析即抛 NoClassDefFoundError）；方法体内 {@code new HikariDataSource()}
  * 只在条件命中后执行，安全。没配 url 的纯内存应用整个配置类跳过。
@@ -60,7 +60,7 @@ public class DataSourceAutoConfiguration implements EnvironmentAware {
         return new HikariDataSource(config);
     }
 
-    /** 整数配置读取：缺省用默认值；配了但非数字时抛带属性名的可读错误（审查修复 M9 I5——裸 NumberFormatException 无从定位是哪个属性配错）。 */
+    /** 整数配置缺省时使用默认值；非数字值抛出包含属性名和值的可读错误。 */
     private int intProperty(String suffix, int defaultValue) {
         String value = environment.getProperty(PREFIX + suffix);
         if (value == null || value.isEmpty()) {

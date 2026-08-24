@@ -1,0 +1,190 @@
+{
+  "schema_version": "0.1",
+  "plan_id": "minispringboot-m10-imported-evidence-v1",
+  "version": 1,
+  "subject": {
+    "id": "minispringboot-m10",
+    "version": "10.0.0",
+    "source_ref": "NoctilumeDev/MiniSpringBoot@85c2b22dfdcb17cd2527f068f85542aca25d694c"
+  },
+  "question": "Do the frozen M10 evidence set and the fresh bounded replay support the declared high-availability, transaction, and readiness claims without overstating lifecycle ownership?",
+  "baseline": {
+    "id": "minispringboot-m10-source-commit",
+    "status": "VALID",
+    "fingerprint": "e269595a74373110e8d149f6061ac43a012ecf970e9b408deb3a01bda2a0b6c5",
+    "tolerances": {
+      "verification_scope": "exact",
+      "lifecycle_ownership": "must remain NOT_PROVEN"
+    }
+  },
+  "experiment_type": "SINGLE_VARIABLE",
+  "variables": [
+    {
+      "name": "verification_scope",
+      "role": "PRIMARY",
+      "value": "IMPORTED_EVIDENCE_AUDIT",
+      "source": "frozen M10 verification boundary"
+    },
+    {
+      "name": "lifecycle_ownership",
+      "role": "CONTROLLED",
+      "value": "NOT_PROVEN",
+      "source": "VeriTrail Core 0.12 does not manage this Docker plus Nginx plus three-Java-process topology"
+    }
+  ],
+  "required_evidence": [
+    "minispringboot.m10-verification"
+  ],
+  "assertions": [
+    {
+      "id": "source-commit-matches",
+      "severity": "HARD",
+      "evidence_type": "minispringboot.m10-verification",
+      "path": "/facts/source_commit_matches",
+      "operator": "eq",
+      "expected": true
+    },
+    {
+      "id": "tracked-evidence-hashes-valid",
+      "severity": "HARD",
+      "evidence_type": "minispringboot.m10-verification",
+      "path": "/facts/tracked_evidence_hashes_valid",
+      "operator": "eq",
+      "expected": true
+    },
+    {
+      "id": "self-verified-claims-pass",
+      "severity": "HARD",
+      "evidence_type": "minispringboot.m10-verification",
+      "path": "/facts/self_verified_claims_pass",
+      "operator": "eq",
+      "expected": true
+    },
+    {
+      "id": "fresh-failover-load-completed",
+      "severity": "HARD",
+      "evidence_type": "minispringboot.m10-verification",
+      "path": "/facts/fresh_failover_load_completed",
+      "operator": "eq",
+      "expected": true
+    },
+    {
+      "id": "fresh-failover-load-zero-errors",
+      "severity": "HARD",
+      "evidence_type": "minispringboot.m10-verification",
+      "path": "/facts/fresh_failover_load_zero_errors",
+      "operator": "eq",
+      "expected": true
+    },
+    {
+      "id": "fresh-failover-proxy-zero-failures",
+      "severity": "HARD",
+      "evidence_type": "minispringboot.m10-verification",
+      "path": "/facts/fresh_failover_proxy_failures",
+      "operator": "eq",
+      "expected": 0
+    },
+    {
+      "id": "fresh-failover-rejoined",
+      "severity": "HARD",
+      "evidence_type": "minispringboot.m10-verification",
+      "path": "/facts/fresh_failover_rejoined",
+      "operator": "eq",
+      "expected": true
+    },
+    {
+      "id": "fresh-failover-accounts-unchanged",
+      "severity": "HARD",
+      "evidence_type": "minispringboot.m10-verification",
+      "path": "/facts/fresh_failover_accounts_unchanged",
+      "operator": "eq",
+      "expected": true
+    },
+    {
+      "id": "transaction-proof-passed",
+      "severity": "HARD",
+      "evidence_type": "minispringboot.m10-verification",
+      "path": "/facts/transaction_proof_passed",
+      "operator": "eq",
+      "expected": true
+    },
+    {
+      "id": "transaction-baseline-restored",
+      "severity": "HARD",
+      "evidence_type": "minispringboot.m10-verification",
+      "path": "/facts/transaction_baseline_restored",
+      "operator": "eq",
+      "expected": true
+    },
+    {
+      "id": "readiness-proof-passed",
+      "severity": "HARD",
+      "evidence_type": "minispringboot.m10-verification",
+      "path": "/facts/readiness_proof_passed",
+      "operator": "eq",
+      "expected": true
+    },
+    {
+      "id": "liveness-remains-up-during-database-outage",
+      "severity": "HARD",
+      "evidence_type": "minispringboot.m10-verification",
+      "path": "/facts/liveness_during_database_outage",
+      "operator": "eq",
+      "expected": "UP"
+    },
+    {
+      "id": "readiness-fails-closed-during-database-outage",
+      "severity": "HARD",
+      "evidence_type": "minispringboot.m10-verification",
+      "path": "/facts/readiness_during_database_outage_http_status",
+      "operator": "eq",
+      "expected": 500
+    },
+    {
+      "id": "readiness-recovers-after-database-recovery",
+      "severity": "HARD",
+      "evidence_type": "minispringboot.m10-verification",
+      "path": "/facts/readiness_after_recovery",
+      "operator": "eq",
+      "expected": "UP"
+    },
+    {
+      "id": "full-topology-lifecycle-is-not-overclaimed",
+      "severity": "HARD",
+      "evidence_type": "minispringboot.m10-verification",
+      "path": "/facts/full_topology_lifecycle_managed",
+      "operator": "eq",
+      "expected": false
+    }
+  ],
+  "random_seed": 20260824,
+  "resource_budget": {
+    "memory_soft_mb": 512,
+    "memory_hard_mb": 1024,
+    "max_artifact_bytes": 1048576
+  },
+  "load_model": {
+    "total_requests": 1,
+    "duration_seconds": 1
+  },
+  "change_scope": {
+    "level": "L3_SYSTEM",
+    "owner": "MiniSpringBoot M10",
+    "expected_blast_radius": "M10 evidence manifest, bounded failover replay, transaction proof, readiness proof, and external verdict",
+    "consumers": [
+      "MiniSpringBoot maintainers",
+      "VeriTrail Core 0.12",
+      "public repository readers"
+    ]
+  },
+  "reproduction_steps": [
+    "Start the owned MiniSpringBoot M10 three-instance cluster and its declared MySQL and Nginx dependencies.",
+    "Run the bounded failover drill, transaction proof, and readiness proof into a fresh evidence directory.",
+    "Generate imported Evidence with deploy/m10/new-veritrail-imported-evidence.ps1.",
+    "Seal this Plan with VeriTrail Core 0.12, evaluate the imported Evidence, and validate the resulting Bundle."
+  ],
+  "cleanup_steps": [
+    "Stop only the MiniSpringBoot M10 processes recorded by deploy/m10/.runtime and the minispring-mysql container.",
+    "Retain the frozen public evidence Bundle; remove only disposable replay output after review."
+  ]
+}

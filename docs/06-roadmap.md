@@ -42,6 +42,7 @@
 
 - 后端：`server.port = 9090`（`application.yml` 默认值 + `WebDemo` 兜底一致）
 - 前端：React/Vite 开发服务器 = `9010`（M9 `demo-frontend/` 落地生效）
+- M10 本机生产入口：Nginx = `9080`；后端实例 = `9091 / 9092 / 9093`；MySQL 宿主映射 = `13306`
 
 ---
 
@@ -116,7 +117,7 @@
   - V3 事务回滚：`transfer-fail`（扣款后刻意抛异常）→ HTTP 500 + docker exec 直查两账户余额 900.00/1100.00 分文未动（无半扣半入）；V4 事务提交：`transfer` → 850.00/1150.00，变动精确等于 amount；
   - V5 无脏读（RR）：CLI 事务 A `UPDATE balance=999` 未提交时应用读 850（旧值），COMMIT 后读 999——未提交不可见、提交后可见双向实证；
   - V6 池无泄漏：100 并发（50 并行）全部 200，MySQL 侧连接 11 条 = 10（max-pool-size 上限）+ 1（CLI 自身），无膨胀；
-  - V7 断连自愈（**揪出 B9 后复验**）：`docker stop mysql` → 请求 30s（Hikari connectionTimeout 默认值，有限阻塞非挂死）后 500「SQL 执行失败: SELECT balance FROM accounts WHERE id = ?」（原始异常可读，修复前是 ITE 包装的「null」）；`docker start` 后 86ms 恢复 200；
+  - V7 断连自愈（**揪出 B9 后复验**）：`docker stop minispring-mysql` → 请求 30s（Hikari connectionTimeout 默认值，有限阻塞非挂死）后 500「SQL 执行失败: SELECT balance FROM accounts WHERE id = ?」（原始异常可读，修复前是 ITE 包装的「null」）；`docker start minispring-mysql` 后 86ms 恢复 200；
   - V8 SQL 负例：重复 email 唯一键冲突 → 500（DuplicateKeyException 翻译），后续请求 200、连接仍 11 条（归还正常）；
   - V9 模块裁剪（D45 延续）：classpath 裁掉 mini-spring-jdbc/HikariCP/mysql 驱动——**application.yml 明明配置了 `minispring.datasource.url`** 但类不在，应用照常启动、服务器正常起、dataSource/jdbcTemplate/transactionManager 三个 Bean 全部不存在、exit 0（「配置在、类不在 → 安全跳过」锚定）；
   - V10 关闭钩子（D2 生效）：`System.exit(0)`（与 Ctrl+C 同一 JVM shutdown 序列）→ `ContextClosedEvent` 发布 → MySQL 侧池连接 4→1（仅 CLI 残留，`@Bean(destroyMethod="close")` 真实释放）→ 9090 端口释放 → exit 0。
@@ -133,26 +134,33 @@
 
 ### M9 · React 前端 + 联调
 
-- **产出**：`demo-frontend/`（React 18；M9 初始验收使用 Vite 5，当前工具链已因公开安全公告升级并锁定为 Vite 8；JavaScript/jsx，端口 9010；Vite proxy `/api`→9090 rewrite 去前缀——决策点 A①/B① 已批）；两页极简 UI（用户管理：列表/新建/编辑/删除；转账演示：双按钮 + 余额卡），零路由/状态/UI 库；fetch 统一封装 + 全局错误横幅（后端可读错误原样到 UI）。
+- **产出**：`demo-frontend/`（React 18；M9 初始验收使用 Vite 5，当前工具链已因公开安全公告升级并锁定为 Vite 8；JavaScript/jsx，端口 9010；Vite proxy `/api`→9090 rewrite 去前缀——决策点 A①/B① 已批）；双页玻璃化操作台（用户管理：列表/新建/编辑/删除；转账演示：提交/回滚 + 余额实录），零路由/状态/UI 组件库（仅 `lucide-react` 图标集）；fetch 统一封装 + 互斥操作消息（后端可读错误原样到 UI）。
 - **落地证据（V1~V8，浏览器真实操作 + F12 Network + docker exec 直查三方对照）**：
   - V1 渲染：浏览器打开 :9010，标题/tab/表格骨架完整，控制台零报错（截图存档）；
   - V2 列表=库：页面唯一行（id=23/甲/dup@v8.com）与 `docker exec` 直查完全一致；`GET /api/users` 200，payload 与 UI 逐字段相等（StrictMode 双请求为开发模式特征）；
-  - V3 新建落库：表单新建 → 横幅「已新建用户 #48（落库 MySQL）」→ docker exec 出现 id=48/fe-m9@minispring.dev；
+  - V3 新建落库：表单新建 → 成功提示「已新建用户 #48（落库 MySQL）」→ docker exec 出现 id=48/fe-m9@minispring.dev；
   - V4 编辑/删除落库：PUT #48 name→M9-Edited（DB 同步变化）；DELETE #48（confirm 弹窗接受）→ DB 行消失、表回到 1 行；
-  - V5 转账提交：页面余额卡 989/1160 = MySQL 精确 ±10；POST /api/accounts/transfer 200，横幅回报双侧余额；
-  - V6 转账回滚：[中途失败转账] → 红色横幅逐字透出后端异常「HTTP 500: … transfer-fail-in-middle（V3 回滚验收的刻意异常）」，余额卡与 DB 均不变（989/1160）；
-  - V7 断库自愈（**揪出并修复 B10 后复验**）：`docker stop mysql` → 前端点击转账 → 有限阻塞（~15-20s，Hikari connectionTimeout）→ 红色横幅完整透出「事务执行失败（受检异常触发回滚）: minispring-hikari - Connection is not available, request timed out after 30003ms (total=0, active=0, idle=0, waiting=2)」——根因（含连接池状态）直达浏览器 UI；`docker start` 后页面刷新即恢复；
+  - V5 转账提交：页面余额卡 989/1160 = MySQL 精确 ±10；POST /api/accounts/transfer 200，成功提示回报双侧余额；
+  - V6 转账回滚：[中途失败转账] → 错误提示逐字透出后端异常「HTTP 500: … transfer-fail-in-middle（V3 回滚验收的刻意异常）」，余额卡与 DB 均不变（989/1160）；
+  - V7 断库自愈（**揪出并修复 B10 后复验**）：`docker stop minispring-mysql` → 前端点击转账 → 有限阻塞（~30s，Hikari connectionTimeout）→ 错误提示完整透出「事务执行失败（受检异常触发回滚）: minispring-hikari - Connection is not available, request timed out after 30003ms (total=0, active=0, idle=0, waiting=0)」——根因（含连接池状态）直达浏览器 UI；`docker start minispring-mysql` 后页面刷新即恢复；
   - V8 F12 全链路：Network 面板见 /api/users、/api/accounts/*、POST/PUT/DELETE 全部请求与 200/500 状态、JSON 响应体。
 - **M9 期间揪出并修复（B10，错误保真对称缺失）**：M8 的 V7 只验了事务外读路径（「SQL 执行失败: …」），事务内写路径（@Transactional）经 TransactionManager 包装后只剩「事务执行失败（受检异常触发回滚）」——根因文本丢失。按对称纪律修全家族四处：`TransactionManager` 两处包装 + `JdbcTemplate.translate` 两处（SQL 与 DuplicateKey 分支），包装消息一律携带 `e.getMessage()`；浏览器复验根因直达 UI。
-- **落地边界（显式）**：CORS 显式不做（决策点 A① 推论：dev 用 Vite proxy、生产 M10 Nginx 同源反代）；前端不做构建产物部署（dist 留给 M10）；断连期间余额卡显示旧值且不标识陈旧性、多条错误横幅相互覆盖（demo 层 UX 简化，无正确性影响，如实标注）；D1/D47 维持 M10。
+- **落地边界（显式）**：CORS 显式不做（决策点 A① 推论：dev 用 Vite proxy、生产 M10 Nginx 同源反代）；前端不做构建产物部署（dist 留给 M10）；断连请求进行中余额仍显示最近一次成功读取值，失败后由错误提示明确覆盖当前操作语境；成功/失败消息互斥，切换到纯观景态时同步清空旧反馈，避免状态跨界面残留；D1/D47 维持 M10。
 
 #### M9 三次质量审查记录（按 §1.6 门闩）
 
 | 审查 | 时间 | 结论与证据 |
 | --- | --- | --- |
 | ① 回顾审查（回归/契约/依赖方向） | 2026-08-19 | 后端零改动兑现（唯一变更 jdbc 错误保真修复，属 bug 修正非契约变更）；前端与后端唯一耦合=JSON 契约+proxy 配置；M0~M8 回归：后端冒烟全绿（/hello、/void、/、/../secret 403、capability×4、accounts JSON）+ 44 单测全过 + MySQL 数据经多轮写删后与页面一致；教训沉淀：boot 模块 WebServer 单测绑 9090，跑全量测试前须停 demo 进程。 |
-| ② 当前审查（异常/边界/null 全路径） | 2026-08-19 | V1~V8 三方对照（浏览器/Network/DB）全过；揪出 B10（事务路径错误保真对称缺失）并修全家族四处、浏览器复验根因直达 UI；负例实测：断库 500 横幅可读、回滚横幅逐字透出后端异常、confirm 删除可取消路径正常。 |
-| ③ 前瞻审查（反例驱动） | 2026-08-19 | 反例①「前端在、后端挂」→ proxy 层 ECONNREFUSED 会以网络错误形态到 UI（fetch 封装已统一 catch，横幅呈现）；反例②「断连期间余额卡陈旧值误导操作者」→ 如实标注为边界（教学取舍）；反例③「StrictMode 双请求导致重复写」→ 核对：写操作均由按钮触发（非 effect），双请求仅出现在 effect 内的读路径，无重复写风险；反例④「M10 Nginx 托管 dist 后路由 404」→ 无 react-router（单页 tab），不触发 SPA 刷新回退问题。M10 风险预置：D1（JAR 扫描）与 D47（Hikari 参数面）在部署阶段一并处置。 |
+| ② 当前审查（异常/边界/null 全路径） | 2026-08-19 | V1~V8 三方对照（浏览器/Network/DB）全过；揪出 B10（事务路径错误保真对称缺失）并修全家族四处、浏览器复验根因直达 UI；负例实测：断库 500 提示可读、回滚提示逐字透出后端异常、confirm 删除可取消路径正常。 |
+| ③ 前瞻审查（反例驱动） | 2026-08-19 | 反例①「前端在、后端挂」→ proxy 层 ECONNREFUSED 会以网络错误形态到 UI（fetch 封装已统一 catch，错误提示呈现）；反例②「断连期间余额卡陈旧值误导操作者」→ 如实标注为边界（教学取舍）；反例③「StrictMode 双请求导致重复写」→ 核对：写操作均由按钮触发（非 effect），双请求仅出现在 effect 内的读路径，无重复写风险；反例④「M10 Nginx 托管 dist 后路由 404」→ 无 react-router（单页 tab），不触发 SPA 刷新回退问题。M10 风险预置：D1（JAR 扫描）与 D47（Hikari 参数面）在部署阶段一并处置。 |
+
+#### M9 展示层冻结（2026-08-22）
+
+- 保留“用户 CRUD / 事务提交与回滚”两条事实链，不用视觉重构改写后端契约；页面改为同一套星际控制舱背景、玻璃材质与低饱和状态色，桌面和移动端均无根横向溢出。
+- 用户表取消页面级横向拉条：正常态按可读列宽展示，编辑态为姓名/邮箱留出输入空间；成功、失败只保留一条互斥反馈，不再以高饱和绿/红抢占工作区。
+- “收起界面”定义为纯观景态：收起时同步清空当次操作消息，并隐藏 tab、工作区与运行链路，只留下居中的 `MiniSpringBoot`；品牌按钮同时是可键盘操作的展开入口，展开后不恢复过期提示。
+- README 的四张实拍已按同一版 UI 重取：用户 23/96、账户 700/1300；404 与断库均由真实浏览器操作复现，失败前后 MySQL 余额保持 700/1300，容器恢复健康后刷新自愈。
 
 ### M0–M9 全量复审修复（外审 35 条 + 补充 29–35 号，进入 M10 前收口）
 
@@ -189,8 +197,14 @@
 
 ### M10 · 3 实例 + Nginx 高可用 + 全链路终验
 
-- **产出**：Nginx `upstream` + 健康检查、3 个无状态实例、健康检查接口、压测脚本、部署手册。
-- **落地证据**：**浏览器经 Nginx 访问**，3 实例同时服务；kill 1 实例后浏览器访问不中断、数据仍在库；产出压测报告。
+- **状态（2026-08-24）**：实现与本机事实自验已完成；源码坐标 `85c2b22`，规范证据清单为 [`docs/evidence/m10/m10-evidence-manifest.json`](evidence/m10/m10-evidence-manifest.json)。在 VeriTrail Core 0.12 冻结后又执行一次有界故障切换、事务和就绪恢复回放，15 项 HARD 断言全部通过；冻结 Bundle 见 [`docs/evidence/m10/veritrail/bundle`](evidence/m10/veritrail/bundle)。复验范围固定为 `IMPORTED_EVIDENCE_AUDIT`，全拓扑生命周期所有权仍为 `NOT_PROVEN`。
+- **已落地产出**：Nginx `upstream` + 被动健康摘除、3 个无状态实例、实例可辨识的 live/ready 探针、前端 `dist` 同源托管、有界容量脚本、精确 PID 启停、故障/事务/就绪演练与 SHA-256 证据清单；操作手册见 [`docs/10-high-availability.md`](10-high-availability.md)。
+- **本机预算（2026-08-22 复测）**：i7-14650HX（16C/24T）、15.78 GiB RAM；M9 服务运行时可用内存约 4.7 GiB，MySQL 容器固定 512 MiB。M10 后端三实例统一 `-Xms128m -Xmx256m`，Nginx 预算 64 MiB；压测期间硬性保留 ≥2 GiB 可用内存，CPU 持续目标 ≤70%，若 CPU ≥85% 持续 10s、可用内存 <2 GiB、系统分页明显增长或非预期错误率 >1%，立即停止升阶并保留现场证据。
+- **阶梯压测（已完成，不做无上限“轰炸”）**：每阶预热 30s、稳态 60s；并发 `1 → 8 → 24 → 48 → 72` 均为 0% 非预期错误，止损线未触发，96 未运行。24 并发达到曲线峰值 6,275.64 RPS / p95 5.14ms；48/72 吞吐回落且延迟上升，因此本机推荐上限冻结为 24，后两阶只算压力边界。
+- **故障切换演练（已完成）**：24 并发时终止 `msb-2`；390,309 请求、6,504.54 RPS、p95 5.26ms、0 非预期错误；故障窗口 20 次独立代理检查 0 失败，实例以新 PID 恢复并重新加入，账户快照保持 700 / 1300。
+- **事务与就绪演练（已完成）**：正常提交、刻意 HTTP 500 回滚、API/MySQL 对账和反向恢复基线全部通过；MySQL 下线时 `/health/live=UP`、`/health=500`，恢复后回到 `UP/UP`，应用 PID 与账户快照均未变化。当前 30 秒 ready 失败时延来自 HikariCP 默认 `connectionTimeout`，D47 维持为显式教学边界。
+- **验迹证据契约**：保存每阶请求数、吞吐、p50/p95/p99、HTTP 状态分布、三实例命中分布、CPU/内存/线程/连接池快照；故障窗口单列请求时间线；事务前后保存 `accounts` 表快照与回滚不变量。证据包只记录可复核事实，不用压测工具日志代替浏览器、Nginx、后端和 MySQL 四层实测。
+- **落地证据**：真实浏览器经 Nginx `:9080` 访问，页面展示 M10 HA 链路且控制台无 warning/error；三实例同时服务，冷启动、Compose、Nginx 配置、PowerShell 5.1、Node、69 个 Java 测试、前端构建与官方 npm audit 均通过。VeriTrail 导入证据复验与本机自验证分层记录：前者验证冻结哈希、新鲜回放事实和诚实边界，不宣称接管 Docker/Nginx/MySQL/三 Java 进程生命周期。
 
 ---
 

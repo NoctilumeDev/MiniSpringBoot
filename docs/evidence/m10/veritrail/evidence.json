@@ -1,0 +1,55 @@
+{
+  "schema_version": "0.1",
+  "evidence_type": "minispringboot.m10-verification",
+  "source": "MiniSpringBoot deploy/m10 imported evidence adapter/0.1",
+  "captured_at": "2026-08-24T14:09:23.022Z",
+  "facts": {
+    "source_commit_matches": true,
+    "tracked_evidence_hashes_valid": true,
+    "self_verified_claims_pass": true,
+    "fresh_failover_load_completed": true,
+    "fresh_failover_load_zero_errors": true,
+    "fresh_failover_proxy_failures": 0,
+    "fresh_failover_rejoined": true,
+    "fresh_failover_accounts_unchanged": true,
+    "transaction_proof_passed": true,
+    "transaction_baseline_restored": true,
+    "readiness_proof_passed": true,
+    "liveness_during_database_outage": "UP",
+    "readiness_during_database_outage_http_status": 500,
+    "readiness_after_recovery": "UP",
+    "full_topology_lifecycle_managed": false
+  },
+  "observed_variables": {
+    "verification_scope": "IMPORTED_EVIDENCE_AUDIT",
+    "lifecycle_ownership": "NOT_PROVEN"
+  },
+  "metadata": {
+    "sourceCommit": "85c2b22dfdcb17cd2527f068f85542aca25d694c",
+    "manifestHashMode": "UTF8_LF_CANONICAL",
+    "manifestEntryCount": 9,
+    "proofDigests": [
+      {
+        "logicalName": "failover-load.json",
+        "sizeBytes": 5089,
+        "sha256": "1dd3ee715d00c6cb10edc790341cf16789287efc2a62173ff91604643845358a"
+      },
+      {
+        "logicalName": "failover-summary.json",
+        "sizeBytes": 3859,
+        "sha256": "c88c574318c2ccfd3a9a305ef89bfd2d2e21ec4087b336af2eb1309696a218b4"
+      },
+      {
+        "logicalName": "transaction-proof.json",
+        "sizeBytes": 2572,
+        "sha256": "b68091006e6eb5bff4b28539d4ca905c4435cdd431cf1ddf62d2c08357c6f883"
+      },
+      {
+        "logicalName": "readiness-proof.json",
+        "sizeBytes": 2330,
+        "sha256": "bbaa896d8d6808382f04e5594f37b0e1895895c7071852875132fdac922fbab4"
+      }
+    ],
+    "boundary": "VeriTrail evaluates imported M10 evidence; it does not claim ownership of Docker, Nginx, MySQL, or the three Java process lifecycles."
+  }
+}

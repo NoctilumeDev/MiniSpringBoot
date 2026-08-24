@@ -97,8 +97,7 @@ public class WebMvcAutoConfiguration {
             }
             DispatcherServlet servlet = beanFactory.getBean(names[0], DispatcherServlet.class);
             String portValue = environment.getProperty("server.port");
-            // N18（M0-M9 复审）：非数字 port 报可读错误并携带配置值——与同模块
-            // DataSourceAutoConfiguration.intProperty 的兜底风格对称，不再裸抛 NumberFormatException
+            // server.port 非数字时抛出携带配置值的可读错误。
             int port = (portValue == null || portValue.isEmpty()) ? DEFAULT_PORT : parsePort(portValue.trim());
             this.webServer = new SunHttpServer(servlet);
             this.webServer.start(port);

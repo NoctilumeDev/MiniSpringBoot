@@ -58,7 +58,7 @@ public class DefaultListableBeanFactory implements ListableBeanFactory, BeanDefi
     // 正在创建中的单例：用于识别「构造器注入卡死型循环依赖」（三级缓存尚未暴露时就折返，直接给出可读错误而非 StackOverflow）
     private final Set<String> currentlyInCreation = ConcurrentHashMap.newKeySet();
 
-    // 单例创建顺序（N4：销毁时逆序，依赖 Bean 先于使用者销毁——与 Spring 的 reverse destruction 一致）
+    // 单例创建顺序：销毁时逆序，使使用者先于依赖释放，与 Spring 的 reverse destruction 一致。
     private final List<String> singletonCreationOrder = new ArrayList<>();
 
     // 配置环境（Environment），由上下文注入；@Value 处理器靠它以占位符查值
@@ -118,8 +118,7 @@ public class DefaultListableBeanFactory implements ListableBeanFactory, BeanDefi
         if (bean != null) {
             return bean;
         }
-        // N5（M0-M9 复审）：单例创建加锁 + 双重检查——并发 getBean 同名单例时，第二个线程
-        // 不再撞进 currentlyInCreation 被误报为循环依赖，而是等首个线程创建完、命中断言缓存。
+        // 单例创建采用加锁与双重检查，保证同名单例并发获取的唯一性。
         synchronized (this) {
             bean = singletonObjects.get(name);
             if (bean != null) {
@@ -220,9 +219,7 @@ public class DefaultListableBeanFactory implements ListableBeanFactory, BeanDefi
             populateBean(beanName, bd, bean);
             bean = initializeBean(beanName, bd, bean);
         } catch (RuntimeException | Error e) {
-            // H1（M0-M9 复审第二轮）：创建失败必须清掉本 bean 在三级/二级缓存里的残留——
-            // 否则后续 getBean 会从三级缓存命中「字段未注入的半成品」并静默返回（无任何报错的
-            // 最阴险路径）。Spring 靠创建中标记守卫自愈，此处直接在失败路径收敛清理，语义等价。
+            // 创建失败时清除该 Bean 的二、三级缓存引用，防止后续请求取得未完成注入的对象。
             if (bd.isSingleton()) {
                 singletonFactories.remove(beanName);
                 earlySingletonObjects.remove(beanName);
@@ -248,7 +245,7 @@ public class DefaultListableBeanFactory implements ListableBeanFactory, BeanDefi
             singletonObjects.put(beanName, bean);
             earlySingletonObjects.remove(beanName);
             singletonFactories.remove(beanName);
-            // N4：记录单例创建顺序（销毁时逆序，依赖 Bean 先于使用者销毁）
+            // 记录单例创建顺序，供关闭阶段逆序销毁。
             singletonCreationOrder.add(beanName);
         }
         return bean;
@@ -270,7 +267,7 @@ public class DefaultListableBeanFactory implements ListableBeanFactory, BeanDefi
         if (bd.isFactoryMethod()) {
             return instantiateUsingFactoryMethod(beanName, bd);
         }
-        // A-4（D3 收口）：@Autowired 构造器注入 —— BPP 选出候选构造器，容器解析参数后调用
+        // @Autowired 构造器注入：BPP 选出候选构造器，容器解析参数后调用。
         Constructor<?> candidate = determineAutowiredConstructor(beanName, bd);
         if (candidate != null) {
             return instantiateUsingConstructor(beanName, candidate);
@@ -363,8 +360,7 @@ public class DefaultListableBeanFactory implements ListableBeanFactory, BeanDefi
     private Object resolveArg(Parameter parameter, String beanName) {
         String qualifier = findQualifierValue(parameter);
         if (qualifier != null && !qualifier.isEmpty()) {
-            // D34（M8 收口，与 AutowiredAnnotationBeanPostProcessor.resolveByQualifier 对称）：
-            // 限定名匹配 BeanDefinition.qualifier（限定名 ≠ beanName 也认）→ 回退 beanName
+            // 限定名先匹配 BeanDefinition.qualifier，再回退 beanName。
             return resolveArgByQualifier(qualifier, parameter.getType(), beanName, isOptionalAutowired(parameter));
         }
         Class<?> type = parameter.getType();
@@ -391,7 +387,7 @@ public class DefaultListableBeanFactory implements ListableBeanFactory, BeanDefi
         throw new BeansException(where + "的参数类型[" + type.getName() + "]找不到可用 Bean");
     }
 
-    /** D34：参数的限定名裁决——匹配 qualifier 字段优先，回退 beanName，两层都空给可读错误。 */
+    /** 参数限定名先匹配 qualifier 字段，再回退 beanName；两层均未命中时给出可读错误。 */
     private Object resolveArgByQualifier(String qualifier, Class<?> type, String beanName, boolean optional) {
         String where = (beanName == null ? "工厂方法" : "Bean[" + beanName + "]构造器");
         String matched = null;
@@ -410,7 +406,7 @@ public class DefaultListableBeanFactory implements ListableBeanFactory, BeanDefi
         if (containsBean(qualifier)) {
             return getBean(qualifier);
         }
-        // D51 对称收口：required=false 且限定名未命中 → null 注入（与 AutowiredAnnotationBeanPostProcessor 对称）
+        // required=false 且限定名未命中时返回 null，与字段及方法注入语义一致。
         if (optional) {
             return null;
         }
@@ -536,9 +532,8 @@ public class DefaultListableBeanFactory implements ListableBeanFactory, BeanDefi
     }
 
     /**
-     * 沿「本类 → 父类链 → 接口链」查找无参方法。M7（M0-M9 复审第二轮）：Bean 被替换成
-     * JDK 代理（如 D30 补偿回填）后，目标类声明的方法不在代理类上——destroyMethod/initMethod
-     * 回调须沿接口与父类回查，找不到时给可读错误而非裸反射异常。
+     * 沿「本类 → 父类链 → 接口链」查找无参方法。JDK 代理对象上可能没有目标类声明的
+     * destroyMethod/initMethod，因此回调需要沿接口与父类回查；找不到时给出可读错误。
      */
     private Method findNoArgMethod(Class<?> clazz, String methodName) {
         for (Class<?> current = clazz; current != null && current != Object.class; current = current.getSuperclass()) {
@@ -562,17 +557,14 @@ public class DefaultListableBeanFactory implements ListableBeanFactory, BeanDefi
     // ---------- 销毁 ----------
 
     public void destroySingletons() {
-        // N4：按创建逆序销毁——先创建的 Bean（往往是底层依赖，如 DataSource）最后销毁，
-        // 使用者先于依赖释放；此前按 beanDefinitionMap（ConcurrentHashMap）无序遍历，
-        // 连接池可能先于还在用它的 Service 被销毁。
+        // 按创建顺序逆序销毁，使使用者先于底层依赖（如 DataSource）释放。
         List<String> reversed = new ArrayList<>(singletonCreationOrder);
         Collections.reverse(reversed);
         for (String beanName : reversed) {
             try {
                 destroyBean(beanName, singletonObjects.get(beanName));
             } catch (RuntimeException e) {
-                // M8（V10 前置）：单个 Bean 销毁失败不得中断其余销毁——
-                // 关闭链上一个炸全链停，会掩盖后续 Bean（如连接池）的释放
+                // 单个 Bean 销毁失败不得中断其余销毁，确保后续资源仍有机会释放。
                 System.err.println("销毁 Bean[" + beanName + "]失败: " + e);
             }
         }

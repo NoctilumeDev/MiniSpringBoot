@@ -7,7 +7,7 @@ import java.util.regex.Pattern;
  * 极简切点：支持两种表达式——
  * <ul>
  *   <li>{@code execution(返回类型 包.类.方法(..))}：类名/方法名可用 {@code *} 通配；</li>
- *   <li>{@code @annotation(注解全限定名)}：标注了指定注解的方法命中（M8 为 {@code @Transactional} 引入）。
+ *   <li>{@code @annotation(注解全限定名)}：标注了指定注解的方法命中。
  *       接口方法本身没标、但<b>实现类对应方法</b>标了也算命中——与 Spring 的
  *       AnnotationMatchingPointcut 的 specific-method 回查语义一致。</li>
  * </ul>
@@ -29,15 +29,14 @@ public class AspectJExpressionPointcut implements Pointcut {
 
     private void parse(String expression) {
         String trimmed = expression.trim();
-        // @annotation(全限定名)：注解级切点（M8）
+        // @annotation(全限定名)：注解级切点
         if (trimmed.startsWith("@annotation(") && trimmed.endsWith(")")) {
             this.annotationName = trimmed
                     .substring("@annotation(".length(), trimmed.length() - 1).trim();
             if (annotationName.isEmpty() || !annotationName.contains(".")) {
                 throw new IllegalArgumentException("@annotation 切点需要注解全限定名: " + expression);
             }
-            // 解析期即加载（审查修复 M9 I4）：注解名写错在切点构造时失败（启动期），
-            // 而非留到第一次 matches 才炸；同时缓存避免热路径重复 Class.forName
+            // 构造切点时解析并缓存注解类型，使非法类型在启动期失败，并避免热路径重复 Class.forName。
             this.annotationClass = loadAnnotation();
             return;
         }
@@ -75,8 +74,7 @@ public class AspectJExpressionPointcut implements Pointcut {
         if (isAnnotationPresent(method)) {
             return true;
         }
-        // M6（M0-M9 复审第二轮）：类级标注（如 @Transactional 标在实现类上）命中该类全部
-        // 方法——此前静默不命中（Bean 不被代理、无事务、无任何警告），与 Spring 类级语义对齐
+        // 类级标注（如 @Transactional 标在实现类上）命中该类全部方法，与 Spring 类级语义对齐。
         if (targetClass.isAnnotationPresent(annotationClass)) {
             return true;
         }

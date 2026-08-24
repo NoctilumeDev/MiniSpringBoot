@@ -50,7 +50,7 @@ public final class JsonSerializer {
         }
     }
 
-    /** N7（M0-M9 复审）：NaN/Infinity 不是合法 JSON（自家解析器都读不回）——显式报错而非输出裸字面量。 */
+    /** NaN 和 Infinity 不是合法 JSON 数字，统一显式拒绝。 */
     private void writeNumber(StringBuilder sb, Number number) {
         double d = number.doubleValue();
         if (!Double.isFinite(d)) {
@@ -69,8 +69,7 @@ public final class JsonSerializer {
                 field.setAccessible(true);
                 value = field.get(obj);
             } catch (IllegalAccessException ignored) {
-                // M8（M0-M9 复审第二轮）：先取值再写名——否则字段名+冒号已写出后取值失败，
-                // 会留下 {"a":, 的半写状态产出非法 JSON；读取不到的字段整体跳过
+                // 先读取字段值，再写字段名，避免取值异常留下半截 JSON；不可读字段整体跳过。
                 continue;
             }
             if (!first) {

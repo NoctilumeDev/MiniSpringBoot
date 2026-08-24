@@ -32,7 +32,7 @@ public class ConfigDemo {
 
         System.out.println("    --- profile = " + (profile == null ? "(默认)" : profile) + " ---");
         check("MiniSpringBoot".equals(app.getName()), "@Value 注入 app.name（yaml）");
-        check("properties-value".equals(app.getOwner()), "@Value 注入 app.owner=properties-value（properties 覆盖 yml，D37 已纠正）");
+        check("properties-value".equals(app.getOwner()), "@Value 注入 app.owner=properties-value（同层 properties 优先于 yml）");
         check(app.getTimeout() == 30, "@Value 注入 app.timeout（int 类型转换）");
         check(app.getFallbackTimeout() == 3000, "@Value 默认值 ${app.missing:3000}");
         check("ioc".equals(app.getFirstFeature()) && "aop".equals(app.getSecondFeature()),
@@ -44,7 +44,7 @@ public class ConfigDemo {
         if ("prod".equals(profile)) {
             check(app.getPort() == 8443, "@Value 注入 server.port=8443（prod 覆盖默认）");
             check("properties-profile-wins".equals(app.getConflict()),
-                    "@Value 注入 app.conflict=properties-profile-wins（profile 层 properties 覆盖 yml，D37 已纠正）");
+                    "@Value 注入 app.conflict=properties-profile-wins（profile 层 properties 优先于 yml）");
         } else {
             check(app.getPort() == 9090, "@Value 注入 server.port=9090（默认值）");
         }

@@ -28,7 +28,7 @@ public interface AnnotatedTypeMetadata {
      * <p>与 {@link #getAnnotationAttributes}（只取第一个命中）的分工：条件求值需要
      * 「一个元素上多个派生注解各自携带的 {@code @Conditional}」全部参与 AND——
      * 例如 {@code @ConditionalOnClass} + {@code @ConditionalOnBean} 同标一个类时，
-     * 两个条件都必须求值（M8 实测修复：此前只求值第一个，第二个被静默忽略）。
+     * 两个条件都必须参与求值。
      */
     List<Annotation> findAnnotations(Class<? extends Annotation> annotationType);
 

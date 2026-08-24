@@ -11,10 +11,10 @@ import com.minispring.core.ListableBeanFactory;
  * 声明式事务切面：拦截 {@link Transactional} 标注的方法，把执行体包进
  * {@link TransactionManager#execute}——正常返回提交、抛异常回滚。
  *
- * <p>切点用 {@code @annotation(全限定名)}（M8 扩展），注解在实现类方法上也能命中
+ * <p>切点使用 {@code @annotation(全限定名)}，注解在实现类方法上也能命中
  * （AspectJExpressionPointcut 会回查 specific method）。
  *
- * <p><b>M8 修复（依赖链死结）</b>：切面不得构造注入 {@link TransactionManager}——否则
+ * <p>切面通过延迟解析 {@link TransactionManager} 避免构造期依赖环：直接构造注入会让
  * 「txAspect → txManager → dataSource」与「dataSource 初始化触发 advisor 收集 → getBean(txAspect)」
  * 互为死结（txAspect 在工厂方法参数解析期无 early 暴露，收集必撞「无法提前暴露的循环依赖」；
  * 纯自动配置、无业务 Bean 的应用必炸）。对齐 Spring TransactionInterceptor 的机制：切面经
@@ -55,8 +55,7 @@ public class TransactionAspect implements BeanFactoryAware {
                     "容器中不存在 TransactionManager——检查 JdbcAutoConfiguration 是否装配"
                             + "（minispring.datasource.url 已配置？）");
         }
-        // M5（M0-M9 复审第二轮）：多候选时取 names[0] 的结果依赖 ConcurrentHashMap 遍历序——
-        // 双数据源场景下事务路由随机。与其静默赌一个，不如启动期语义前移：显式报错要求用户收敛
+        // 多候选事务管理器无法确定性选择，要求用户收敛到唯一候选。
         if (names.length > 1) {
             throw new com.minispring.jdbc.DataAccessException("容器中存在多个 TransactionManager（"
                     + java.util.Arrays.toString(names) + "）——@Transactional 无法裁决事务边界；"

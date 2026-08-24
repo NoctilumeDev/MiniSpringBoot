@@ -7,7 +7,7 @@
 ![JDK](https://img.shields.io/badge/JDK-17-2c3e50?logo=java&logoColor=white)
 ![Maven](https://img.shields.io/badge/Maven-3.9-2c3e50?logo=apachemaven&logoColor=white)
 ![内核依赖](https://img.shields.io/badge/内核-零第三方运行时依赖-2e7d32)
-![里程碑](https://img.shields.io/badge/M0~M9-落地验收通过-2e7d32)
+![里程碑](https://img.shields.io/badge/M0~M10-本机落地自验通过-2e7d32)
 ![数据库](https://img.shields.io/badge/MySQL-8%2FHikariCP-2c3e50?logo=mysql&logoColor=white)
 ![前端](https://img.shields.io/badge/React-18%2FVite-61dafb?logo=react&logoColor=black)
 ![Tests](https://img.shields.io/badge/tests-69%2F69-brightgreen)
@@ -21,18 +21,18 @@ MiniSpringBoot 是一个 **从零手写** 的 Spring Boot 内核复刻项目。�
 | 内核代码 | 153 个 Java 文件 / 6,683 行（`src/main`，可 `git ls-files '**/*.java'` 复核） |
 | 内核第三方运行时依赖 | **0**（JSON / YAML / HTTP 服务器全部手写；HikariCP、MySQL 驱动只在 demo 层） |
 | 测试 | 69 个（本地与 [CI](https://github.com/NoctilumeDev/MiniSpringBoot/actions) 云端 MySQL 上均全绿；jdbc 单测真连库） |
-| 里程碑 | M0–M9 落地验收通过 + 三轮全量复审（累计修复 41 个真实缺陷，账目见 [roadmap](docs/06-roadmap.md)） |
+| 里程碑 | M0–M10 本机落地自验通过；M10 VeriTrail 导入证据复验 15/15 HARD 断言通过（账目见 [roadmap](docs/06-roadmap.md)） |
 
 ---
 
 ## ⚠️ 重要声明：内核是脚手架，demo 是真应用
 
-请务必先认清它的身份——**框架内核是一个教学脚手架，不是开箱即用的生产框架**；但在它之上，我们搭了一个**真正能跑、能测的 demo 应用**（前端 + 后端 + MySQL 全链路），用来证明它「不是纸老虎」（3 实例 + Nginx 高可用为 M10 计划）。
+请务必先认清它的身份——**框架内核是一个教学脚手架，不是开箱即用的生产框架**；但在它之上，我们搭了一个**真正能跑、能测的 demo 应用**（前端 + 后端 + MySQL 全链路），并在 M10 落地了 Nginx + 3 个无状态实例的本机高可用演练，用来证明它「不是纸老虎」。
 
 - ❌ 框架内核不是「拿来即用」的生产框架，不内置分布式高可用
 - ❌ 不追求 API 与 Spring 完全兼容，只追求「机制」与「思想」的一致
 - ❌ 不会为了「能用」而牺牲「能被看懂」
-- ✅ 但 demo 应用**一定要可用**：前端 + 后端 + 数据库全链路打通，并通过并发测试（3 实例高可用为 M10 计划，尚未落地）
+- ✅ 但 demo 应用**一定要可用**：前端 + 后端 + 数据库全链路打通，并通过有界容量、单实例故障切换、事务与数据库就绪演练
 
 它的目标是双重的：
 
@@ -85,11 +85,15 @@ graph TD
     end
     subgraph DEMO["demo 应用轨道 · 双轨制（此层可引真实依赖）"]
         direction TB
-        FE["demo-frontend<br/>React + Vite（:9010）"]
-        APP["mini-spring-demo<br/>后端收口（Controller / Service）"]
+        BROWSER["浏览器<br/>生产入口 :9080"]
+        NGINX["Nginx 1.28<br/>dist 托管 + least_conn"]
+        FE["demo-frontend dist<br/>React 18 + Vite 8"]
+        APP["mini-spring-demo ×3<br/>:9091 / :9092 / :9093"]
         STARTER["mini-spring-starter-demo<br/>Starter 验证"]
         DB[("MySQL 8<br/>deploy/mysql（:13306）")]
-        FE -. "Vite proxy /api" .-> APP
+        BROWSER --> NGINX
+        NGINX --> FE
+        NGINX -. "/api · /health" .-> APP
         APP -. "JDBC" .-> DB
         APP -.- STARTER
     end
@@ -99,10 +103,8 @@ graph TD
     classDef kernelNode fill:#eef2f8,stroke:#5b7db1,color:#1f2328
     classDef demoNode fill:#f6f8fa,stroke:#8b949e,color:#1f2328
     class BOOT,AUTO,WEB,JDBC,AOP,CTX,CFG,CORE kernelNode
-    class FE,APP,STARTER demoNode
+    class BROWSER,NGINX,FE,APP,STARTER demoNode
 ```
-
-> Nginx 反向代理与 3 实例高可用为 M10 计划，未画入。
 
 | 模块 | 对应 Spring 的概念 | 责任 |
 | --- | --- | --- |
@@ -126,12 +128,12 @@ graph TD
 | 用户管理（CRUD 落 MySQL） | 转账演示（事务提交 / 回滚） |
 | :---: | :---: |
 | <img src="docs/screenshots/users-page.png" width="640" alt="用户管理页"/> | <img src="docs/screenshots/transfer-page.png" width="640" alt="转账演示页"/> |
-| 表中 id=23 / id=96 两行与 `users` 表逐行一致；新建、编辑、删除均真实落库（唯一键冲突会被 MySQL 约束拒绝并透出到 UI） | 余额卡 770 / 1230 即 `accounts` 表实时值；「中途失败转账」先扣款后抛异常 → 事务整体回滚，两账户分文不动 |
+| 表中 id=23 / id=96 两行与 `users` 表逐行一致；新建、编辑、删除均真实落库（唯一键冲突会被 MySQL 约束拒绝并透出到 UI） | 余额卡 700 / 1300 即 `accounts` 表实时值；「中途失败转账」先扣款后抛异常 → 事务整体回滚，两账户分文不动 |
 
 | 错误根因直达 UI（数据库断连） | 状态码语义（404，非一律 500） |
 | :---: | :---: |
-| <img src="docs/screenshots/error-banner.png" width="640" alt="错误横幅"/> | <img src="docs/screenshots/404-evidence.png" width="640" alt="404 证据"/> |
-| `docker stop mysql` 后转账：约 30s 有限阻塞（Hikari connectionTimeout），红色横幅逐字透出根因与连接池状态（`Connection is not available, request timed out after 30010ms`）；事务开启失败即回滚，余额零变动；`docker start` 后接口立即自愈 | 向不存在的账户（#99999）转账 → 后端返回 **HTTP 404**（非 500），错误消息「入款失败，账户 99999 不存在」逐层透出到红色横幅；事务同步回滚，余额 770/1230 不变。参数非法返回 400（如负数金额），业务规则冲突才是 500——状态码语义清晰，调用方不再靠猜 |
+| <img src="docs/screenshots/error-banner.png" width="640" alt="数据库断连错误提示"/> | <img src="docs/screenshots/404-evidence.png" width="640" alt="404 证据"/> |
+| `docker stop minispring-mysql` 后转账：约 30s 有限阻塞（Hikari connectionTimeout），错误提示条逐字透出根因与连接池状态（`Connection is not available, request timed out after 30003ms`）；事务开启失败即回滚，余额零变动；容器恢复健康后页面刷新立即自愈 | 向不存在的账户（#99999）转账 → 后端返回 **HTTP 404**（非 500），错误消息「入款失败，账户 99999 不存在」逐层透出到错误提示条；事务同步回滚，余额 700/1300 不变。参数非法返回 400（如负数金额），业务规则冲突才是 500——状态码语义清晰，调用方不再靠猜 |
 
 > 以上四张图的取证过程（含断连前后 DB 快照差分）记录于 [docs/06-roadmap.md](docs/06-roadmap.md) 各轮验收章节。
 
@@ -158,7 +160,7 @@ graph TD
 - 每个模块真实可运行，行为真实可观察（非 mock）
 - 并发正确性：内嵌服务器多线程并发处理请求、数据库连接池无泄漏
 - 一个能真正跑起来的示例应用 `demo`（React 前端 + 后端 + MySQL 全链路）
-- 3 实例无状态 + Nginx 负载均衡的高可用演练（M10 计划）
+- 3 实例无状态 + Nginx `least_conn` 的故障切换演练（M10 已落地；本机自验与 VeriTrail 导入证据复验均通过，且未夸大为全拓扑生命周期托管）
 - 每个里程碑都有明确的「落地证据」验收清单
 - **每一轮全量复审都以 `docker exec` 直查 MySQL / 真实 HTTP / 浏览器操作为唯一事实**——「宣称已修 ≠ 代码事实」，登记关闭前逐项 grep 源码核实；修复必须配「修错了必失败」的约束性测试（往届复审曾揪出三级缓存残留、`@Import` 循环导入、监听器泛型静默退化等 20+ 真实缺陷，详见 [docs/06-roadmap.md](docs/06-roadmap.md) 各轮审查记录）
 
@@ -186,6 +188,8 @@ MiniSpringBoot
 │   ├── 07-boot.md             # 启动器
 │   ├── 08-jdbc.md             # JDBC 与事务
 │   ├── 09-frontend.md         # React 前端与联调
+│   ├── 10-high-availability.md # M10 三实例、容量、故障与证据契约
+│   ├── evidence/m10/           # M10 原始报告、SHA-256 清单与复核坐标
 │   └── screenshots/           # 联调验收实拍（README 引用）
 ├── mini-spring-core/          # 核心容器（三级缓存 / 生命周期 / BPP）
 ├── mini-spring-config/        # 配置系统（properties/yaml/Profile/@Value）
@@ -198,7 +202,7 @@ MiniSpringBoot
 ├── mini-spring-starter-demo/  # Starter 验证（引入依赖即自动装配）
 ├── mini-spring-demo/          # 后端 demo 收口（全链路能力验证）
 ├── demo-frontend/             # React + Vite 前端（M9 联调：用户管理 + 转账演示）
-└── deploy/                    # 部署物（mysql：M8 数据库容器 compose + 建表 SQL；Nginx/压测 M10）
+└── deploy/                    # 部署物（mysql：M8；m10：Nginx、三实例编排与有界验证脚本）
 ```
 
 > React 前端已于 M9 落地（`demo-frontend/`，9010）；MySQL 于 M8 接入（`deploy/mysql/`）。
@@ -224,6 +228,17 @@ cd demo-frontend && npm install && npm run dev
 ```
 
 验证：浏览器打开 `http://localhost:9010`——用户管理页对 MySQL 真实 CRUD、转账页可视化事务提交/回滚；F12 Network 可见 `/api/*` 全链路请求。
+
+```powershell
+# M10 生产形态：构建 dist，启动 :9091/:9092/:9093 与 Nginx :9080
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File deploy/m10/start-cluster.ps1
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File deploy/m10/status-cluster.ps1
+
+# 停止 M10 精确进程与 Nginx；MySQL 数据卷不动
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File deploy/m10/stop-cluster.ps1
+```
+
+验证：浏览器打开 `http://127.0.0.1:9080/`。容量曲线、故障切换、事务、就绪演练和证据哈希见 [M10 高可用与有界容量验证](docs/10-high-availability.md)。
 
 > 推送到 main 或更新 PR 即触发 [GitHub Actions CI](.github/workflows/ci.yml)：backend 在云端起 MySQL service 跑全量 69 个测试（jdbc 单测真连库），frontend 在 Node 22 上执行 `npm ci`、Vite build 与 moderate 级依赖审计——本地能跑的，云端同样验证。
 
@@ -261,7 +276,7 @@ cd demo-frontend && npm install && npm run dev
 - **M8** ✅：数据库接入（MySQL + HikariCP + JdbcTemplate + 声明式事务；V1~V10 唯一事实验收）
 - **M9** ✅：React 前端 + 前后端联调（Vite proxy 同源；浏览器/Network/MySQL 三方对照验收）
 - **M0–M9 三轮全量复审** ✅：外审 + 自审 + 他机环境复核，累计揪出并修复 40+ 真实缺陷（详见 [docs/06-roadmap.md](docs/06-roadmap.md) 各轮记录），测试 45→69
-- **M10**：3 实例高可用 + 全链路终验
+- **M10** ✅：Nginx + 3 实例 + 前端 `dist` 同源托管；有界容量、单实例故障切换、事务与 MySQL 就绪演练本机通过；VeriTrail 导入证据复验 15/15 HARD 断言通过（全拓扑生命周期所有权仍明确为 `NOT_PROVEN`）
 
 ---
 

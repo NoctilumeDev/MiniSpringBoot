@@ -15,8 +15,8 @@ import com.minispring.web.servlet.ResponseStatusException;
 import java.util.List;
 
 /**
- * 用户接口（M8 起真实落库 MySQL）：CRUD 全链路走 {@code JdbcTemplate}，
- * 写库后可由 {@code docker exec minispring-mysql mysql ...} 直查取证（V1/V2 验收）。
+ * 用户接口：CRUD 全链路通过 {@code JdbcTemplate} 持久化到 MySQL，写入结果可由
+ * {@code docker exec minispring-mysql mysql ...} 直接核验。
  */
 @RestController
 @RequestMapping("/users")
@@ -34,7 +34,7 @@ public class UserController {
         User user = jdbc.queryOne("SELECT id, name, email FROM users WHERE id = ?",
                 UserController::mapUser, id);
         if (user == null) {
-            // 外审复核第三轮（D16 部分收口）：资源缺失是 404，不是服务器故障 500
+            // 资源不存在返回 404。
             throw new ResponseStatusException(404, "用户不存在: " + id);
         }
         return user;
