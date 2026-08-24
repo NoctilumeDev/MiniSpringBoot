@@ -1,0 +1,48 @@
+name: Reproducible defect
+description: Report a reproducible framework, demo, build, test, or documentation defect.
+title: "bug: "
+labels:
+  - bug
+body:
+  - type: dropdown
+    id: area
+    attributes:
+      label: Affected area
+      options:
+        - Framework core
+        - Demo backend
+        - React frontend
+        - M10 deployment and evidence
+        - Build or CI
+        - Documentation
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction
+      description: Provide the smallest repeatable steps, command, input, and environment.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior and evidence
+      description: Include relevant output without credentials, private data, or machine-specific paths.
+    validations:
+      required: true
+  - type: checkboxes
+    id: boundary
+    attributes:
+      label: Public reporting boundary
+      options:
+        - label: This report contains no credential, private log, proxy configuration, or undisclosed vulnerability.
+          required: true
+        - label: I checked the README and documented project boundaries before reporting.
+          required: true

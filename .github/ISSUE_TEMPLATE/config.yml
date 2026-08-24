@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Private security report
+    url: https://github.com/NoctilumeDev/MiniSpringBoot/security/advisories/new
+    about: Report vulnerabilities or sensitive security findings privately.
+  - name: Project boundaries and verification
+    url: https://github.com/NoctilumeDev/MiniSpringBoot#readme
+    about: Read the teaching scope, milestones, verification facts, and explicit boundaries first.
