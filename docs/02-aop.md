@@ -77,6 +77,8 @@ AOP 并不修改你的原始字节码（那是 CGLIB/AspectJ 编译期织入的�
 
 关键认知：**调用方拿到的，从头到尾都是代理对象；原始对象从未被直接暴露。** 所以「无感」的真相是——你不是在调用原始方法，你一直在调用代理。
 
+代理接口不只取目标类直接声明的 `getInterfaces()`：容器会沿目标类的父类层级以及接口继承层级确定性收集完整业务接口。因此，`SpecializedService extends BaseService` 即使自己没有再次书写 `implements Service`，只要父类实现了该接口，它仍然可以进入同一条 JDK 自动代理链。无接口的目标依旧按教学边界直接放行，不引入类代理。
+
 ### 4.1 与 IoC 生命周期的衔接
 
 回顾 [01 章](01-ioc-container.md)的 Bean 生命周期，代理对象在 **`postProcessAfterInitialization`** 生成。这意味着：
@@ -132,4 +134,5 @@ AspectJAutoProxyCreator — 在 BeanPostProcessor 阶段判断并回填代理
 - 用注解切点 `@Transactional` 实现一个「打印 begin/commit/rollback」的演示事务切面 ✅
 - 多切面命中同一方法时，通知顺序符合预期 ✅
 - 单测验证：被代理对象注入后，AOP 仍然生效（证明代理发生在注入之后且替换成功）✅
+- 单测验证：业务接口只由父类实现时，子类 Bean 仍会被识别并暴露为 JDK 代理 ✅
 - 文档明确标注「不支持类级代理」的边界 ✅
