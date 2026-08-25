@@ -47,6 +47,45 @@ function Wait-M10Endpoint([string]$Uri, [int]$TimeoutSeconds = 30) {
     throw "等待端点超时: $Uri"
 }
 
+function Start-M10RedirectedProcess(
+    [string]$FilePath,
+    [string[]]$ArgumentList,
+    [string]$StandardOutputPath,
+    [string]$StandardErrorPath
+) {
+    $process = Start-Process -FilePath $FilePath -ArgumentList $ArgumentList -WindowStyle Hidden -PassThru `
+        -RedirectStandardOutput $StandardOutputPath -RedirectStandardError $StandardErrorPath
+
+    # Windows PowerShell 5.1 does not reliably retain the native process handle when
+    # Start-Process combines -PassThru with redirected output. If the handle has not
+    # been materialized before the child exits, ExitCode may later be $null even after
+    # WaitForExit()/Refresh(). Pin the handle while the process is alive so callers can
+    # distinguish a genuine zero exit from an unavailable exit code.
+    try {
+        [void]$process.Handle
+    } catch {
+        throw "无法保留子进程句柄（$FilePath，PID $($process.Id)）：$($_.Exception.Message)"
+    }
+    return $process
+}
+
+function Wait-M10SuccessfulProcess(
+    [System.Diagnostics.Process]$Process,
+    [string]$Description,
+    [string]$FailureHint = ''
+) {
+    $Process.WaitForExit()
+    $Process.Refresh()
+    $exitCode = $Process.ExitCode
+    if ($null -eq $exitCode) {
+        throw "$Description 未能取得可信退出码；拒绝把未知结果视为成功。$FailureHint"
+    }
+    if ([int]$exitCode -ne 0) {
+        throw "$Description 退出码 $exitCode。$FailureHint"
+    }
+    return [int]$exitCode
+}
+
 function Get-M10DemoProcess([int]$ProcessId, [int]$Port) {
     $process = Get-CimInstance Win32_Process -Filter "ProcessId = $ProcessId" -ErrorAction SilentlyContinue
     if ($null -eq $process) {

@@ -63,8 +63,8 @@ try {
         '--label=failover',
         "--output-dir=$evidenceDirectory"
     )
-    $load = Start-Process -FilePath 'node' -ArgumentList $arguments -WindowStyle Hidden -PassThru `
-        -RedirectStandardOutput $loadStdout -RedirectStandardError $loadStderr
+    $load = Start-M10RedirectedProcess -FilePath 'node' -ArgumentList $arguments `
+        -StandardOutputPath $loadStdout -StandardErrorPath $loadStderr
     $timeline.Add([ordered]@{ at = (Get-Date).ToString('o'); event = 'LOAD_STARTED'; pid = $load.Id; concurrency = $Concurrency })
 
     Start-Sleep -Seconds $KillAfterSeconds
@@ -103,11 +103,8 @@ try {
     } while ((Get-Date) -lt $rejoinDeadline)
     if (-not $rejoined) { throw "$TargetInstance 恢复后 15s 内未重新收到 Nginx 流量。" }
 
-    $load.WaitForExit()
-    $load.Refresh()
-    if ($load.ExitCode -ne 0) {
-        throw "故障窗口压测器退出码 $($load.ExitCode)。详见 $loadStdout / $loadStderr"
-    }
+    $loadExitCode = Wait-M10SuccessfulProcess -Process $load -Description '故障窗口压测器' `
+        -FailureHint "详见 $loadStdout / $loadStderr"
 
     $after = Get-AccountSnapshot
     if (-not (Test-AccountSnapshotsEqual -Before $baseline -After $after)) {
@@ -131,6 +128,7 @@ try {
         accountsBefore = $baseline
         accountsAfter = $after
         timeline = $timeline
+        loadExitCode = $loadExitCode
         loadStdout = Split-Path -Leaf $loadStdout
         loadStderr = Split-Path -Leaf $loadStderr
     }
