@@ -52,6 +52,9 @@ public class DefaultListableBeanFactory implements ListableBeanFactory, BeanDefi
     private final Map<String, Object> earlySingletonObjects = new ConcurrentHashMap<>();
     private final Map<String, ObjectFactory<?>> singletonFactories = new ConcurrentHashMap<>();
 
+    // 生命周期所有权：singletonObjects 可保存后处理器产生的代理，但销毁回调必须落在容器创建的原始目标上。
+    private final Map<String, Object> singletonDestructionTargets = new ConcurrentHashMap<>();
+
     // 质检员（BeanPostProcessor）
     private final List<BeanPostProcessor> beanPostProcessors = new ArrayList<>();
 
@@ -206,6 +209,7 @@ public class DefaultListableBeanFactory implements ListableBeanFactory, BeanDefi
 
     private Object doCreateBean(String beanName, BeanDefinition bd) {
         Object bean = instantiate(beanName, bd);
+        Object destructionTarget = bean;
         // 提前暴露的引用需单独捕获，避免 bean 后续被重新赋值导致 lambda 无法引用
         Object exposed = bean;
 
@@ -243,6 +247,7 @@ public class DefaultListableBeanFactory implements ListableBeanFactory, BeanDefi
 
         if (bd.isSingleton()) {
             singletonObjects.put(beanName, bean);
+            singletonDestructionTargets.put(beanName, destructionTarget);
             earlySingletonObjects.remove(beanName);
             singletonFactories.remove(beanName);
             // 记录单例创建顺序，供关闭阶段逆序销毁。
@@ -560,13 +565,17 @@ public class DefaultListableBeanFactory implements ListableBeanFactory, BeanDefi
         Collections.reverse(reversed);
         for (String beanName : reversed) {
             try {
-                destroyBean(beanName, singletonObjects.get(beanName));
+                Object destructionTarget = singletonDestructionTargets.get(beanName);
+                destroyBean(beanName, destructionTarget != null
+                        ? destructionTarget
+                        : singletonObjects.get(beanName));
             } catch (RuntimeException e) {
                 // 单个 Bean 销毁失败不得中断其余销毁，确保后续资源仍有机会释放。
                 System.err.println("销毁 Bean[" + beanName + "]失败: " + e);
             }
         }
         singletonObjects.clear();
+        singletonDestructionTargets.clear();
         earlySingletonObjects.clear();
         singletonFactories.clear();
         singletonCreationOrder.clear();

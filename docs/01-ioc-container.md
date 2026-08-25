@@ -102,6 +102,7 @@ BeanPostProcessor.postProcessAfterInitialization   ← AOP 代理在这里生成
 
 - **生命周期回调的两种形态**：注解式 `@PostConstruct`/`@PreDestroy` 属 Spring 机制，本框架**未实现**（教学子集显式边界）；等价能力由 `InitializingBean`/`DisposableBean` 接口与 `@Bean(initMethod/destroyMethod)` 声明式回调承担（D2 已落地）。
 - **AOP 的插入点**：代理对象在 `postProcessAfterInitialization` 生成——所以「代理」永远发生在「原始对象完全就绪」之后。这是理解 AOP 与生命周期关系的关键。
+- **代理不转移生命周期所有权**：一级缓存可以对外保存 AOP 代理，但容器会单独保留自己创建的原始目标；关闭时，`DisposableBean` 与 `destroyMethod` 始终在原始目标上执行，不要求销毁方法暴露到业务接口。
 
 ---
 
