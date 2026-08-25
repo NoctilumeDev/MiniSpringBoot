@@ -325,7 +325,11 @@ public class DefaultListableBeanFactory implements ListableBeanFactory, BeanDefi
     private Object instantiateUsingFactoryMethod(String beanName, BeanDefinition bd) {
         Object factoryBean = getBean(bd.getFactoryBeanName());
         try {
-            Method method = findFactoryMethod(factoryBean.getClass(), bd.getFactoryMethodName());
+            Method method = bd.getFactoryMethod();
+            if (method == null) {
+                method = findFactoryMethod(factoryBean.getClass(), bd.getFactoryMethodName());
+            }
+            method.setAccessible(true);
             Object[] args = resolveFactoryMethodArgs(method);
             return method.invoke(factoryBean, args);
         } catch (Exception e) {
@@ -334,19 +338,36 @@ public class DefaultListableBeanFactory implements ListableBeanFactory, BeanDefi
     }
 
     private Method findFactoryMethod(Class<?> factoryClass, String methodName) {
-        // D43：先扫本类声明的方法（含非 public 的包私有 @Bean），再回退 public 方法（含接口默认方法）
+        // 兼容手工只登记 factoryMethodName 的 BeanDefinition；注解读取路径会直接保存精确 Method。
+        // 同名重载无法仅凭名称可靠裁决，必须 fail-fast，绝不能依赖 JVM 反射枚举顺序。
+        List<Method> candidates = new ArrayList<>();
         for (Method method : factoryClass.getDeclaredMethods()) {
             if (method.getName().equals(methodName)) {
-                method.setAccessible(true);
-                return method;
+                addFactoryMethodCandidate(candidates, method);
             }
         }
         for (Method method : factoryClass.getMethods()) {
             if (method.getName().equals(methodName)) {
-                return method;
+                addFactoryMethodCandidate(candidates, method);
             }
         }
+        if (candidates.size() > 1) {
+            throw new BeansException("工厂方法[" + methodName + "]存在重载；请登记精确 Method，而非仅登记方法名");
+        }
+        if (candidates.size() == 1) {
+            Method matched = candidates.get(0);
+            matched.setAccessible(true); // D43：允许非 public 的包私有 @Bean
+            return matched;
+        }
         throw new BeansException("工厂方法[" + methodName + "]不存在");
+    }
+
+    private void addFactoryMethodCandidate(List<Method> candidates, Method candidate) {
+        boolean sameSignatureAlreadyPresent = candidates.stream()
+                .anyMatch(existing -> Arrays.equals(existing.getParameterTypes(), candidate.getParameterTypes()));
+        if (!sameSignatureAlreadyPresent) {
+            candidates.add(candidate);
+        }
     }
 
     private Object[] resolveFactoryMethodArgs(Method method) {

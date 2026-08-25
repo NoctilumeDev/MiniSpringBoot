@@ -19,6 +19,7 @@ import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * IoC 容器的基线单测（仅作最低基线，不作为「落地验收」依据）。
@@ -59,6 +60,18 @@ class DefaultListableBeanFactoryTest {
     }
 
     static class Proto {
+    }
+
+    static class InheritedFactoryMethod {
+        public Integer build(Object dependency) {
+            return 42;
+        }
+    }
+
+    static class OverloadedFactory extends InheritedFactoryMethod {
+        String build() {
+            return "plain";
+        }
     }
 
     /** 构造慢的单例：拉宽并发 getBean 的竞态窗口，让 N5 用例稳定复现。 */
@@ -103,6 +116,22 @@ class DefaultListableBeanFactoryTest {
         factory.registerBeanDefinition("proto", bd);
 
         assertNotSame(factory.getBean("proto"), factory.getBean("proto"));
+    }
+
+    @Test
+    void nameOnlyFactoryMetadataRejectsOverloadedMethods() {
+        DefaultListableBeanFactory factory = new DefaultListableBeanFactory();
+        factory.registerBeanDefinition("factory", new BeanDefinition(OverloadedFactory.class));
+
+        BeanDefinition product = new BeanDefinition(String.class);
+        product.setFactoryBeanName("factory");
+        product.setFactoryMethodName("build");
+        factory.registerBeanDefinition("product", product);
+
+        BeansException exception = assertThrows(BeansException.class, () -> factory.getBean("product"));
+        String causeMessage = exception.getCause() == null ? "" : String.valueOf(exception.getCause().getMessage());
+        assertTrue(exception.getMessage().contains("重载") || causeMessage.contains("重载"),
+                "仅有名称的工厂元数据遇到重载时必须给出可读拒绝，实际: " + exception);
     }
 
     /** N4：销毁必须按创建逆序——使用者（zzz）先于其依赖（aaa）销毁。 */

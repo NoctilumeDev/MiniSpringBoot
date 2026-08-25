@@ -1,5 +1,6 @@
 package com.minispring.core;
 
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -19,6 +20,7 @@ public class BeanDefinition {
     private String destroyMethodName;
     private String factoryBeanName;
     private String factoryMethodName;
+    private Method factoryMethod;
     private boolean primary;
     private String qualifier;
     private final List<PropertyValue> propertyValues = new ArrayList<>();
@@ -47,6 +49,19 @@ public class BeanDefinition {
 
     public void setFactoryMethodName(String factoryMethodName) {
         this.factoryMethodName = factoryMethodName;
+        this.factoryMethod = null;
+    }
+
+    /**
+     * 保存配置读取阶段已经确认的精确工厂方法，避免同名重载在实例化阶段退化为“取第一个”。
+     */
+    public Method getFactoryMethod() {
+        return factoryMethod;
+    }
+
+    public void setFactoryMethod(Method factoryMethod) {
+        this.factoryMethod = factoryMethod;
+        this.factoryMethodName = factoryMethod == null ? null : factoryMethod.getName();
     }
 
     public boolean isFactoryMethod() {
