@@ -94,7 +94,6 @@ public class AspectJExpressionPointcut implements Pointcut {
         return method.isAnnotationPresent(annotationClass);
     }
 
-    @SuppressWarnings("unchecked")
     private Class<? extends java.lang.annotation.Annotation> loadAnnotation() {
         // TCCL 为 null 的启动器场景兜底用本类加载器（否则落到 bootstrap loader，
         // 应用注解必然找不到，报出误导性的「注解不存在」）
@@ -103,8 +102,11 @@ public class AspectJExpressionPointcut implements Pointcut {
             loader = AspectJExpressionPointcut.class.getClassLoader();
         }
         try {
-            return (Class<? extends java.lang.annotation.Annotation>)
-                    Class.forName(annotationName, false, loader);
+            Class<?> candidate = Class.forName(annotationName, false, loader);
+            if (!candidate.isAnnotation()) {
+                throw new IllegalArgumentException("@annotation 切点引用的类型不是注解: " + annotationName);
+            }
+            return candidate.asSubclass(java.lang.annotation.Annotation.class);
         } catch (ClassNotFoundException e) {
             throw new IllegalArgumentException("@annotation 切点引用的注解不存在: " + annotationName, e);
         }
