@@ -175,8 +175,8 @@
 
 - `JdbcTemplate` / `RowMapper<T>`：JDBC 样板收敛（查询/更新/自增主键回填），纯 `java.sql.*`，零第三方
 - `DataAccessException` 体系：`SQLException` 统一翻译（约束冲突转 `DuplicateKeyException`），包装消息携带根因
-- `TransactionManager`（编程式）+ `@Transactional`（声明式，AOP 切面驱动）：REQUIRED 传播，异常/Error 一律回滚
-- `TransactionContext`：ThreadLocal 绑定活动事务连接，同一事务内 SQL 复用同一物理连接
+- `TransactionManager`（编程式）+ `@Transactional`（声明式，AOP 切面驱动）：REQUIRED 传播，异常/Error 一律回滚；内层参与者失败会将共享事务标记为 rollback-only
+- `TransactionContext`：ThreadLocal 绑定活动事务状态（连接 + rollback-only + 首个失败原因），同一事务内 SQL 复用同一物理连接
 - 依赖方向：`jdbc` 仅依赖 `aop`（复用切面），与 `web` 并列，单向无环
 
 ---

@@ -12,6 +12,8 @@ import java.sql.SQLException;
  * <p>语义子集（教学项目显式约定）：
  * <ul>
  *   <li>传播行为只有 <b>REQUIRED</b> 一种——当前线程已在事务中则加入（复用同一连接）；</li>
+ *   <li>内层参与者失败会把共享事务标记为 rollback-only；即使异常被外层业务捕获，
+ *       最外层边界也会回滚并抛出 {@link UnexpectedRollbackException}；</li>
  *   <li>回滚规则：回调抛任何异常（RuntimeException、受检异常乃至 Error——未到达 commit
  *       的路径在 finally 统一回滚）都回滚；</li>
  *   <li>隔离级别用数据源默认（MySQL RR），不做定制。</li>
@@ -31,9 +33,9 @@ public class TransactionManager {
         if (TransactionContext.current() != null) {
             try {
                 return action.doInTransaction();
-            } catch (Exception e) {
-                throw (e instanceof RuntimeException) ? (RuntimeException) e
-                        : new DataAccessException("事务执行失败（受检异常上抛）: " + e.getMessage(), e);
+            } catch (Throwable failure) {
+                TransactionContext.markRollbackOnly(failure);
+                throw propagate(failure, "事务执行失败（受检异常上抛）");
             }
         }
         Connection connection = null;
@@ -43,12 +45,16 @@ public class TransactionManager {
             connection.setAutoCommit(false);
             TransactionContext.bind(connection);
             T result = action.doInTransaction();
+            if (TransactionContext.isRollbackOnly()) {
+                throw new UnexpectedRollbackException(
+                        "共享的 REQUIRED 事务已被内层参与者标记为 rollback-only",
+                        TransactionContext.rollbackCause());
+            }
             connection.commit();
             committed = true;
             return result;
-        } catch (Exception e) {
-            throw (e instanceof RuntimeException) ? (RuntimeException) e
-                    : new DataAccessException("事务执行失败（受检异常触发回滚）: " + e.getMessage(), e);
+        } catch (Throwable failure) {
+            throw propagate(failure, "事务执行失败（受检异常触发回滚）");
         } finally {
             // 回滚收敛到唯一位置：任何未到达 commit 的路径（Exception、Error 乃至其他
             // Throwable——catch(Exception) 拦不住 Error）都必须先终结半开事务再归还连接。
@@ -61,6 +67,16 @@ public class TransactionManager {
             TransactionContext.clear();
             closeQuietly(connection);
         }
+    }
+
+    private RuntimeException propagate(Throwable failure, String checkedExceptionMessage) {
+        if (failure instanceof Error error) {
+            throw error;
+        }
+        if (failure instanceof RuntimeException runtimeException) {
+            return runtimeException;
+        }
+        return new DataAccessException(checkedExceptionMessage + ": " + failure.getMessage(), failure);
     }
 
     private void rollbackQuietly(Connection connection) {

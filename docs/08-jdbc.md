@@ -46,9 +46,9 @@ Long insertAndReturnKey(String sql, Object... args)   // GENERATED_KEY，users �
 
 ### 3.3 事务（决策点 B，推荐入 M8）
 
-- **编程式**：`TransactionManager.execute(callback)`——`setAutoCommit(false)` → ThreadLocal 绑定连接 → commit/rollback（异常回滚）→ finally 归还。
+- **编程式**：`TransactionManager.execute(callback)`——`setAutoCommit(false)` → ThreadLocal 绑定事务状态 → commit/rollback（异常回滚）→ finally 归还。参与同一 REQUIRED 事务的内层调用失败时会标记 rollback-only；即使外层业务捕获了该异常，最外层边界也会回滚并抛出 `UnexpectedRollbackException`。
 - **声明式**：`@Transactional` 注解 + `TransactionAspect`（`@Around` AOP）；受 D8 约束，**Service 必须接口化**（demo 的 AccountService 落接口）。
-- 不做：传播行为（只有 REQUIRED 一种）、隔离级别定制（用 MySQL 默认 RR）、`@RollbackFor` 细化（任何 RuntimeException/Exception 都回滚）。
+- 不做：REQUIRED 以外的传播行为（如 REQUIRES_NEW / savepoint 式 NESTED）、隔离级别定制（用 MySQL 默认 RR）、`@RollbackFor` 细化（任何 RuntimeException/Exception/Error 都回滚）。
 
 ### 3.4 D34 修复（M8 第一批，前置）
 
@@ -94,6 +94,6 @@ Long insertAndReturnKey(String sql, Object... args)   // GENERATED_KEY，users �
 
 ## 7. 边界与债务
 
-- 不做：ORM/实体映射、连接池参数调优（仅 max-pool-size 可配）、传播行为、嵌套事务、分布式事务；
+- 不做：ORM/实体映射、连接池参数调优（仅 max-pool-size 可配）、REQUIRED 以外的传播行为、savepoint 式嵌套事务、分布式事务；
 - 事务 ThreadLocal 不清理的防护：TransactionManager 必须 try-finally remove（否则线程池复用串事务——SunHttpServer 是 cached 池，串了就是脏数据，V6 顺带覆盖）；
 - D1（JAR 扫描）维持 M10；D44（切面收集期引用）维持如实标注。
