@@ -369,14 +369,12 @@ public class DefaultListableBeanFactory implements ListableBeanFactory, BeanDefi
             return getBean(candidates[0]);
         }
         if (candidates.length > 1) {
-            for (String name : candidates) {
-                // M1：候选集可能含运行期手动单例（无 BeanDefinition，如 webServer）——只对
-                // 有定义的候选读 @Primary，手动单例本就不该参与 Primary 裁决，跳过而非崩溃
-                if (containsBeanDefinition(name) && getBeanDefinition(name).isPrimary()) {
-                    return getBean(name);
-                }
+            String description = "注入参数类型[" + type.getName() + "]";
+            String primary = DependencyCandidateResolver.determinePrimaryCandidate(candidates, this, description);
+            if (primary != null) {
+                return getBean(primary);
             }
-            throw new BeansException("注入参数类型[" + type.getName() + "]有多个候选: " + Arrays.toString(candidates)
+            throw new BeansException(description + "有多个候选: " + Arrays.toString(candidates)
                     + "，请用 @Qualifier 或 @Primary 拍板");
         }
         // 无候选：参数级 @Autowired(required=false)（按全限定名识别）允许缺省注入 null；默认 required 报错
