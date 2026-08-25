@@ -1,6 +1,7 @@
 package com.minispring.aop.framework.autoproxy;
 
 import com.minispring.aop.Advisor;
+import com.minispring.aop.AopProxyUtils;
 import com.minispring.aop.JdkDynamicAopProxy;
 import com.minispring.aop.annotation.Aspect;
 import com.minispring.aop.aspectj.AspectJAdvisorFactory;
@@ -66,8 +67,8 @@ public class AspectJAutoProxyCreator implements SmartInstantiationAwareBeanPostP
     }
 
     private Object wrapIfNecessary(Object bean, String beanName) {
-        // JDK 代理只作用于有接口的对象；无接口类（含切面自身、普通 Bean）直接放行
-        if (bean.getClass().getInterfaces().length == 0) {
+        // JDK 代理只作用于有接口的对象；接口可由任意父类继承。
+        if (AopProxyUtils.completeProxiedInterfaces(bean.getClass()).length == 0) {
             return bean;
         }
         // 收集期间先记下、暂不代理，等 advisor 收集完成后再补判定（D30）
