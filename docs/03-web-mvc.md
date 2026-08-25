@@ -41,6 +41,8 @@ interface WebServer {
 
 **设计要点**：哪怕只写一个实现，也要抽出 `WebServer` 接口——这让「换掉底层服务器」成为可能，也让学生看清「Spring Boot 所谓内嵌容器，本质就是一个可替换的 SPI」。
 
+`SunHttpServer` 为并发请求显式创建 cached executor；这份线程池属于服务器实现，而不是 JDK `HttpServer` 自动托管的资源。因此 `start()` 同时建立服务器与 executor，`stop()`、启动失败和启动中断路径都必须同时收口二者。重复 `start()` 会 fail-fast，`stop()` 保持幂等；同一实例停止后可以用一套全新的资源重新启动。
+
 ### 2.1 关于「HTTP 协议」的诚实说明
 
 `SunHttpServer` 已经帮我们完成了 TCP 连接、HTTP 报文解析，所以我们不必手写 socket 逐字节解析。**作为教学补充，文档会把 HTTP 报文（请求行 / 头 / 空行 / 体）的结构、以及与自研 socket 服务器的差异讲清楚**，但不把「手写 socket 服务器」作为首版硬性要求——那是「另一个轮子」，值得单独做，不值得现在阻塞主线。
