@@ -41,7 +41,7 @@ public class AnnotatedBeanDefinitionReader {
 
             BeanDefinition bd = new BeanDefinition(method.getReturnType());
             bd.setFactoryBeanName(configBeanName);
-            bd.setFactoryMethodName(method.getName());
+            bd.setFactoryMethod(method);
             if (method.isAnnotationPresent(Scope.class)) {
                 bd.setScope(method.getAnnotation(Scope.class).value());
             }
