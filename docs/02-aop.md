@@ -93,8 +93,8 @@ AOP 并不修改你的原始字节码（那是 CGLIB/AspectJ 编译期织入的�
 一个目标方法可能命中多个切面。执行顺序需要有序、可预测。设计采用**责任链**：
 
 ```
-Before A → Before B → 目标方法 → AfterReturning B → AfterReturning A
-（先进先出的「栈」式结构：先织入的先执行 Before，后执行 After）
+Before A → Before B → 目标方法 → After B → After A
+（先进先出的「栈」式结构：先织入的先执行 Before，后执行 After；目标抛错时 After 仍按 finally 语义执行）
 ```
 
 `@Around` 是链中最灵活的节点：它自己决定是否调用 `proceed()`，从而「打断」或「短路」后续链条——这天然适合幂等、重试、断路器等场景。
@@ -103,17 +103,16 @@ Before A → Before B → 目标方法 → AfterReturning B → AfterReturning A
 
 ## 6. 切点匹配设计
 
-首版支持三种切点匹配粒度，由简到繁：
+当前实现支持两种表达式：
 
-1. **注解匹配**：方法上带某注解即命中（如 `@Transactional`）——最常用，实现最简单。
-2. **方法名通配**：如 `execution(* com.xx.UserService.*(..))` 的简化子集。
-3. **正则匹配**：方法全限定名满足正则即命中。
+1. **`@annotation(注解全限定名)`**：接口方法、实现类对应方法或目标类带指定注解时命中（如 `@Transactional`）。表达式在构造切点时就加载并校验类型；类不存在或实际不是注解都会启动期失败，不把配置错误拖进调用热路径。
+2. **`execution(返回类型 包.类.方法(..))`**：类名和方法名支持 `*` 的简化 glob 子集。
 
-> 完整 AspectJ 表达式语法极其复杂，MiniSpringBoot 只实现一个「够用」的子集，并在文档中明确标注未覆盖的语法。
+> 完整 AspectJ 语法与任意正则表达式均未实现。MiniSpringBoot 只保留教学所需、可以明确解释和验证的子集。
 
 ---
 
-## 7. 设计类图（规划）
+## 7. 设计类图
 
 ```
 Aspect             — 一个切面（含多个 Advisor）
@@ -121,7 +120,8 @@ Advisor            = Pointcut + Advice 的组合
 Pointcut           — 判断某方法是否命中
 Advice             — 命中后要执行的逻辑
 MethodInterceptor  — 通知链节点（执行 proceed）
-AopProxyFactory    — 生成 JDK 动态代理
+JdkDynamicAopProxy — 生成并执行 JDK 动态代理
+AspectJAutoProxyCreator — 在 BeanPostProcessor 阶段判断并回填代理
 ```
 
 ---
