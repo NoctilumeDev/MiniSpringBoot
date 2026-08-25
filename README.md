@@ -10,7 +10,7 @@
 ![里程碑](https://img.shields.io/badge/M0~M10-本机落地自验通过-2e7d32)
 ![数据库](https://img.shields.io/badge/MySQL-8%2FHikariCP-2c3e50?logo=mysql&logoColor=white)
 ![前端](https://img.shields.io/badge/React-18%2FVite-61dafb?logo=react&logoColor=black)
-![Tests](https://img.shields.io/badge/tests-70%2F70-brightgreen)
+![Tests](https://img.shields.io/badge/tests-83%2F83-brightgreen)
 ![License](https://img.shields.io/badge/license-MIT-blue)
 
 MiniSpringBoot 是一个 **从零手写** 的 Spring Boot 内核复刻项目。八个框架内核模块不依赖 Spring，并对使用方保持**零个强制传递的第三方运行时依赖**；JSON、YAML、HTTP 等核心机制由 JDK 实现。`mini-spring-autoconfigure` 同时提供 HikariCP 可选集成：它直接以 `<optional>true>` 编译依赖 HikariCP，只有消费方（包括 demo）显式提供 HikariCP 时才启用。
@@ -18,9 +18,9 @@ MiniSpringBoot 是一个 **从零手写** 的 Spring Boot 内核复刻项目。�
 | | |
 | :--- | :--- |
 | 内核模块 | 8 个（core → config → context → aop → web → jdbc → autoconfigure → boot，依赖严格单向） |
-| 内核代码 | 155 个 Java 文件 / 7,766 个物理行（八个内核模块的 `src/main`；运行 `python scripts/verify_repository_contracts.py --metrics` 精确复核） |
+| 内核代码 | 155 个 Java 文件 / 7,775 个物理行（八个内核模块的 `src/main`；运行 `python scripts/verify_repository_contracts.py --metrics` 精确复核） |
 | 内核强制传递的第三方运行时依赖 | **0**（HikariCP 是 `autoconfigure` 的直接 optional 集成，不会传递给使用方；demo 显式提供 HikariCP 与 MySQL 驱动） |
-| 测试 | 70 个（本地与 [CI](https://github.com/NoctilumeDev/MiniSpringBoot/actions) 云端 MySQL 上均全绿；jdbc 单测真连库） |
+| 测试 | 83 个（本地与 [CI](https://github.com/NoctilumeDev/MiniSpringBoot/actions) 云端 MySQL 上均全绿；jdbc 单测真连库） |
 | 里程碑 | M0–M10 本机落地自验通过；M10 VeriTrail 导入证据复验 15/15 HARD 断言通过（原始冻结坐标 [v0.m10](https://github.com/NoctilumeDev/MiniSpringBoot/releases/tag/v0.m10)，包含事务连接清理修订的维护坐标 [v0.m10.1](https://github.com/NoctilumeDev/MiniSpringBoot/releases/tag/v0.m10.1)；账目见 [roadmap](docs/06-roadmap.md)） |
 
 ---
@@ -240,7 +240,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File deploy/m10/stop-cluster.
 
 验证：浏览器打开 `http://127.0.0.1:9080/`。容量曲线、故障切换、事务、就绪演练和证据哈希见 [M10 高可用与有界容量验证](docs/10-high-availability.md)。
 
-> 推送到 main 或更新 PR 即触发 [GitHub Actions CI](.github/workflows/ci.yml)：backend 在云端起 MySQL service 跑全量 70 个测试（jdbc 单测真连库），frontend 在 Node 22 上执行 `npm ci`、Vite build 与 moderate 级依赖审计——本地能跑的，云端同样验证。
+> 推送到 main 或更新 PR 即触发 [GitHub Actions CI](.github/workflows/ci.yml)：backend 在云端起 MySQL service 跑全量 83 个测试（jdbc 单测真连库），frontend 在 Node 22 上执行 `npm ci`、Vite build 与 moderate 级依赖审计——本地能跑的，云端同样验证。
 
 ---
 
