@@ -11,6 +11,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -130,5 +131,19 @@ class JdkProxyAdviceTest {
         assertEquals("unplanned-failure", ex.getMessage());
         // 切点不命中：通知不得执行（证明该方法确实走了「空链直通」分支）
         assertTrue(aspect.calls.isEmpty());
+    }
+
+    @Test
+    void proxyObjectIdentityIsReflexiveSymmetricAndStable() {
+        GreeterImpl target = new GreeterImpl();
+        Greeter proxy = (Greeter) new JdkDynamicAopProxy(target, List.of()).getProxy();
+        Greeter anotherProxy = (Greeter) new JdkDynamicAopProxy(target, List.of()).getProxy();
+
+        assertTrue(proxy.equals(proxy), "代理必须满足 equals 自反性");
+        assertFalse(proxy.equals(target), "代理与目标不是同一身份");
+        assertFalse(target.equals(proxy), "equals 在代理与目标之间必须对称");
+        assertFalse(proxy.equals(anotherProxy), "两个独立代理不应因共享目标就相等");
+        assertEquals(System.identityHashCode(proxy), proxy.hashCode());
+        assertEquals(target.toString(), proxy.toString(), "toString 保留目标的可读表示");
     }
 }

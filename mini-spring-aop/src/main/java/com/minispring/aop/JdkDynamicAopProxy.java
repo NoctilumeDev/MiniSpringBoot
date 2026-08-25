@@ -31,9 +31,15 @@ public class JdkDynamicAopProxy implements AopProxy, InvocationHandler {
     @Override
     public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
         Object[] arguments = (args != null) ? args : new Object[0];
-        // Object 的 equals/hashCode/toString 属于代理自身语义，不落入业务切点，直接透传给目标
+        // equals/hashCode 必须遵守代理自身的身份契约：若委托给目标，
+        // target.equals(proxy) 通常为 false，连 proxy.equals(proxy) 也会被破坏。
         if (method.getDeclaringClass() == Object.class) {
-            return invokeTarget(method, arguments);
+            return switch (method.getName()) {
+                case "equals" -> proxy == arguments[0];
+                case "hashCode" -> System.identityHashCode(proxy);
+                // toString 不参与身份判定，保留目标的可读表示。
+                default -> invokeTarget(method, arguments);
+            };
         }
         // 收集所有「切点命中该方法」的拦截器，组成链
         List<MethodInterceptor> chain = new ArrayList<>();
