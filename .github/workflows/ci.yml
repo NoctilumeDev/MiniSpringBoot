@@ -18,6 +18,37 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  windows-powershell-contracts:
+    name: Windows PowerShell 5.1 process contracts
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: Verify redirected child exit-code capture
+        shell: powershell
+        run: .\deploy\m10\verify-process-exit-code.ps1
+
+      - name: Parse M10 PowerShell scripts
+        shell: powershell
+        run: |
+          $parseFailures = @()
+          Get-ChildItem -LiteralPath deploy/m10 -Filter '*.ps1' -File -Recurse | ForEach-Object {
+            $tokens = $null
+            $errors = $null
+            [void][System.Management.Automation.Language.Parser]::ParseFile(
+              $_.FullName,
+              [ref]$tokens,
+              [ref]$errors
+            )
+            if ($errors) {
+              $parseFailures += $errors
+            }
+          }
+          if ($parseFailures.Count -gt 0) {
+            $parseFailures | Format-List | Out-String | Write-Host
+            throw "M10 PowerShell parse contract failed."
+          }
+
   backend:
     name: Backend (JDK 17 + MySQL)
     runs-on: ubuntu-latest
