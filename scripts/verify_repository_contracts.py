@@ -25,7 +25,7 @@ KERNEL_MODULES = (
     "mini-spring-boot",
 )
 EXPECTED_KERNEL_JAVA_FILES = 153
-EXPECTED_KERNEL_PHYSICAL_LINES = 7_618
+EXPECTED_KERNEL_PHYSICAL_LINES = 7_624
 BUNDLE_MANIFESTS = (
     "docs/evidence/m10/veritrail/bundle/bundle-manifest.json",
     "docs/evidence/m10/veritrail/negative-control-bundle/bundle-manifest.json",

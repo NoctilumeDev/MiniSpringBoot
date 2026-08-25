@@ -81,9 +81,15 @@ public class TransactionManager {
         }
         try {
             connection.setAutoCommit(true);
+        } catch (SQLException resetFailure) {
+            // 恢复连接状态失败不得阻断 close；否则无池连接会直接泄漏，
+            // 连接池也失去唯一的归还机会。
+            System.err.println("恢复事务连接 auto-commit 失败（仍将尝试关闭）: " + resetFailure);
+        }
+        try {
             connection.close();
-        } catch (SQLException e) {
-            System.err.println("归还事务连接失败（可能已由池兜底）: " + e);
+        } catch (SQLException closeFailure) {
+            System.err.println("关闭事务连接失败（可能已由池兜底）: " + closeFailure);
         }
     }
 }
