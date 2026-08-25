@@ -5,6 +5,7 @@ import com.minispring.core.BeanDefinitionRegistry;
 import com.minispring.core.BeansException;
 import com.minispring.core.InstantiationAwareBeanPostProcessor;
 import com.minispring.core.ListableBeanFactory;
+import com.minispring.core.support.DependencyCandidateResolver;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
@@ -191,25 +192,12 @@ public class AutowiredAnnotationBeanPostProcessor implements InstantiationAwareB
     }
 
     private Object resolveByPrimary(String[] candidates, Class<?> requiredType, String beanName, String description) {
-        String primary = null;
-        for (String name : candidates) {
-            // M1：跳过运行期手动单例（无 BeanDefinition，不参与 Primary 裁决）
-            if (!registry.containsBeanDefinition(name)) {
-                continue;
-            }
-            BeanDefinition bd = registry.getBeanDefinition(name);
-            // 统一看 BeanDefinition.isPrimary()——既覆盖类级 @Primary，也覆盖 @Bean 方法级 @Primary（D23）
-            if (bd.isPrimary()) {
-                if (primary != null) {
-                    throw new BeansException("注入[" + description + "]失败：存在多个 @Primary 候选");
-                }
-                primary = name;
-            }
-        }
+        String prefix = "注入[" + description + "]失败：";
+        String primary = DependencyCandidateResolver.determinePrimaryCandidate(candidates, registry, prefix);
         if (primary != null) {
             return beanFactory.getBean(primary);
         }
-        throw new BeansException("注入[" + description + "]失败：" + requiredType.getName()
+        throw new BeansException(prefix + requiredType.getName()
                 + " 有多个候选，请用 @Qualifier 或 @Primary 拍板");
     }
 
