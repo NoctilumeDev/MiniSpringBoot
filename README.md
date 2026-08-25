@@ -18,7 +18,7 @@ MiniSpringBoot 是一个 **从零手写** 的 Spring Boot 内核复刻项目。�
 | | |
 | :--- | :--- |
 | 内核模块 | 8 个（core → config → context → aop → web → jdbc → autoconfigure → boot，依赖严格单向） |
-| 内核代码 | 153 个 Java 文件 / 7,624 个物理行（八个内核模块的 `src/main`；运行 `python scripts/verify_repository_contracts.py --metrics` 精确复核） |
+| 内核代码 | 154 个 Java 文件 / 7,688 个物理行（八个内核模块的 `src/main`；运行 `python scripts/verify_repository_contracts.py --metrics` 精确复核） |
 | 内核强制传递的第三方运行时依赖 | **0**（HikariCP 是 `autoconfigure` 的直接 optional 集成，不会传递给使用方；demo 显式提供 HikariCP 与 MySQL 驱动） |
 | 测试 | 70 个（本地与 [CI](https://github.com/NoctilumeDev/MiniSpringBoot/actions) 云端 MySQL 上均全绿；jdbc 单测真连库） |
 | 里程碑 | M0–M10 本机落地自验通过；M10 VeriTrail 导入证据复验 15/15 HARD 断言通过（原始冻结坐标 [v0.m10](https://github.com/NoctilumeDev/MiniSpringBoot/releases/tag/v0.m10)，包含事务连接清理修订的维护坐标 [v0.m10.1](https://github.com/NoctilumeDev/MiniSpringBoot/releases/tag/v0.m10.1)；账目见 [roadmap](docs/06-roadmap.md)） |
