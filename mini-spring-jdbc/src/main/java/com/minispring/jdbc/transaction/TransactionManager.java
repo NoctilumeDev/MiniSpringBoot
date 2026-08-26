@@ -4,32 +4,42 @@ import com.minispring.jdbc.DataAccessException;
 
 import javax.sql.DataSource;
 import java.sql.Connection;
-import java.sql.SQLException;
+import java.util.Objects;
 
 /**
  * 编程式事务管理器（等价 Spring 的 {@code TransactionTemplate} 背后的执行逻辑，教学简化版）。
  *
  * <p>语义子集（教学项目显式约定）：
  * <ul>
- *   <li>传播行为只有 <b>REQUIRED</b> 一种——当前线程已在事务中则加入（复用同一连接）；</li>
- *   <li>内层参与者失败会把共享事务标记为 rollback-only；即使异常被外层业务捕获，
- *       最外层边界也会回滚并抛出 {@link UnexpectedRollbackException}；</li>
- *   <li>回滚规则：回调抛任何异常（RuntimeException、受检异常乃至 Error——未到达 commit
- *       的路径在 finally 统一回滚）都回滚；</li>
- *   <li>隔离级别用数据源默认（MySQL RR），不做定制。</li>
+ *   <li>传播行为只有 <b>REQUIRED</b>：当前线程已有事务时复用同一连接；</li>
+ *   <li>内层参与者失败会把共享事务标记为 rollback-only；</li>
+ *   <li>回调抛出任何 {@link Throwable} 都触发回滚；</li>
+ *   <li>commit/rollback 调用失败时，事务结果为 {@link TransactionOutcome#UNKNOWN}，
+ *       连接必须被丢弃，调用方不得把它当成可安全重试的失败。</li>
  * </ul>
+ *
+ * <p>这里刻意把“事务终局”和“连接清理”分开：已知提交/回滚后才允许恢复
+ * auto-commit 并归还连接；结果未知或连接状态无法恢复时，只能由资源所有者丢弃。
  */
 public class TransactionManager {
 
     private final DataSource dataSource;
+    private final ConnectionDiscarder connectionDiscarder;
 
     public TransactionManager(DataSource dataSource) {
-        this.dataSource = dataSource;
+        this(dataSource, discarderFor(dataSource));
+    }
+
+    TransactionManager(DataSource dataSource, ConnectionDiscarder connectionDiscarder) {
+        this.dataSource = Objects.requireNonNull(dataSource, "dataSource");
+        this.connectionDiscarder = Objects.requireNonNull(connectionDiscarder, "connectionDiscarder");
     }
 
     /** 在事务中执行回调：提交或回滚后返回结果 / 重抛异常。 */
     public <T> T execute(TransactionCallback<T> action) {
-        // REQUIRED：已有活动事务（本线程）则直接加入，不开新连接、不动提交边界
+        Objects.requireNonNull(action, "action");
+
+        // REQUIRED：已有活动事务（本线程）则直接加入，不开新连接、不动提交边界。
         if (TransactionContext.current() != null) {
             try {
                 return action.doInTransaction();
@@ -38,35 +48,151 @@ public class TransactionManager {
                 throw propagate(failure, "事务执行失败（受检异常上抛）");
             }
         }
-        Connection connection = null;
-        boolean committed = false;
+
+        Connection connection;
         try {
             connection = dataSource.getConnection();
-            connection.setAutoCommit(false);
-            TransactionContext.bind(connection);
-            T result = action.doInTransaction();
-            if (TransactionContext.isRollbackOnly()) {
-                throw new UnexpectedRollbackException(
-                        "共享的 REQUIRED 事务已被内层参与者标记为 rollback-only",
-                        TransactionContext.rollbackCause());
-            }
-            connection.commit();
-            committed = true;
-            return result;
-        } catch (Throwable failure) {
-            throw propagate(failure, "事务执行失败（受检异常触发回滚）");
-        } finally {
-            // 回滚收敛到唯一位置：任何未到达 commit 的路径（Exception、Error 乃至其他
-            // Throwable——catch(Exception) 拦不住 Error）都必须先终结半开事务再归还连接。
-            // 未提交事务必须先回滚，再恢复 auto-commit；JDBC 在事务中切换 auto-commit
-            // 会构成隐式提交。该路径也保证 Error 与 Exception 采用相同的回滚语义。
-            if (!committed) {
-                rollbackQuietly(connection);
-            }
-            // 线程池复用纪律：clear 必须在 finally（见 TransactionContext 的 javadoc）
-            TransactionContext.clear();
-            closeQuietly(connection);
+        } catch (Throwable acquisitionFailure) {
+            throw propagate(acquisitionFailure, "获取数据库连接失败");
         }
+
+        BoundaryState state = BoundaryState.ACQUIRED;
+        try {
+            try {
+                connection.setAutoCommit(false);
+                state = BoundaryState.ACTIVE;
+            } catch (Throwable beginFailure) {
+                BoundaryState failedAt = state;
+                state = BoundaryState.UNKNOWN;
+                TransactionSystemException failure = boundaryFailure(
+                        "开启事务失败（" + failedAt + " -> " + state + "），事务结果未知",
+                        TransactionOutcome.UNKNOWN,
+                        beginFailure);
+                discard(connection, failure);
+                throw failure;
+            }
+
+            TransactionContext.bind(connection);
+
+            T result;
+            try {
+                result = action.doInTransaction();
+                if (TransactionContext.isRollbackOnly()) {
+                    throw new UnexpectedRollbackException(
+                            "共享的 REQUIRED 事务已被内层参与者标记为 rollback-only",
+                            TransactionContext.rollbackCause());
+                }
+            } catch (Throwable businessFailure) {
+                state = rollback(connection, state, businessFailure);
+                TransactionContext.clear();
+                attachCleanupFailure(businessFailure, releaseKnown(connection,
+                        TransactionOutcome.ROLLED_BACK, state));
+                throw propagate(businessFailure, "事务执行失败（受检异常触发回滚）");
+            }
+
+            state = BoundaryState.COMMITTING;
+            try {
+                connection.commit();
+                state = BoundaryState.COMMITTED;
+            } catch (Throwable commitFailure) {
+                state = BoundaryState.UNKNOWN;
+                TransactionContext.clear();
+                TransactionSystemException failure = boundaryFailure(
+                        "commit 调用失败，数据库是否提交未知；不得盲目重试",
+                        TransactionOutcome.UNKNOWN,
+                        commitFailure);
+                discard(connection, failure);
+                throw failure;
+            }
+
+            TransactionContext.clear();
+            TransactionSystemException cleanupFailure =
+                    releaseKnown(connection, TransactionOutcome.COMMITTED, state);
+            if (cleanupFailure != null) {
+                throw cleanupFailure;
+            }
+            return result;
+        } finally {
+            // 先于任何可能抛错的清理动作执行；线程池复用时绝不能泄漏半开事务上下文。
+            TransactionContext.clear();
+        }
+    }
+
+    private BoundaryState rollback(Connection connection,
+                                   BoundaryState state,
+                                   Throwable businessFailure) {
+        if (state != BoundaryState.ACTIVE) {
+            throw new IllegalStateException("只能从 ACTIVE 状态回滚，当前状态: " + state);
+        }
+        state = BoundaryState.ROLLING_BACK;
+        try {
+            connection.rollback();
+            return BoundaryState.ROLLED_BACK;
+        } catch (Throwable rollbackFailure) {
+            state = BoundaryState.UNKNOWN;
+            TransactionContext.clear();
+            TransactionSystemException boundaryFailure = boundaryFailure(
+                    "rollback 调用失败，数据库是否回滚未知；保留原始业务异常",
+                    TransactionOutcome.UNKNOWN,
+                    rollbackFailure);
+            discard(connection, boundaryFailure);
+            attachCleanupFailure(businessFailure, boundaryFailure);
+            throw propagate(businessFailure, "事务执行失败且回滚结果未知");
+        }
+    }
+
+    /**
+     * 释放已知终局的连接。恢复/关闭失败不会改变数据库终局，但连接已不再适合复用，
+     * 所以仍需丢弃，并把已知终局带给调用方。
+     */
+    private TransactionSystemException releaseKnown(Connection connection,
+                                                     TransactionOutcome outcome,
+                                                     BoundaryState state) {
+        try {
+            connection.setAutoCommit(true);
+        } catch (Throwable resetFailure) {
+            TransactionSystemException failure = boundaryFailure(
+                    "事务已" + outcomeText(outcome) + "，但恢复 auto-commit 失败；连接已丢弃",
+                    outcome,
+                    resetFailure);
+            discard(connection, failure);
+            return failure;
+        }
+
+        try {
+            connection.close();
+            return null;
+        } catch (Throwable closeFailure) {
+            TransactionSystemException failure = boundaryFailure(
+                    "事务已" + outcomeText(outcome) + "，但归还连接失败；连接已丢弃（状态 " + state + "）",
+                    outcome,
+                    closeFailure);
+            discard(connection, failure);
+            return failure;
+        }
+    }
+
+    private void discard(Connection connection, TransactionSystemException primaryFailure) {
+        try {
+            connectionDiscarder.discard(connection);
+        } catch (Throwable discardFailure) {
+            primaryFailure.addSuppressed(boundaryFailure(
+                    "丢弃不可复用连接失败，需要检查连接池/数据库健康状态",
+                    primaryFailure.outcome(),
+                    discardFailure));
+        }
+    }
+
+    private void attachCleanupFailure(Throwable primary, TransactionSystemException cleanupFailure) {
+        if (cleanupFailure != null) {
+            primary.addSuppressed(cleanupFailure);
+        }
+    }
+
+    private TransactionSystemException boundaryFailure(String message,
+                                                       TransactionOutcome outcome,
+                                                       Throwable cause) {
+        return new TransactionSystemException(message, outcome, cause);
     }
 
     private RuntimeException propagate(Throwable failure, String checkedExceptionMessage) {
@@ -79,33 +205,29 @@ public class TransactionManager {
         return new DataAccessException(checkedExceptionMessage + ": " + failure.getMessage(), failure);
     }
 
-    private void rollbackQuietly(Connection connection) {
-        if (connection == null) {
-            return;
+    private static ConnectionDiscarder discarderFor(DataSource dataSource) {
+        Objects.requireNonNull(dataSource, "dataSource");
+        if (dataSource instanceof ConnectionDiscardingDataSource owner) {
+            return owner::discard;
         }
-        try {
-            connection.rollback();
-        } catch (SQLException rollbackFailure) {
-            // 回滚失败是严重问题但不能再抛（会覆盖业务异常），打出来留证据
-            System.err.println("事务回滚失败（连接将由池回收）: " + rollbackFailure);
-        }
+        return ConnectionDiscarder.aborting();
     }
 
-    private void closeQuietly(Connection connection) {
-        if (connection == null) {
-            return;
-        }
-        try {
-            connection.setAutoCommit(true);
-        } catch (SQLException resetFailure) {
-            // 恢复连接状态失败不得阻断 close；否则无池连接会直接泄漏，
-            // 连接池也失去唯一的归还机会。
-            System.err.println("恢复事务连接 auto-commit 失败（仍将尝试关闭）: " + resetFailure);
-        }
-        try {
-            connection.close();
-        } catch (SQLException closeFailure) {
-            System.err.println("关闭事务连接失败（可能已由池兜底）: " + closeFailure);
-        }
+    private static String outcomeText(TransactionOutcome outcome) {
+        return switch (outcome) {
+            case COMMITTED -> "提交";
+            case ROLLED_BACK -> "回滚";
+            case UNKNOWN -> "处于未知状态";
+        };
+    }
+
+    private enum BoundaryState {
+        ACQUIRED,
+        ACTIVE,
+        COMMITTING,
+        COMMITTED,
+        ROLLING_BACK,
+        ROLLED_BACK,
+        UNKNOWN
     }
 }

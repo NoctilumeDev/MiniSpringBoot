@@ -57,7 +57,7 @@ public class DataSourceAutoConfiguration implements EnvironmentAware {
         }
         config.setMaximumPoolSize(intProperty(".max-pool-size", 10));
         config.setPoolName("minispring-hikari");
-        return new HikariDataSource(config);
+        return new ManagedHikariDataSource(config);
     }
 
     /** 整数配置缺省时使用默认值；非数字值抛出包含属性名和值的可读错误。 */
