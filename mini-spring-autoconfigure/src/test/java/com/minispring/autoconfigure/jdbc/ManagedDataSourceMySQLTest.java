@@ -1,22 +1,25 @@
 package com.minispring.autoconfigure.jdbc;
 
 import com.minispring.jdbc.transaction.ConnectionDiscardingDataSource;
+import com.minispring.jdbc.transaction.ManagedDataSource;
 import com.zaxxer.hikari.HikariConfig;
+import com.zaxxer.hikari.HikariDataSource;
 import org.junit.jupiter.api.Test;
 
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.Statement;
+import java.util.UUID;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * 真实 MySQL + Hikari 所有权验证：被驱逐的代理必须关闭，下一次借用必须落到新的物理连接。
+ * 真实 MySQL + Hikari 所有权验证：驱逐后必须更换物理连接，未提交写入必须由数据库回滚。
  */
-class ManagedHikariDataSourceMySQLTest {
+class ManagedDataSourceMySQLTest {
 
     @Test
     void discardEvictsTheBorrowedPhysicalConnection() throws Exception {
@@ -30,28 +33,27 @@ class ManagedHikariDataSourceMySQLTest {
         config.setConnectionTimeout(3_000);
         config.setPoolName("minispring-discard-proof");
 
-        try (ManagedHikariDataSource dataSource = new ManagedHikariDataSource(config)) {
+        HikariDataSource pool = new HikariDataSource(config);
+        try (ManagedDataSource dataSource = new ManagedDataSource(pool, pool::evictConnection)) {
             assertInstanceOf(ConnectionDiscardingDataSource.class, dataSource);
+            assertTrue(dataSource.isWrapperFor(HikariDataSource.class));
 
+            String proofEmail = "discard+" + UUID.randomUUID() + "@hikari-test.invalid";
             Connection connection = dataSource.getConnection();
             long evictedConnectionId = connectionId(connection);
-            try (Statement statement = connection.createStatement()) {
-                statement.executeUpdate("DELETE FROM users WHERE email = 'discard@hikari-test'");
-            }
-
-            // TransactionManager 只在事务边界失败时驱逐；复现其真实借用状态，
-            // 并留下未提交写入，以数据库事实判断物理连接是否真的被终止。
             connection.setAutoCommit(false);
-            try (Statement statement = connection.createStatement()) {
-                statement.executeUpdate("INSERT INTO users(name, email)"
-                        + " VALUES ('待驱逐事务', 'discard@hikari-test')");
+            try (var statement = connection.prepareStatement(
+                    "INSERT INTO users(name, email) VALUES (?, ?)")) {
+                statement.setString(1, "待驱逐事务");
+                statement.setString(2, proofEmail);
+                statement.executeUpdate();
             }
             dataSource.discard(connection);
 
             try (Connection replacement = dataSource.getConnection()) {
                 assertNotEquals(evictedConnectionId, connectionId(replacement),
                         "驱逐后不得把同一物理连接重新借出");
-                assertEquals(0, rowCount(replacement, "discard@hikari-test"),
+                assertEquals(0, rowCount(replacement, proofEmail),
                         "物理连接终止必须让未提交事务由数据库回滚");
             }
         }

@@ -12,7 +12,7 @@ import java.sql.Connection;
  * REQUIRED 事务的内层调用失败后，即使外层业务捕获了异常，最外层事务也不得提交。
  *
  * <p><b>线程池安全纪律</b>：bind/clear 必须严格成对（TransactionManager 用 try-finally 保证）。
- * SunHttpServer 是 cached 线程池，线程会被复用——一旦 clear 失误，下一个请求会「继承」
+ * SunHttpServer 的固定工作线程会被复用——一旦 clear 失误，下一个请求会「继承」
  * 上一个事务的半开连接，那就是脏数据跨请求泄漏。
  */
 public final class TransactionContext {

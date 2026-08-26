@@ -7,9 +7,11 @@ import com.minispring.context.annotation.Bean;
 import com.minispring.context.annotation.Configuration;
 import com.minispring.core.EnvironmentAware;
 import com.minispring.core.env.Environment;
+import com.minispring.jdbc.transaction.ManagedDataSource;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 
+import javax.sql.DataSource;
 /**
  * 数据源自动配置：classpath 上有 HikariCP 且配置了 {@code minispring.datasource.url} 时，
  * 自动装配连接池数据源。
@@ -27,7 +29,7 @@ import com.zaxxer.hikari.HikariDataSource;
  *   <li>{@code minispring.datasource.url} —— JDBC 连接串（必填，无则不装配）</li>
  *   <li>{@code minispring.datasource.username} / {@code minispring.datasource.password}</li>
  *   <li>{@code minispring.datasource.driver-class-name}（可选，驱动可从 url 推断）</li>
- *   <li>{@code minispring.datasource.max-pool-size}（缺省 10）</li>
+ *   <li>{@code minispring.datasource.max-pool-size}（缺省 10，硬上限 256）</li>
  * </ul>
  */
 @Configuration
@@ -36,6 +38,8 @@ import com.zaxxer.hikari.HikariDataSource;
 public class DataSourceAutoConfiguration implements EnvironmentAware {
 
     static final String PREFIX = "minispring.datasource";
+    static final int DEFAULT_MAX_POOL_SIZE = 10;
+    static final int MAX_POOL_SIZE = 256;
 
     private Environment environment;
 
@@ -46,7 +50,7 @@ public class DataSourceAutoConfiguration implements EnvironmentAware {
 
     @Bean(destroyMethod = "close")
     @ConditionalOnMissingBean
-    public HikariDataSource dataSource() {
+    public DataSource dataSource() {
         HikariConfig config = new HikariConfig();
         config.setJdbcUrl(environment.getProperty(PREFIX + ".url"));
         config.setUsername(environment.getProperty(PREFIX + ".username"));
@@ -55,19 +59,26 @@ public class DataSourceAutoConfiguration implements EnvironmentAware {
         if (driver != null && !driver.isEmpty()) {
             config.setDriverClassName(driver);
         }
-        config.setMaximumPoolSize(intProperty(".max-pool-size", 10));
+        config.setMaximumPoolSize(boundedIntProperty(
+                ".max-pool-size", DEFAULT_MAX_POOL_SIZE, 1, MAX_POOL_SIZE));
         config.setPoolName("minispring-hikari");
-        return new ManagedHikariDataSource(config);
+        HikariDataSource pool = new HikariDataSource(config);
+        return new ManagedDataSource(pool, pool::evictConnection);
     }
 
-    /** 整数配置缺省时使用默认值；非数字值抛出包含属性名和值的可读错误。 */
-    private int intProperty(String suffix, int defaultValue) {
+    /** 有界整数配置；配置值不能绕过资源预算重新打开无界连接增长风险。 */
+    private int boundedIntProperty(String suffix, int defaultValue, int minimum, int maximum) {
         String value = environment.getProperty(PREFIX + suffix);
         if (value == null || value.isEmpty()) {
             return defaultValue;
         }
         try {
-            return Integer.parseInt(value.trim());
+            int parsed = Integer.parseInt(value.trim());
+            if (parsed < minimum || parsed > maximum) {
+                throw new IllegalStateException("配置 " + PREFIX + suffix + " 必须在 "
+                        + minimum + ".." + maximum + " 范围内: " + parsed);
+            }
+            return parsed;
         } catch (NumberFormatException e) {
             throw new IllegalStateException("配置 " + PREFIX + suffix + "=\"" + value + "\" 不是合法整数", e);
         }

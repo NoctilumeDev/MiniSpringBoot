@@ -94,6 +94,6 @@ Long insertAndReturnKey(String sql, Object... args)   // GENERATED_KEY，users �
 
 ## 7. 边界与债务
 
-- 不做：ORM/实体映射、连接池参数调优（仅 max-pool-size 可配）、REQUIRED 以外的传播行为、savepoint 式嵌套事务、分布式事务；
-- 事务 ThreadLocal 不清理的防护：TransactionManager 必须 try-finally remove（否则线程池复用串事务——SunHttpServer 是 cached 池，串了就是脏数据，V6 顺带覆盖）；
+- 不做：ORM/实体映射、连接池参数调优（仅 max-pool-size 可配，默认 10、硬上限 256）、REQUIRED 以外的传播行为、savepoint 式嵌套事务、分布式事务；
+- 事务 ThreadLocal 不清理的防护：TransactionManager 必须 try-finally remove（否则固定 worker 被复用时会串事务，形成跨请求脏数据）；commit/rollback 失败则把终局标成 UNKNOWN 并丢弃连接，禁止恢复 auto-commit 后盲目归还连接池；
 - D1（JAR 扫描）维持 M10；D44（切面收集期引用）维持如实标注。
