@@ -190,10 +190,10 @@
 2. 属性填充（依赖注入 @Autowired / @Value）
 3. Aware 回调（BeanNameAware / BeanFactoryAware 等）
 4. BeanPostProcessor.postProcessBeforeInitialization
-5. 初始化（InitializingBean.afterPropertiesSet / @PostConstruct）
+5. 初始化（`InitializingBean.afterPropertiesSet` / `@Bean(initMethod)`；未实现 `@PostConstruct`）
 6. BeanPostProcessor.postProcessAfterInitialization（AOP 代理在此生成）
 7. 就绪，放入一级缓存提供使用
-8. 容器关闭：DisposableBean.destroy / @PreDestroy
+8. 容器关闭（`DisposableBean.destroy` / `@Bean(destroyMethod)`；未实现 `@PreDestroy`）
 ```
 
 > 记住这条「主旋律」，后面每一章都能在上面找到自己的位置：IoC 负责 1/2/5/7/8，AOP 负责 6，配置系统负责 2 里的 `@Value`，Web 层则是 7 之后「被使用」的消费者。
