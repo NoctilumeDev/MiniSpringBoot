@@ -48,7 +48,7 @@ MiniSpringBoot 的教学主线回答的是：IoC、AOP、MVC、JDBC 与事务这
 | `852c85a` | 显式事务终局、事务系统异常、连接丢弃接口及故障测试候选 | **DEFERRED ENGINEERING EVIDENCE**：保留为事务失败空间的实现样本，不进入教学主线 |
 | `e6eebb6` | 池化连接所有权、可选依赖隔离及真实 MySQL 测试候选 | **DEFERRED ENGINEERING EVIDENCE**：展示资源所有权复杂度，不作为生产完成态 |
 | `c33f50a` | HTTP 资源上限、JSON 边界、错误语义及相关测试候选 | **DEFERRED ENGINEERING EVIDENCE**：有教学对照价值，但改动面已经越过归档收尾 |
-| `0596a6e` | 纠正教学基线既有的配置优先级、命令行/Profile 能力与生命周期文档；Java 文件只改 JavaDoc 与末尾换行 | **SEPARATELY ADJUDICABLE**：机械上可独立应用；是否带回教学主线需作为文档事实修正单独裁决，不能因位于实验分支就自动采用或拒绝 |
+| `0596a6e` | 纠正教学基线既有的配置优先级、命令行/Profile 能力与生命周期文档；Java 文件只改 JavaDoc 与末尾换行 | **APPROVED FOR SEPARATE INCLUSION**：经独立事实核对后，以 `6f4a49b` 单独进入文档候选分支；尚未合入 `main`，也不构成对其余 hardening 的认可 |
 | `870c890` | CodeQL 与 dependency review workflow 候选 | **SEALED / NOT ADOPTED**：未合入 `main`，也未产生 GitHub 运行或告警审核证据；不得据此宣称安全通过 |
 
 这些提交能证明“方案曾被实际写出并形成可审查 diff”，不能单独证明：
