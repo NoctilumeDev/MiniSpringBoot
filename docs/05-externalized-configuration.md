@@ -110,8 +110,10 @@ app.name=MiniSpringBoot
 `Profile` 回答「同一份代码，怎么适配开发/测试/生产三套环境」。
 
 机制：调用方在加载配置前通过 `StandardEnvironment#setActiveProfiles(...)` 手动指定 `active profile`，
-加载器据此**多加载一份对应的配置文件**，并让其优先级**高于默认文件**。当前未从
-`spring.profiles.active`、`SPRING_PROFILES_ACTIVE` 或 `run(..., args)` 自动激活 Profile。
+加载器据此**多加载一份对应的配置文件**，并让其优先级**高于默认文件**。当前实现要求 classpath
+中至少存在一份默认 `application.properties` / `application.yml` 作为插入锚点；若只有 profile 文件而
+没有默认文件，加载器不会读取该 profile 文件。当前也未从 `spring.profiles.active`、
+`SPRING_PROFILES_ACTIVE` 或 `run(..., args)` 自动激活 Profile。
 
 ```
 profile = "prod"

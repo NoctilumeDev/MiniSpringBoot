@@ -16,15 +16,17 @@ MiniSpringBoot 的教学主线回答的是：IoC、AOP、MVC、JDBC 与事务这
 
 | 项目 | 坐标 / 状态 |
 | --- | --- |
-| 教学基线 | `0a8c1d46e256be503ecd948d3d53e123efb08bd7`（`main`，`v0.m10.3`） |
-| 原始实验分支 | `archive-hardening/minispring-system-boundaries` |
+| 教学基线 | `0a8c1d46e256be503ecd948d3d53e123efb08bd7`（2026-08-26 当时的 `main`，`v0.m10.3`） |
+| 原始实验本地 ref | `archive-hardening/minispring-system-boundaries` |
 | 原始实验分支头 | `870c89080621b8d554e2050dded4d2da76300ebd` |
 | 与教学基线的关系 | 从上述教学基线分叉；未合入 `main` |
 | 归档裁决 | 冻结为工程化候选证据；不是受支持版本，不是 Release，不是生产就绪证明 |
 
-在 2026-08-26 的归档裁决发生时，五个实验提交只存在于本地分支，没有 push、PR、merge 或 Release。即使一个克隆中不存在该实验分支，也不影响教学版的构建、运行或阅读。
+2026-08-26 本轮读回时，远端没有 `archive-hardening/minispring-system-boundaries` 或 `docs/raw-hardening-experiment` ref，也没有观察到对应 PR、`main` 合入或 Release。这个结论只描述该时间点可见的远端事实，不能证明历史上从未出现过短暂远端引用。此时实验头 `870c890` 只由本地 ref 保持可达；这不影响教学版的构建、运行或阅读。
 
 原始实验分支刻意保留当时的施工状态。停止说明作为独立文档变更审议，不反向改写那五个实验提交。
+
+固定 SHA 只解决“对象身份不漂移”，不负责把对象带到新的克隆。要让这段实验成为长期证据，还必须提供持久载体：本地分支只能支持本机追溯；经验证并带 SHA-256 的 Git bundle 可以支持离线恢复；陌生公众复验则需要公开、稳定且明确标为实验的 archival ref 或公开证据资产。在完成最终仓库治理阶段的载体裁决与读回以前，本文只是一份**本地可追溯记录**，不能被主页文章扩大为“公众已可复现”。
 
 ## 3. 同一机制，新增的是失败空间
 
@@ -48,7 +50,7 @@ MiniSpringBoot 的教学主线回答的是：IoC、AOP、MVC、JDBC 与事务这
 | `852c85a` | 显式事务终局、事务系统异常、连接丢弃接口及故障测试候选 | **DEFERRED ENGINEERING EVIDENCE**：保留为事务失败空间的实现样本，不进入教学主线 |
 | `e6eebb6` | 池化连接所有权、可选依赖隔离及真实 MySQL 测试候选 | **DEFERRED ENGINEERING EVIDENCE**：展示资源所有权复杂度，不作为生产完成态 |
 | `c33f50a` | HTTP 资源上限、JSON 边界、错误语义及相关测试候选 | **DEFERRED ENGINEERING EVIDENCE**：有教学对照价值，但改动面已经越过归档收尾 |
-| `0596a6e` | 纠正教学基线既有的配置优先级、命令行/Profile 能力与生命周期文档；Java 文件只改 JavaDoc 与末尾换行 | **APPROVED FOR SEPARATE INCLUSION**：经独立事实核对后，以 `6f4a49b` 单独进入文档候选分支；尚未合入 `main`，也不构成对其余 hardening 的认可 |
+| `0596a6e` | 纠正教学基线既有的配置优先级、命令行/Profile 能力与生命周期文档；Java 文件只改 JavaDoc 与末尾换行 | **APPROVED AS AN INDEPENDENT CLAIM CORRECTION**：经独立事实核对后，其等价补丁与本文一同审议；这不构成对其余 hardening 的认可 |
 | `870c890` | CodeQL 与 dependency review workflow 候选 | **SEALED / NOT ADOPTED**：未合入 `main`，也未产生 GitHub 运行或告警审核证据；不得据此宣称安全通过 |
 
 这些提交能证明“方案曾被实际写出并形成可审查 diff”，不能单独证明：
@@ -82,13 +84,17 @@ MiniSpringBoot 的教学主线回答的是：IoC、AOP、MVC、JDBC 与事务这
 
 这条阅读路径的终点不是“照着候选分支继续造完”，而是理解为什么真正的工业框架会长成今天的样子。
 
-若本地保留了实验分支，可用以下只读命令核对原始轨迹：
+只有当 Git 对象库同时包含两个固定提交时，以下只读命令才能核对原始轨迹；先检查可达对象，再读取提交和 diff：
 
 ```bash
+git cat-file -e 0a8c1d46e256be503ecd948d3d53e123efb08bd7^{commit}
+git cat-file -e 870c89080621b8d554e2050dded4d2da76300ebd^{commit}
 git log --reverse --oneline 0a8c1d46e256be503ecd948d3d53e123efb08bd7..870c89080621b8d554e2050dded4d2da76300ebd
 git diff --stat 0a8c1d46e256be503ecd948d3d53e123efb08bd7..870c89080621b8d554e2050dded4d2da76300ebd
 git diff 0a8c1d46e256be503ecd948d3d53e123efb08bd7..870c89080621b8d554e2050dded4d2da76300ebd
 ```
+
+在公开合入本文或从主页文章引用这段实验以前，必须先完成实验对象的持久载体、不可变性与 fresh-clone/离线恢复读回；否则只能把它标为作者本地保存、公众无法独立重放的历史记录。
 
 ## 7. 最终边界
 
@@ -96,6 +102,7 @@ git diff 0a8c1d46e256be503ecd948d3d53e123efb08bd7..870c89080621b8d554e2050dded4d
 - 原始 hardening 分支代表一次被冻结的工程化实验，不是平行维护的产品线；
 - 本文解释实验的证据价值与停止理由，不替实验补完实现；
 - 安全扫描与 GitHub 仓库治理属于独立验收域，不由这段实验代替；
+- 实验的公开可复现性以持久 ref / bundle / 证据资产的实际读回为准，固定 SHA 本身不能代替可达性；
 - “做过”不等于“应该合入”，“能够继续”也不等于“现在应该继续”。
 
 MiniSpringBoot 负责把机制讲清楚；这段实验负责展示现实为何让机制周围长出复杂度；真正完整的工业答案，应继续到成熟实现中寻找。

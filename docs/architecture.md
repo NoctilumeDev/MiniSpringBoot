@@ -188,7 +188,7 @@
 ```
 1. 实例化（构造器）
 2. 属性填充（依赖注入 @Autowired / @Value）
-3. Aware 回调（BeanNameAware / BeanFactoryAware 等）
+3. Aware 回调（`BeanFactoryAware` / `EnvironmentAware`；context 层另以 BeanPostProcessor 注入 `ApplicationEventPublisherAware`）
 4. BeanPostProcessor.postProcessBeforeInitialization
 5. 初始化（`InitializingBean.afterPropertiesSet` / `@Bean(initMethod)`；未实现 `@PostConstruct`）
 6. BeanPostProcessor.postProcessAfterInitialization（AOP 代理在此生成）
