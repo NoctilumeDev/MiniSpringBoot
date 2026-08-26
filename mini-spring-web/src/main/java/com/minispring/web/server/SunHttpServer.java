@@ -1,13 +1,19 @@
 package com.minispring.web.server;
 
+import com.minispring.web.http.HttpErrorResponse;
 import com.minispring.web.http.HttpRequest;
 import com.minispring.web.http.HttpResponse;
+import com.minispring.web.http.HttpStatusException;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
 
 import java.net.InetSocketAddress;
+import java.util.Objects;
+import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
@@ -23,12 +29,42 @@ import java.util.concurrent.atomic.AtomicReference;
  */
 public class SunHttpServer implements WebServer {
 
+    public static final String DEFAULT_BIND_ADDRESS = "127.0.0.1";
+    public static final int DEFAULT_WORKER_THREADS = 8;
+    public static final int DEFAULT_QUEUE_CAPACITY = 128;
+    public static final int MAX_WORKER_THREADS = 256;
+    public static final int MAX_QUEUE_CAPACITY = 65_536;
+
     private final HttpHandler handler;
+    private final String bindAddress;
+    private final int workerThreads;
+    private final int queueCapacity;
     private HttpServer server;
     private ExecutorService executor;
 
     public SunHttpServer(HttpHandler handler) {
-        this.handler = handler;
+        this(handler, DEFAULT_BIND_ADDRESS, DEFAULT_WORKER_THREADS, DEFAULT_QUEUE_CAPACITY);
+    }
+
+    public SunHttpServer(HttpHandler handler,
+                         String bindAddress,
+                         int workerThreads,
+                         int queueCapacity) {
+        this.handler = Objects.requireNonNull(handler, "handler");
+        if (bindAddress == null || bindAddress.isBlank()) {
+            throw new IllegalArgumentException("HTTP 绑定地址不能为空");
+        }
+        if (workerThreads <= 0 || workerThreads > MAX_WORKER_THREADS) {
+            throw new IllegalArgumentException("HTTP 工作线程数必须在 1.."
+                    + MAX_WORKER_THREADS + " 范围内: " + workerThreads);
+        }
+        if (queueCapacity <= 0 || queueCapacity > MAX_QUEUE_CAPACITY) {
+            throw new IllegalArgumentException("HTTP 请求队列容量必须在 1.."
+                    + MAX_QUEUE_CAPACITY + " 范围内: " + queueCapacity);
+        }
+        this.bindAddress = bindAddress;
+        this.workerThreads = workerThreads;
+        this.queueCapacity = queueCapacity;
     }
 
     @Override
@@ -71,7 +107,11 @@ public class SunHttpServer implements WebServer {
         HttpServer createdServer = null;
         ExecutorService createdExecutor = null;
         try {
-            createdServer = HttpServer.create(new InetSocketAddress(port), 0);
+            InetSocketAddress socketAddress = new InetSocketAddress(bindAddress, port);
+            if (socketAddress.isUnresolved()) {
+                throw new IllegalArgumentException("无法解析 HTTP 绑定地址: " + bindAddress);
+            }
+            createdServer = HttpServer.create(socketAddress, queueCapacity);
             // 所有路径（含子路径）都进入同一个前端控制器，路由交给它内部完成
             createdServer.createContext("/", exchange -> {
                 HttpRequest request = new SunHttpRequest(exchange);
@@ -79,28 +119,45 @@ public class SunHttpServer implements WebServer {
                 try {
                     handler.handle(request, response);
                 } catch (Throwable e) {
-                    // 兜底：任何漏网的异常/错误（含 Error，如 P0-1 的 StackOverflowError）都转成 500，
-                    // 避免连接被直接断开、客户端收到无 HTTP 响应的裸连接错误
+                    // 兜底：显式 HTTP 错误保留 4xx/5xx；其余漏网异常（含 Error）转成通用 500，
+                    // 避免连接被直接断开、客户端收到无 HTTP 响应的裸连接错误。
                     if (!response.isCommitted()) {
-                        response.setStatus(500);
+                        int status = e instanceof HttpStatusException statusException
+                                ? statusException.getStatus() : 500;
+                        response.setStatus(status);
                         response.setContentType("text/plain; charset=utf-8");
-                        response.write("Internal Server Error: " + e.getMessage());
+                        response.write(HttpErrorResponse.body(status, e.getMessage()));
+                        if (status >= 500) {
+                            System.err.println("请求处理异常，已返回通用 " + status + "；类型="
+                                    + e.getClass().getName());
+                        }
                     } else {
                         // L2：响应已提交时无法改写——留日志证据而非静默吞掉（排障黑洞）
-                        System.err.println("请求处理异常（响应已提交，兜底放弃改写）: " + e);
+                        System.err.println("请求处理异常（响应已提交，兜底放弃改写）；类型="
+                                + e.getClass().getName());
                     }
                 } finally {
                     exchange.close();
                 }
             });
-            // 显式给线程池：JDK HttpServer 不设 executor 时默认单线程串行处理请求（BUG-2 修复）；
-            // 工作线程同样显式非守护，避免随启动方线程的 daemon 属性漂移。
-            // 线程池由本服务器创建，也必须由 stop() 关闭，不能指望 HttpServer 代管外部 executor。
-            createdExecutor = Executors.newCachedThreadPool(runnable -> {
-                Thread worker = new Thread(null, runnable, "minispring-http-worker", 0, false);
-                worker.setDaemon(false);
-                return worker;
-            });
+            // 固定线程 + 有界队列把并发、内存和排队延迟放进同一资源预算；饱和时由
+            // HttpServer dispatcher 线程执行，形成反压而不是继续创建线程或静默丢请求。
+            AtomicInteger workerNumber = new AtomicInteger();
+            ThreadPoolExecutor boundedExecutor = new ThreadPoolExecutor(
+                    workerThreads,
+                    workerThreads,
+                    30L,
+                    TimeUnit.SECONDS,
+                    new ArrayBlockingQueue<>(queueCapacity),
+                    runnable -> {
+                        Thread worker = new Thread(null, runnable,
+                                "minispring-http-worker-" + workerNumber.incrementAndGet(), 0, false);
+                        worker.setDaemon(false);
+                        return worker;
+                    },
+                    new ThreadPoolExecutor.CallerRunsPolicy());
+            boundedExecutor.allowCoreThreadTimeOut(true);
+            createdExecutor = boundedExecutor;
             createdServer.setExecutor(createdExecutor);
             createdServer.start();
             this.server = createdServer;

@@ -4,8 +4,10 @@ import com.minispring.core.BeanFactory;
 import com.minispring.core.BeanFactoryAware;
 import com.minispring.core.InitializingBean;
 import com.minispring.core.ListableBeanFactory;
+import com.minispring.web.http.HttpErrorResponse;
 import com.minispring.web.http.HttpRequest;
 import com.minispring.web.http.HttpResponse;
+import com.minispring.web.http.HttpStatusException;
 import com.minispring.web.mvc.HandlerAdapter;
 import com.minispring.web.mvc.HandlerMapping;
 import com.minispring.web.mvc.HandlerMethod;
@@ -16,7 +18,7 @@ import com.minispring.web.server.HttpHandler;
  * 前端控制器：所有请求的统一入口，只做一件事——「分发」。
  *
  * <p>找到处理器 → 交给适配器执行并写响应；未命中映射则尝试静态资源，再不行返回 404；
- * 途中任何异常统一转 500。
+ * 显式 HTTP/参数错误映射为 4xx，其余服务端异常统一转成脱敏 500。
  */
 public class DispatcherServlet implements HttpHandler, BeanFactoryAware, InitializingBean {
 
@@ -62,7 +64,7 @@ public class DispatcherServlet implements HttpHandler, BeanFactoryAware, Initial
             writeNotFound(response);
         } catch (Throwable e) {
             // P0-1：不能用 catch(Exception)——JSON 深嵌套等场景抛 StackOverflowError（Error 非 Exception），
-            // 会绕过这里导致连接层无 HTTP 响应；Throwable 一并兜底为 500。
+            // 会绕过这里导致连接层无 HTTP 响应；Throwable 进入统一 4xx/5xx 边界。
             writeError(response, e);
         }
     }
@@ -76,19 +78,25 @@ public class DispatcherServlet implements HttpHandler, BeanFactoryAware, Initial
     private void writeError(HttpResponse response, Throwable e) {
         // 响应头已发出时不能改写状态码或追加错误体，只记录错误并保持已提交响应不变。
         if (response.isCommitted()) {
-            System.err.println("请求处理异常（响应已提交，无法改写为错误状态）: " + e);
+            System.err.println("请求处理异常（响应已提交，无法改写为错误状态）；类型="
+                    + e.getClass().getName());
             return;
         }
         int status = resolveStatus(e);
         response.setStatus(status);
         response.setContentType("text/plain; charset=utf-8");
-        response.write(status + " " + statusLabel(status) + ": " + e.getMessage());
+        if (status >= 500) {
+            // 服务端异常细节只进服务端诊断面；对外响应保持稳定，避免泄露 SQL、路径、密钥或实现类名。
+            System.err.println("请求处理异常，已返回通用 " + status + "；类型="
+                    + e.getClass().getName());
+        }
+        response.write(HttpErrorResponse.body(status, e.getMessage()));
     }
 
     /**
      * 异常 → HTTP 状态码的内建映射：
      * <ul>
-     *   <li>{@link ResponseStatusException} → 自带状态码（资源缺失 404、明确指定的 4xx 等）；</li>
+     *   <li>{@link HttpStatusException} → 自带状态码（资源缺失 404、请求体超限 413 等）；</li>
      *   <li>{@link IllegalArgumentException} → 400（参数/校验类错误是客户端的锅）；</li>
      *   <li>其余（含 {@code IllegalStateException}、{@code DataAccessException}）→ 500
      *       ——业务规则冲突与基础设施故障维持「服务器错误」口径，不与客户端错误混淆。</li>
@@ -96,8 +104,8 @@ public class DispatcherServlet implements HttpHandler, BeanFactoryAware, Initial
      * 包级可见：供同包单测直接断言映射结果（约束性锚点）。
      */
     int resolveStatus(Throwable e) {
-        if (e instanceof ResponseStatusException) {
-            return ((ResponseStatusException) e).getStatus();
+        if (e instanceof HttpStatusException statusException) {
+            return statusException.getStatus();
         }
         if (e instanceof IllegalArgumentException) {
             return 400;
@@ -105,15 +113,4 @@ public class DispatcherServlet implements HttpHandler, BeanFactoryAware, Initial
         return 500;
     }
 
-    /** 常见状态码的 reason-phrase（响应体前缀用；未知码退化为 "Error"）。 */
-    private static String statusLabel(int status) {
-        switch (status) {
-            case 400: return "Bad Request";
-            case 404: return "Not Found";
-            case 405: return "Method Not Allowed";
-            case 409: return "Conflict";
-            case 500: return "Internal Server Error";
-            default: return "Error";
-        }
-    }
 }

@@ -83,7 +83,7 @@
 
 - **产出**：`WebServer` SPI + `SunHttpServer`、前端控制器（`DispatcherServlet`）、`HandlerMapping/HandlerAdapter`、参数绑定（`ArgumentResolver` 策略链）、自写 JSON（`JsonParser`/`JsonSerializer`/`JsonObjectMapper`）、类型转换（`Converter`/`TypeConversionService`）、静态资源托管。
 - **落地证据**：**浏览器真实打开** `GET /hello`、`GET /hello?name=World`、`GET /users/{id}`、`POST /users`（`@RequestBody` JSON）、`GET /`（静态首页），F12 Network 真实看到请求/响应；异常路径（`GET /users/999` → 500 原始异常、未知路径 → 404）真实返回。
-- **落地边界（显式技术债）**：JSON 反序列化仅扁平 POJO；参数绑定依赖注解显式 `value()`（未启用 `-parameters`）；业务异常统一 500、无状态码映射；`SunHttpServer` 已补 cached 线程池（每请求一线程），仅无 NIO/池上限调优——详见 §7 的 D17。M5 不引入 AOP（`web` 不依赖 `aop`；AOP 计时已于 M3 验证，Controller 无接口无法被 JDK 代理，见 D8，M7 收口）。
+- **当前边界**：参数绑定仍依赖注解显式 `value()`（未启用 `-parameters`）；未实现注解式异常处理器；`SunHttpServer` 仍不是 NIO/Reactor，但已改为可配置的固定线程 + 有界队列、loopback 默认绑定和通用 500 响应；JSON 已补严格词法、循环引用、深度和输出预算，复杂泛型/任意精度仍属教学边界。M5 不引入 AOP（`web` 不依赖 `aop`；AOP 计时已于 M3 验证，Controller 无接口无法被 JDK 代理，见 D8，M7 收口）。
 
 ### M6 · 自动配置 + Starter
 
@@ -258,7 +258,7 @@
 | D14 | JSON 反序列化仅支持扁平 POJO 与 `List<String>`，不支持 `List<POJO>` / 嵌套集合 | POST 请求体含对象数组时 | 已修于 M7（B-6）：List 字段按泛型实参逐元素映射，`List<Integer>`/`List<Long>`/`List<POJO>` 均正确；raw/顶层 List 按节点自然类型 |
 | D15 | `@PathVariable`/`@RequestParam` 依赖注解显式 `value()`，未启用 `-parameters`（参数名未编译保留），省略 value 会解析失败 | 按参数名隐式绑定时 | 需要时启用 `-parameters` 编译，或补参数名解析 |
 | D16 | ~~错误处理简化：业务异常统一 500，无 `@ExceptionHandler`/`@ResponseStatus`（无法区分 404/400）~~ **部分收口（外审复核第三轮）**：`DispatcherServlet.resolveStatus` 内建映射——`ResponseStatusException`（web 新增，携带状态码的业务异常）→ 自带码、`IllegalArgumentException` → 400、其余 → 500；demo 侧用户/账户不存在改抛 404、余额不足/账户缺失的扣入款失败改 400（`transfer-fail` 的 IllegalStateException 维持 500，V3 回滚叙事不变）。**余量**：`@ExceptionHandler`/`@ResponseStatus` 注解机制未做（用异常类约定替代）；`DataAccessException` → 409（如唯一键冲突）受依赖方向限制（web 不依赖 jdbc）未做，维持 500 | 需要按异常类型返回不同状态码时 | 已部分关闭（注解化异常解析器按需再开） |
-| D17 | `SunHttpServer` 仅 cached 线程池（每请求一线程），无 NIO/Reactor、无线程池上限控制 | 高并发压测时线程数无上限、吞吐受限 | M10 3 实例 + Nginx 分摊（教学项目可接受），必要时配固定线程池或换实现 |
+| D17 | ~~`SunHttpServer` cached 线程池无线程上限~~ 已关闭：固定 worker + 有界队列 + CallerRuns 反压，`server.worker-threads`/`server.queue-capacity` 可配；默认 loopback，`server.address` 显式放开。仍非 NIO/Reactor | 高并发吞吐需要事件循环时 | 资源无界风险已关闭；吞吐模型变化时换 WebServer 实现 |
 | D18 | 静态资源 `"static" + path` 拼接未显式拒绝 `..` | 直觉上担心路径穿越，但 JDK HttpServer `URI.getPath()` 已规范化、`ClassLoader.getResourceAsStream` 不逃逸 classpath 根，当前不构成漏洞 | 已修于 M7：`StaticResourceHandler.handle` 入口显式拒绝 `..` → 403 |
 | D19 | ~~`mini-spring-autoconfigure` 的 `main` 源集混入 demo 自动配置类~~ 已修于 M7；M7 终审（A-2）补齐同类残留：web（WebDemo/WebConfig/HelloController/UserController/User）、aop（AopConfig/AopDemo/LoggingAspect/OrderService/OrderServiceImpl）、core（IocDemo）的框架模块 demo 类全部清除，四个框架模块 `main` 源集零 demo | 任何模块依赖 `mini-spring-autoconfigure` 并开启自动配置时 | 已关闭 |
 | D20 | `AutoConfigurationLoader.load` 不去重、不排序：候选顺序 = classpath 上 SPI 文件遍历序 + 文件内行序；重复类名靠 `registerComponent` 的 `containsBeanDefinition` 去重兜底，自动配置类之间无 `@Order/@AutoConfigureOrder` 排序保证 | 多 starter 重复列举同一自动配置；自动配置类 A 依赖 B 提供的 Bean（跨配置的 `@ConditionalOnBean`/`@ConditionalOnMissingBean`）而 B 恰在 A 之后加载时误判 | 已修于 M7：`AutoConfigurationImportSelector` 去重 + `@Order`/`@AutoConfigureOrder` 排序 |

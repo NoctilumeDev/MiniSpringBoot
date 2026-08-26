@@ -8,7 +8,11 @@ app:
     - aop
   pointer: name
 server:
+  # 默认只监听本机；确需局域网访问时才显式改为 0.0.0.0，并自行配置外围访问控制。
+  address: "127.0.0.1"
   port: "9090"
+  worker-threads: 8
+  queue-capacity: 128
 smtp:
   host: localhost
   port: 25

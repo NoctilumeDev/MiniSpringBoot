@@ -51,7 +51,7 @@ MiniSpringBoot 是一个 **从零手写** 的 Spring Boot 内核复刻项目。�
 2. 依赖注入（`@Autowired`）到底是怎么把对象塞进字段里的？循环依赖靠什么解开？
 3. AOP 的切面，是怎么让你「无感」地加上了事务、日志、权限？
 4. 一个 HTTP 请求，从 80 端口进来，是怎么精准命中到你的 Controller 方法的？
-5. `spring.factories` / 自动配置，是如何做到「只引入一个 Starter 就生效一堆 Bean」的？
+5. `META-INF/mini.factories`（对应 Spring 的 `spring.factories`）/ 自动配置，是如何做到「只引入一个 Starter 就生效一堆 Bean」的？
 6. `application.yml` 里的一行配置，是怎么跑到你 `@Value` 标注的字段上的？
 
 每一个问号，这里都有一份「自己写出来」的答案，而不是「调用了 Spring 某个类」的答案。
@@ -130,10 +130,10 @@ graph TD
 | <img src="docs/screenshots/users-page.png" width="640" alt="用户管理页"/> | <img src="docs/screenshots/transfer-page.png" width="640" alt="转账演示页"/> |
 | 表中 id=23 / id=96 两行与 `users` 表逐行一致；新建、编辑、删除均真实落库（唯一键冲突会被 MySQL 约束拒绝并透出到 UI） | 余额卡 700 / 1300 即 `accounts` 表实时值；「中途失败转账」先扣款后抛异常 → 事务整体回滚，两账户分文不动 |
 
-| 错误根因直达 UI（数据库断连） | 状态码语义（404，非一律 500） |
+| 历史断库取证（安全边界整改前） | 状态码语义（404，非一律 500） |
 | :---: | :---: |
 | <img src="docs/screenshots/error-banner.png" width="640" alt="数据库断连错误提示"/> | <img src="docs/screenshots/404-evidence.png" width="640" alt="404 证据"/> |
-| `docker stop minispring-mysql` 后转账：约 30s 有限阻塞（Hikari connectionTimeout），错误提示条逐字透出根因与连接池状态（`Connection is not available, request timed out after 30003ms`）；事务开启失败即回滚，余额零变动；容器恢复健康后页面刷新立即自愈 | 向不存在的账户（#99999）转账 → 后端返回 **HTTP 404**（非 500），错误消息「入款失败，账户 99999 不存在」逐层透出到错误提示条；事务同步回滚，余额 700/1300 不变。参数非法返回 400（如负数金额），业务规则冲突才是 500——状态码语义清晰，调用方不再靠猜 |
+| 此图保留的是整改前真实失败现场：`docker stop minispring-mysql` 后约 30s 触发 Hikari 超时，余额零变动，数据库恢复后可刷新自愈。**当前实现不再把连接池、SQL 或异常消息回显给浏览器**：未处理 5xx 固定返回通用文案，服务端只记录异常类型；本轮终验会重新取证当前行为 | 向不存在的账户（#99999）转账 → 后端返回 **HTTP 404**（非 500），错误消息「入款失败，账户 99999 不存在」逐层透出到错误提示条；事务同步回滚，余额 700/1300 不变。参数非法返回 400（如负数金额）；未处理的服务端故障统一映射为不泄露内部细节的 500 |
 
 > 以上四张图的取证过程（含断连前后 DB 快照差分）记录于 [docs/06-roadmap.md](docs/06-roadmap.md) 各轮验收章节。
 
@@ -224,7 +224,7 @@ mvn -pl mini-spring-demo exec:java "-Dexec.mainClass=com.minispring.demo.app.Dem
 
 ```bash
 # 启动前端（M9，另一终端；Vite 9010，/api 经 proxy 转 9090）
-cd demo-frontend && npm install && npm run dev
+cd demo-frontend && npm ci && npm run dev
 ```
 
 验证：浏览器打开 `http://localhost:9010`——用户管理页对 MySQL 真实 CRUD、转账页可视化事务提交/回滚；F12 Network 可见 `/api/*` 全链路请求。

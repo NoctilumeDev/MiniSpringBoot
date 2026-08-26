@@ -62,8 +62,9 @@ public class WebMvcAutoConfiguration {
     }
 
     /**
-     * 内嵌服务器生命周期：start 时取容器里唯一的 {@link DispatcherServlet}，读 {@code server.port}
-     * （缺省 9090）启动 {@link SunHttpServer}，并把服务器注册为 {@code webServer} 运行期单例；stop 停服务器。
+     * 内嵌服务器生命周期：start 时取容器里唯一的 {@link DispatcherServlet}，读取端口、绑定地址和
+     * 有界执行器预算后启动 {@link SunHttpServer}，并把服务器注册为 {@code webServer} 运行期单例；
+     * stop 停服务器。默认只监听 127.0.0.1；需要远程访问时必须显式配置 {@code server.address}。
      *
      * <p>放在 autoconfigure（而非 boot）：本类引用 web 具体类，只有 web 在 classpath 上才会随本配置类
      * 装配——「裁掉 web 模块 → 本组件不存在 → 不启动服务器」自然成立。依赖注入走 Aware 回调
@@ -99,17 +100,46 @@ public class WebMvcAutoConfiguration {
             String portValue = environment.getProperty("server.port");
             // server.port 非数字时抛出携带配置值的可读错误。
             int port = (portValue == null || portValue.isEmpty()) ? DEFAULT_PORT : parsePort(portValue.trim());
-            this.webServer = new SunHttpServer(servlet);
+            String addressValue = environment.getProperty("server.address");
+            String address = (addressValue == null || addressValue.isBlank())
+                    ? SunHttpServer.DEFAULT_BIND_ADDRESS : addressValue.trim();
+            int workerThreads = boundedPositiveIntProperty("server.worker-threads",
+                    SunHttpServer.DEFAULT_WORKER_THREADS, SunHttpServer.MAX_WORKER_THREADS);
+            int queueCapacity = boundedPositiveIntProperty("server.queue-capacity",
+                    SunHttpServer.DEFAULT_QUEUE_CAPACITY, SunHttpServer.MAX_QUEUE_CAPACITY);
+            this.webServer = new SunHttpServer(servlet, address, workerThreads, queueCapacity);
             this.webServer.start(port);
             singletonRegistry.registerSingleton(WEB_SERVER_BEAN_NAME, webServer);
-            System.out.println("  [http] 内嵌服务器已启动: http://localhost:" + port);
+            System.out.println("  [http] 内嵌服务器已启动: http://" + address + ":" + port
+                    + " (workers=" + workerThreads + ", queue=" + queueCapacity + ")");
         }
 
         private static int parsePort(String value) {
             try {
-                return Integer.parseInt(value);
+                int port = Integer.parseInt(value);
+                if (port < 1 || port > 65_535) {
+                    throw new IllegalStateException("server.port 超出合法范围 1..65535: " + port);
+                }
+                return port;
             } catch (NumberFormatException e) {
                 throw new IllegalStateException("server.port 配置了非数字值: \"" + value + "\"（期望整数端口）", e);
+            }
+        }
+
+        private int boundedPositiveIntProperty(String name, int defaultValue, int maximum) {
+            String value = environment.getProperty(name);
+            if (value == null || value.isBlank()) {
+                return defaultValue;
+            }
+            try {
+                int parsed = Integer.parseInt(value.trim());
+                if (parsed <= 0 || parsed > maximum) {
+                    throw new IllegalStateException(name + " 必须在 1.." + maximum
+                            + " 范围内: " + parsed);
+                }
+                return parsed;
+            } catch (NumberFormatException e) {
+                throw new IllegalStateException(name + " 配置了非数字值: \"" + value + "\"", e);
             }
         }
 

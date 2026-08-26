@@ -41,7 +41,7 @@ interface WebServer {
 
 **设计要点**：哪怕只写一个实现，也要抽出 `WebServer` 接口——这让「换掉底层服务器」成为可能，也让学生看清「Spring Boot 所谓内嵌容器，本质就是一个可替换的 SPI」。
 
-`SunHttpServer` 为并发请求显式创建 cached executor；这份线程池属于服务器实现，而不是 JDK `HttpServer` 自动托管的资源。因此 `start()` 同时建立服务器与 executor，`stop()`、启动失败和启动中断路径都必须同时收口二者。重复 `start()` 会 fail-fast，`stop()` 保持幂等；同一实例停止后可以用一套全新的资源重新启动。
+`SunHttpServer` 为并发请求显式创建固定线程数 + 有界队列的 executor；默认预算为 8 个 worker、128 个排队请求，硬上限分别为 256 和 65,536，配置不能重新打开无界/OOM 风险。饱和时由 dispatcher 形成反压，TCP backlog 也使用同一容量。默认只绑定 `127.0.0.1`；远程访问必须显式配置 `server.address`。这份线程池属于服务器实现，而不是 JDK `HttpServer` 自动托管的资源，因此 `start()` 同时建立服务器与 executor，`stop()`、启动失败和启动中断路径都必须同时收口二者。重复 `start()` 会 fail-fast，`stop()` 保持幂等；同一实例停止后可以用一套全新的资源重新启动。
 
 ### 2.1 关于「HTTP 协议」的诚实说明
 
@@ -125,7 +125,7 @@ class HandlerMethod {
 - **`JsonParser`**（反序列化）：把 JSON 字符串 → `JsonNode`（Object/Array/String/Number/Boolean/null 的树结构）。
 - **`JsonSerializer`**（序列化）：把 Java 对象（反射遍历字段）→ JSON 字符串。
 
-定位清晰：**只为满足 MVC 的入参/出参，不追求 JSON 规范的 100% 覆盖**（不支持对重复键、极大数值、Unicode 转义等边角的完整实现，文档如实标注）。
+定位清晰：**只为满足 MVC 的入参/出参，不追求通用 JSON 库的全部能力**。输入侧只接受合法 UTF-8，严格拒绝重复键、前导零、裸控制字符与非 JSON 空白，并限制请求体（超限为 413）/递归深度；输出侧检测循环引用、字符串化后重名的 Map 键和父子类同名字段，并限制深度与字符预算。仍不承诺任意精度数字映射、完整 Unicode 标量校验或复杂泛型对象图；需要这些能力时应换成熟 JSON 库。
 
 ---
 

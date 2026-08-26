@@ -4,66 +4,86 @@ import java.lang.reflect.Array;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * 极简 JSON 序列化器：反射遍历字段，把 Java 对象写成 JSON 字符串。
  *
- * <p>支持：String / 基本与包装类型 / 枚举 / 数组 / List / Map / 普通 POJO / {@link JsonNode}。
- * 不做循环引用检测（自引用对象会无限递归），教学子集如实标注。
+ * <p>支持 String / 基本与包装类型 / 枚举 / 数组 / List / Map / 普通 POJO /
+ * {@link JsonNode}。对象图按身份检测当前递归链，输出字符数和嵌套深度都有硬上限；
+ * 因而循环引用或异常膨胀会明确失败，不会演变为 StackOverflowError/OOM。
  */
 public final class JsonSerializer {
 
+    static final int MAX_DEPTH = 128;
+    static final int MAX_OUTPUT_CHARS = 1024 * 1024;
+
     public String serialize(Object value) {
-        StringBuilder sb = new StringBuilder();
-        writeValue(sb, value);
-        return sb.toString();
+        WriteContext context = new WriteContext();
+        writeValue(context, value, 0);
+        return context.result();
     }
 
-    private void writeValue(StringBuilder sb, Object value) {
+    private void writeValue(WriteContext context, Object value, int depth) {
+        if (depth > MAX_DEPTH) {
+            throw new IllegalStateException("JSON 序列化嵌套深度超过上限 " + MAX_DEPTH);
+        }
         if (value == null) {
-            sb.append("null");
+            context.append("null");
         } else if (value instanceof String) {
-            writeString(sb, (String) value);
+            writeString(context, (String) value);
         } else if (value instanceof Character || value instanceof CharSequence) {
-            writeString(sb, value.toString());
+            writeString(context, value.toString());
         } else if (value instanceof Boolean) {
-            sb.append(value);
+            context.append(value.toString());
         } else if (value instanceof Number) {
-            writeNumber(sb, (Number) value);
+            writeNumber(context, (Number) value);
         } else if (value instanceof Enum) {
-            writeString(sb, ((Enum<?>) value).name());
+            writeString(context, ((Enum<?>) value).name());
         } else if (value instanceof java.util.Date) {
-            // L10：Date 走 ISO-8601 字符串——否则反射吐 fastTime 等内部字段，前端拿到无意义结构
-            writeString(sb, ((java.util.Date) value).toInstant().toString());
-        } else if (value instanceof JsonNode) {
-            writeJsonNode(sb, (JsonNode) value);
-        } else if (value.getClass().isArray()) {
-            writeArray(sb, value);
-        } else if (value instanceof List) {
-            writeList(sb, (List<?>) value);
-        } else if (value instanceof Map) {
-            writeMap(sb, (Map<?, ?>) value);
+            writeString(context, ((java.util.Date) value).toInstant().toString());
         } else {
-            writeObject(sb, value);
+            context.enter(value);
+            try {
+                if (value instanceof JsonNode) {
+                    writeJsonNode(context, (JsonNode) value, depth);
+                } else if (value.getClass().isArray()) {
+                    writeArray(context, value, depth);
+                } else if (value instanceof List) {
+                    writeList(context, (List<?>) value, depth);
+                } else if (value instanceof Map) {
+                    writeMap(context, (Map<?, ?>) value, depth);
+                } else {
+                    writeObject(context, value, depth);
+                }
+            } finally {
+                context.exit(value);
+            }
         }
     }
 
     /** NaN 和 Infinity 不是合法 JSON 数字，统一显式拒绝。 */
-    private void writeNumber(StringBuilder sb, Number number) {
+    private void writeNumber(WriteContext context, Number number) {
         double d = number.doubleValue();
         if (!Double.isFinite(d)) {
             throw new IllegalStateException("无法序列化为 JSON 的数字: " + number
                     + "（NaN/Infinity 不在 JSON 规范内，请检查计算链路）");
         }
-        sb.append(number);
+        context.append(number.toString());
     }
 
-    private void writeObject(StringBuilder sb, Object obj) {
-        sb.append('{');
+    private void writeObject(WriteContext context, Object obj, int depth) {
+        context.append('{');
         boolean first = true;
+        Set<String> fieldNames = new HashSet<>();
         for (Field field : collectFields(obj.getClass())) {
+            if (!fieldNames.add(field.getName())) {
+                throw new IllegalStateException("JSON 序列化检测到重复字段名: " + field.getName());
+            }
             Object value;
             try {
                 field.setAccessible(true);
@@ -73,131 +93,134 @@ public final class JsonSerializer {
                 continue;
             }
             if (!first) {
-                sb.append(',');
+                context.append(',');
             }
-            writeString(sb, field.getName());
-            sb.append(':');
-            writeValue(sb, value);
+            writeString(context, field.getName());
+            context.append(':');
+            writeValue(context, value, depth + 1);
             first = false;
         }
-        sb.append('}');
+        context.append('}');
     }
 
-    private void writeArray(StringBuilder sb, Object array) {
-        sb.append('[');
+    private void writeArray(WriteContext context, Object array, int depth) {
+        context.append('[');
         int len = Array.getLength(array);
         for (int i = 0; i < len; i++) {
             if (i > 0) {
-                sb.append(',');
+                context.append(',');
             }
-            writeValue(sb, Array.get(array, i));
+            writeValue(context, Array.get(array, i), depth + 1);
         }
-        sb.append(']');
+        context.append(']');
     }
 
-    private void writeList(StringBuilder sb, List<?> list) {
-        sb.append('[');
+    private void writeList(WriteContext context, List<?> list, int depth) {
+        context.append('[');
         for (int i = 0; i < list.size(); i++) {
             if (i > 0) {
-                sb.append(',');
+                context.append(',');
             }
-            writeValue(sb, list.get(i));
+            writeValue(context, list.get(i), depth + 1);
         }
-        sb.append(']');
+        context.append(']');
     }
 
-    private void writeMap(StringBuilder sb, Map<?, ?> map) {
-        sb.append('{');
+    private void writeMap(WriteContext context, Map<?, ?> map, int depth) {
+        context.append('{');
         boolean first = true;
+        Set<String> serializedKeys = new HashSet<>();
         for (Map.Entry<?, ?> entry : map.entrySet()) {
-            if (!first) {
-                sb.append(',');
+            String key = String.valueOf(entry.getKey());
+            if (!serializedKeys.add(key)) {
+                throw new IllegalStateException("JSON 序列化检测到重复对象键: " + key);
             }
-            writeString(sb, String.valueOf(entry.getKey()));
-            sb.append(':');
-            writeValue(sb, entry.getValue());
+            if (!first) {
+                context.append(',');
+            }
+            writeString(context, key);
+            context.append(':');
+            writeValue(context, entry.getValue(), depth + 1);
             first = false;
         }
-        sb.append('}');
+        context.append('}');
     }
 
-    private void writeJsonNode(StringBuilder sb, JsonNode node) {
+    private void writeJsonNode(WriteContext context, JsonNode node, int depth) {
         switch (node.type()) {
             case NULL:
-                sb.append("null");
+                context.append("null");
                 break;
             case BOOLEAN:
-                sb.append(node.asBoolean());
+                context.append(Boolean.toString(node.asBoolean()));
                 break;
             case NUMBER:
-                // B-1：数字节点输出原文，不加引号（原与 STRING 共用 writeString 会把 42 写成 "42"）
-                // N7：原文须能落到有限 double（1e999 溢出为 Infinity 同样非法），否则显式报错
                 String text = node.asString();
                 if (!Double.isFinite(Double.parseDouble(text))) {
                     throw new IllegalStateException("无法序列化为 JSON 的数字: " + text + "（溢出为 Infinity）");
                 }
-                sb.append(text);
+                context.append(text);
                 break;
             case STRING:
-                writeString(sb, node.asString());
+                writeString(context, node.asString());
                 break;
             case ARRAY:
-                sb.append('[');
+                context.append('[');
                 for (int i = 0; i < node.size(); i++) {
                     if (i > 0) {
-                        sb.append(',');
+                        context.append(',');
                     }
-                    writeJsonNode(sb, node.get(i));
+                    writeValue(context, node.get(i), depth + 1);
                 }
-                sb.append(']');
+                context.append(']');
                 break;
             case OBJECT:
-                sb.append('{');
+                context.append('{');
                 boolean first = true;
                 for (Map.Entry<String, JsonNode> entry : node.entries().entrySet()) {
                     if (!first) {
-                        sb.append(',');
+                        context.append(',');
                     }
-                    writeString(sb, entry.getKey());
-                    sb.append(':');
-                    writeJsonNode(sb, entry.getValue());
+                    writeString(context, entry.getKey());
+                    context.append(':');
+                    writeValue(context, entry.getValue(), depth + 1);
                     first = false;
                 }
-                sb.append('}');
+                context.append('}');
                 break;
             default:
-                sb.append("null");
+                throw new IllegalStateException("未知 JsonNode 类型: " + node.type());
         }
     }
 
-    private void writeString(StringBuilder sb, String s) {
-        sb.append('"');
-        for (char c : s.toCharArray()) {
+    private void writeString(WriteContext context, String value) {
+        context.append('"');
+        for (char c : value.toCharArray()) {
             switch (c) {
                 case '"':
-                    sb.append("\\\"");
+                    context.append("\\\"");
                     break;
                 case '\\':
-                    sb.append("\\\\");
+                    context.append("\\\\");
                     break;
                 case '\n':
-                    sb.append("\\n");
+                    context.append("\\n");
                     break;
                 case '\r':
-                    sb.append("\\r");
+                    context.append("\\r");
                     break;
                 case '\t':
-                    sb.append("\\t");
+                    context.append("\\t");
                     break;
                 default:
                     if (c < 0x20) {
-                        sb.append(String.format("\\u%04x", (int) c));
+                        context.append(String.format("\\u%04x", (int) c));
                     } else {
-                        sb.append(c);
+                        context.append(c);
                     }
             }
         }
-        sb.append('"');
+        context.append('"');
     }
 
     private List<Field> collectFields(Class<?> clazz) {
@@ -214,5 +237,42 @@ public final class JsonSerializer {
             current = current.getSuperclass();
         }
         return fields;
+    }
+
+    private static final class WriteContext {
+        private final StringBuilder output = new StringBuilder();
+        private final IdentityHashMap<Object, Boolean> ancestors = new IdentityHashMap<>();
+
+        private void enter(Object value) {
+            if (ancestors.put(value, Boolean.TRUE) != null) {
+                throw new IllegalStateException("JSON 序列化检测到循环引用: "
+                        + value.getClass().getName());
+            }
+        }
+
+        private void exit(Object value) {
+            ancestors.remove(value);
+        }
+
+        private void append(char value) {
+            ensureCapacity(1);
+            output.append(value);
+        }
+
+        private void append(String value) {
+            ensureCapacity(value.length());
+            output.append(value);
+        }
+
+        private void ensureCapacity(int additionalChars) {
+            if (additionalChars > MAX_OUTPUT_CHARS - output.length()) {
+                throw new IllegalStateException("JSON 序列化输出超过上限 "
+                        + MAX_OUTPUT_CHARS + " 字符");
+            }
+        }
+
+        private String result() {
+            return output.toString();
+        }
     }
 }

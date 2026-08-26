@@ -4,7 +4,7 @@ package com.minispring.web.json;
  * 极简 JSON 解析器：递归下降，把 JSON 文本解析成 {@link JsonNode} 树。
  *
  * <p>支持 object / array / string（含常用转义、Unicode 转义）/ number / true / false / null。
- * 教学子集：不校验重复键、不保证超大整数的精度、不处理 Unicode 代理对等边角，文档如实标注。
+ * 严格拒绝重复键、数字前导零、字符串中的裸控制字符和非 JSON 空白；不保证超大整数的映射精度。
  */
 public final class JsonParser {
 
@@ -71,6 +71,9 @@ public final class JsonParser {
         while (true) {
             skipWhitespace();
             String key = parseString();
+            if (object.get(key) != null) {
+                throw error("对象包含重复键 '" + key + "'");
+            }
             skipWhitespace();
             expect(':');
             object.put(key, parseValue(depth + 1));
@@ -158,6 +161,10 @@ public final class JsonParser {
                         throw error("未知转义 '\\" + e + "'");
                 }
             } else {
+                if (c < 0x20) {
+                    throw error("字符串包含未转义控制字符 0x"
+                            + String.format("%02x", (int) c));
+                }
                 sb.append(c);
             }
         }
@@ -181,17 +188,25 @@ public final class JsonParser {
         if (peek() == '-') {
             pos++;
         }
-        int intStart = pos;
-        while (pos < text.length() && Character.isDigit(text.charAt(pos))) {
-            pos++;
+        if (pos >= text.length()) {
+            throw error("非法数字");
         }
-        if (pos == intStart) {
+        if (text.charAt(pos) == '0') {
+            pos++;
+            if (pos < text.length() && isDigit(text.charAt(pos))) {
+                throw error("数字整数部分不允许前导零");
+            }
+        } else if (text.charAt(pos) >= '1' && text.charAt(pos) <= '9') {
+            while (pos < text.length() && isDigit(text.charAt(pos))) {
+                pos++;
+            }
+        } else {
             throw error("非法数字");
         }
         if (pos < text.length() && text.charAt(pos) == '.') {
             pos++;
             int fracStart = pos;
-            while (pos < text.length() && Character.isDigit(text.charAt(pos))) {
+            while (pos < text.length() && isDigit(text.charAt(pos))) {
                 pos++;
             }
             // P4：小数点后必须至少一位数字，`1.` 非法
@@ -205,7 +220,7 @@ public final class JsonParser {
                 pos++;
             }
             int expStart = pos;
-            while (pos < text.length() && Character.isDigit(text.charAt(pos))) {
+            while (pos < text.length() && isDigit(text.charAt(pos))) {
                 pos++;
             }
             // P4：指数后必须至少一位数字，`1e` / `1e+` 非法
@@ -240,9 +255,17 @@ public final class JsonParser {
     }
 
     private void skipWhitespace() {
-        while (pos < text.length() && Character.isWhitespace(text.charAt(pos))) {
+        while (pos < text.length()) {
+            char c = text.charAt(pos);
+            if (c != ' ' && c != '\t' && c != '\r' && c != '\n') {
+                return;
+            }
             pos++;
         }
+    }
+
+    private boolean isDigit(char c) {
+        return c >= '0' && c <= '9';
     }
 
     private IllegalArgumentException error(String message) {

@@ -1,10 +1,14 @@
 package com.minispring.web.server;
 
 import com.minispring.web.http.HttpRequest;
+import com.minispring.web.http.HttpStatusException;
 import com.sun.net.httpserver.HttpExchange;
 
 import java.io.IOException;
 import java.net.URLDecoder;
+import java.nio.ByteBuffer;
+import java.nio.charset.CharacterCodingException;
+import java.nio.charset.CodingErrorAction;
 import java.nio.charset.StandardCharsets;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -52,15 +56,26 @@ final class SunHttpRequest implements HttpRequest {
                 // 请求体上限为 1 MiB，多读取 1 字节用于识别超限，避免无界缓冲占满内存。
                 byte[] bytes = exchange.getRequestBody().readNBytes(MAX_BODY_BYTES + 1);
                 if (bytes.length > MAX_BODY_BYTES) {
-                    throw new IllegalStateException("请求体超过上限 " + MAX_BODY_BYTES
-                            + " 字节，已拒绝读取（DoS 防护）");
+                    throw new HttpStatusException(413, "请求体超过上限 " + MAX_BODY_BYTES + " 字节");
                 }
-                body = new String(bytes, StandardCharsets.UTF_8);
+                body = decodeUtf8(bytes);
             } catch (IOException e) {
                 throw new IllegalStateException("读取请求体失败", e);
             }
         }
         return body;
+    }
+
+    private String decodeUtf8(byte[] bytes) {
+        try {
+            return StandardCharsets.UTF_8.newDecoder()
+                    .onMalformedInput(CodingErrorAction.REPORT)
+                    .onUnmappableCharacter(CodingErrorAction.REPORT)
+                    .decode(ByteBuffer.wrap(bytes))
+                    .toString();
+        } catch (CharacterCodingException e) {
+            throw new HttpStatusException(400, "请求体不是合法 UTF-8", e);
+        }
     }
 
     @Override
