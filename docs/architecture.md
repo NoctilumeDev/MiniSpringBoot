@@ -191,7 +191,7 @@
 3. Aware 回调（`BeanFactoryAware` / `EnvironmentAware`；context 层另以 BeanPostProcessor 注入 `ApplicationEventPublisherAware`）
 4. BeanPostProcessor.postProcessBeforeInitialization
 5. 初始化（`InitializingBean.afterPropertiesSet` / `@Bean(initMethod)`；未实现 `@PostConstruct`）
-6. BeanPostProcessor.postProcessAfterInitialization（AOP 代理在此生成）
+6. BeanPostProcessor.postProcessAfterInitialization（常规路径在此生成 AOP 代理；循环依赖可通过 `getEarlyBeanReference` 提前生成）
 7. 就绪，放入一级缓存提供使用
 8. 容器关闭（`DisposableBean.destroy` / `@Bean(destroyMethod)`；未实现 `@PreDestroy`）
 ```

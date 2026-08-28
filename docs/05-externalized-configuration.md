@@ -145,4 +145,4 @@ profile = "prod"
 - `${key:default}` 默认值生效 ✅
 - `@Value` 支持字符串 → 基本类型/包装类型的转换 ✅
 - 指定 `profile` 后，`application-prod.yml` 覆盖默认值 ✅
-- 单测覆盖三种解析：properties、yaml、占位符嵌套 ✅
+- `ConfigDemo` 的运行时断言覆盖 properties、yaml、默认值、嵌套占位符、类型转换与 Profile 覆盖；当前测试树没有单独的占位符单测，不能把这份 main 演示证据写成单测覆盖。

@@ -27,7 +27,7 @@ MiniSpringBoot 的教学主线回答的是：IoC、AOP、MVC、JDBC 与事务这
 
 2026-08-26 初次读回时，远端没有 `archive-hardening/minispring-system-boundaries` 或 `docs/raw-hardening-experiment` ref，也没有观察到对应 PR、`main` 合入或 Release。这个结论只描述该时间点可见的远端事实，不能证明历史上从未出现过短暂远端引用。当时实验头 `870c890` 只由本地 ref 保持可达；这不影响教学版的构建、运行或阅读。
 
-2026-08-28 最终治理阶段先建立了精确 tag ruleset，再创建上述公开归档 tag。经禁用凭据助手的 fresh HTTPS clone 读回，公开 tag object 为 `9d806f6`，并可检出实验提交 `870c890`；远端 `main` 仍为教学基线 `0a8c1d4`。tag 是 annotated 但未签名，因此本文不把它扩大解释为签名来源证明。ruleset 防止普通 ref 更新与删除，但管理员仍有修改仓库治理配置的能力；半年后的复核仍应同时比对 tag object、解引用提交和 ruleset 事实。
+2026-08-28 本轮操作记录显示：最终治理阶段先建立了精确 tag ruleset，再创建上述公开归档 tag。经禁用凭据助手的 fresh HTTPS clone 读回，公开 tag object 为 `9d806f6`，并可检出实验提交 `870c890`；远端 `main` 仍为教学基线 `0a8c1d4`。当前公开状态能独立证明两者同时存在，不能单凭最终状态重建创建先后。tag 是 annotated 但未签名，因此本文不把它扩大解释为签名来源证明。ruleset 防止普通 ref 更新与删除，但管理员仍有修改仓库治理配置的能力；半年后的复核仍应同时比对 tag object、解引用提交和 ruleset 事实。
 
 原始实验分支刻意保留当时的施工状态。停止说明作为独立文档变更审议，不反向改写那五个实验提交。
 
@@ -100,12 +100,13 @@ git rev-parse 'refs/tags/archive/raw-hardening-experiment-2026-08-26^{}'
 git switch --detach archive/raw-hardening-experiment-2026-08-26
 ```
 
-持有离线载体时，应先核对 SHA-256，再显式指定教学主分支完成 fresh clone；bundle 没有可供 Git 自动猜测的默认远端 HEAD：
+持有离线载体时，应以绝对路径指定 bundle，先核对 SHA-256，再显式指定教学主分支完成 fresh clone。`git bundle verify` 需要在一个现有 Git 仓库中运行，因此下例先 clone、再通过 `-C` 在新仓库里校验；bundle 没有可供 Git 自动猜测的默认远端 HEAD：
 
 ```bash
-sha256sum MiniSpringBoot_raw-hardening-experiment_2026-08-26.bundle
-git bundle verify MiniSpringBoot_raw-hardening-experiment_2026-08-26.bundle
-git clone --branch main MiniSpringBoot_raw-hardening-experiment_2026-08-26.bundle MiniSpringBoot-offline
+BUNDLE=/absolute/path/MiniSpringBoot_raw-hardening-experiment_2026-08-26.bundle
+sha256sum "$BUNDLE"
+git clone --branch main "$BUNDLE" MiniSpringBoot-offline
+git -C MiniSpringBoot-offline bundle verify "$BUNDLE"
 git -C MiniSpringBoot-offline switch --detach archive/raw-hardening-experiment-2026-08-26
 ```
 
