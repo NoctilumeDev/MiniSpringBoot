@@ -71,7 +71,7 @@
 
 - **产出**：`Pointcut/Advice/Aspect/Advisor`、`@Before/@After/@Around`、JDK 动态代理。
 - **落地证据**：demo 里 `@Around` 计时切面真实拦截目标方法，耗时真实打印。
-- **落地边界（显式技术债）**：`DefaultListableBeanFactory.getEarlyBeanReference` 目前仍直接返回原始对象，尚未委托 AOP 代理器提前生成代理；因此「被代理 Bean 同时参与循环依赖」时，提前暴露的是裸对象而非代理，与容器最终持有的代理不一致。**M3 验收口径不含此联合场景，不阻塞**；归到 **M7 收口**（最迟 M8 数据接入前）接上——core 新增 `SmartInstantiationAwareBeanPostProcessor#getEarlyBeanReference` 扩展点，`AspectJAutoProxyCreator` 实现并用 `earlyProxyReferences` 去重，同时补「AOP × 循环依赖」集成场景验收。
+- **M3 当时的落地边界（主体已于 M7 关闭）**：M3 验收时，`DefaultListableBeanFactory.getEarlyBeanReference` 仍直接返回原始对象，因此「被代理 Bean 同时参与循环依赖」不在当期验收口径内。M7 随后新增 `SmartInstantiationAwareBeanPostProcessor#getEarlyBeanReference` 扩展点，由 `AspectJAutoProxyCreator` 提前生成代理并用 `earlyProxyReferences` 去重；当前实现已不再保留这项主体技术债。切面收集期已注入的裸对象引用无法自动替换，仍作为 D44 显式边界保留。
 
 ### M4 · 外部化配置
 

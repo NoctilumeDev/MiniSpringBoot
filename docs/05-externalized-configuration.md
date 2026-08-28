@@ -32,12 +32,13 @@ interface PropertySource {
 ```
 Environment
   ├─ systemProperties（系统属性，最高优先级）
-  ├─ application-{profile}.yml（带 profile 的配置）
-  ├─ application.yml（默认配置）
-  └─ environmentVariables / 命令行参数等
+  ├─ environmentVariables（环境变量）
+  ├─ application-{profile}.properties/yml（带 profile 的配置）
+  └─ application.properties/yml（默认配置）
 ```
 
-查值时逐个 `PropertySource` 询问，谁先有值谁赢。这套「优先级链」正是 Spring 里「命令行参数覆盖配置文件」的实现原理。
+查值时逐个 `PropertySource` 询问，谁先有值谁赢。`MutablePropertySources` 提供插入高优先级来源的机制，
+但当前 `MiniSpringApplication.run(..., args)` **尚不解析命令行参数**，不能把可扩展机制写成已交付能力。
 
 ---
 
@@ -108,7 +109,11 @@ app.name=MiniSpringBoot
 
 `Profile` 回答「同一份代码，怎么适配开发/测试/生产三套环境」。
 
-机制：启动时指定 `active profile`，容器的加载器据此**多加载一份对应的配置文件**，并让其优先级**高于默认文件**。
+机制：调用方在加载配置前通过 `StandardEnvironment#setActiveProfiles(...)` 手动指定 `active profile`，
+加载器据此**多加载一份对应的配置文件**，并让其优先级**高于默认文件**。当前实现要求 classpath
+中至少存在一份默认 `application.properties` / `application.yml` 作为插入锚点；若只有 profile 文件而
+没有默认文件，加载器不会读取该 profile 文件。当前也未从 `spring.profiles.active`、
+`SPRING_PROFILES_ACTIVE` 或 `run(..., args)` 自动激活 Profile。
 
 ```
 profile = "prod"
@@ -124,13 +129,12 @@ profile = "prod"
 
 | 优先级 | 来源 |
 | --- | --- |
-| 1 | 命令行参数 |
-| 2 | 系统属性 `System.getProperties()` |
-| 3 | 环境变量 |
-| 4 | `application-{profile}.yml/properties` |
-| 5 | `application.yml/properties` |
+| 1 | 系统属性 `System.getProperties()` |
+| 2 | 环境变量 |
+| 3 | 手动激活的 `application-{profile}.properties/yml`（后激活者优先，同层 `.properties` 优先） |
+| 4 | `application.properties/yml`（同层 `.properties` 优先） |
 
-> 这张表是理解「为什么环境变量/命令行能覆盖配置文件」的钥匙，也是排障时最先要检查的顺序。
+> 这张表描述的是当前代码事实。命令行覆盖与自动 Profile 激活仍是显式技术债，排障时不能假定它们存在。
 
 ---
 
@@ -141,4 +145,4 @@ profile = "prod"
 - `${key:default}` 默认值生效 ✅
 - `@Value` 支持字符串 → 基本类型/包装类型的转换 ✅
 - 指定 `profile` 后，`application-prod.yml` 覆盖默认值 ✅
-- 单测覆盖三种解析：properties、yaml、占位符嵌套 ✅
+- `ConfigDemo` 的运行时断言覆盖 properties、yaml、默认值、嵌套占位符、类型转换与 Profile 覆盖；当前测试树没有单独的占位符单测，不能把这份 main 演示证据写成单测覆盖。

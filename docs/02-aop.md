@@ -75,18 +75,18 @@ AOP 并不修改你的原始字节码（那是 CGLIB/AspectJ 编译期织入的�
                                    └─ 3. 执行 After / AfterReturning 通知
 ```
 
-关键认知：**调用方拿到的，从头到尾都是代理对象；原始对象从未被直接暴露。** 所以「无感」的真相是——你不是在调用原始方法，你一直在调用代理。
+关键认知：在常规稳定路径中，调用方从容器取得的、命中切点的业务 Bean 是代理对象；所谓「无感」，是业务调用先进入代理，再由代理调用原始目标，而不是修改原始字节码。这里不能绝对化成「原始对象从未被直接暴露」：循环依赖可能触发初始化前的早期代理；切面收集期还存在 D44 所记录的边界——已注入给其他 Bean 的早期裸对象引用不会因容器随后回填代理而自动替换。
 
 代理接口不只取目标类直接声明的 `getInterfaces()`：容器会沿目标类的父类层级以及接口继承层级确定性收集完整业务接口。因此，`SpecializedService extends BaseService` 即使自己没有再次书写 `implements Service`，只要父类实现了该接口，它仍然可以进入同一条 JDK 自动代理链。无接口的目标依旧按教学边界直接放行，不引入类代理。
 
 ### 4.1 与 IoC 生命周期的衔接
 
-回顾 [01 章](01-ioc-container.md)的 Bean 生命周期，代理对象在 **`postProcessAfterInitialization`** 生成。这意味着：
+回顾 [01 章](01-ioc-container.md)的 Bean 生命周期，常规路径在 **`postProcessAfterInitialization`** 生成代理：
 
 1. 原始对象先完整创建（依赖注入、初始化全部完成）。
 2. 容器在最后一步「狸猫换太子」，用代理替换掉原始对象放进缓存。
 
-这就是 `BeanPostProcessor` 最经典的用途——**它是 AOP 与 IoC 的缝合点**。
+若单例因循环依赖被真正提前引用，三级缓存会委托 `SmartInstantiationAwareBeanPostProcessor#getEarlyBeanReference` 在初始化完成前生成同一代理，after 阶段只避免二次包装。另有切面收集期的 D44 已知边界，详见 [路线图](06-roadmap.md)。因此，`BeanPostProcessor` 是 **AOP 与 IoC 的缝合点**，但 `postProcessAfterInitialization` 不是所有路径唯一的代理生成时点。
 
 ---
 

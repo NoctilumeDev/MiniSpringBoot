@@ -85,13 +85,14 @@ BeanDefinitionRegistry（保存 BeanDefinition 图纸）
    ↓
 属性填充（@Autowired / @Value 注入）
    ↓
-Aware 回调（BeanNameAware / BeanFactoryAware）
+容器直接注入 BeanFactoryAware / EnvironmentAware
    ↓
 BeanPostProcessor.postProcessBeforeInitialization
+（context 在此注入 ApplicationEventPublisherAware）
    ↓
 初始化（InitializingBean.afterPropertiesSet / @Bean initMethod）
    ↓
-BeanPostProcessor.postProcessAfterInitialization   ← AOP 代理在这里生成
+BeanPostProcessor.postProcessAfterInitialization   ← 常规路径在这里生成 AOP 代理
    ↓
 放入一级缓存，对外提供
    ↓
@@ -102,7 +103,7 @@ BeanPostProcessor.postProcessAfterInitialization   ← AOP 代理在这里生成
 
 - **生命周期回调的两种形态**：注解式 `@PostConstruct`/`@PreDestroy` 属 Spring 机制，本框架**未实现**（教学子集显式边界）；等价能力由 `InitializingBean`/`DisposableBean` 接口与 `@Bean(initMethod/destroyMethod)` 声明式回调承担（D2 已落地）。
 - **工厂方法保留精确身份**：配置读取阶段会把每个 `@Bean` 对应的 `Method` 固化到 `BeanDefinition`；即使同一配置类存在同名重载，也不会在实例化阶段按反射枚举顺序误选。兼容旧式“只登记方法名”的定义遇到重载时会直接拒绝并给出可读错误。
-- **AOP 的插入点**：代理对象在 `postProcessAfterInitialization` 生成——所以「代理」永远发生在「原始对象完全就绪」之后。这是理解 AOP 与生命周期关系的关键。
+- **AOP 的插入点**：常规路径在 `postProcessAfterInitialization` 生成代理；若单例因循环依赖被真正提前引用，`SmartInstantiationAwareBeanPostProcessor#getEarlyBeanReference` 会在初始化完成前生成同一代理，after 阶段只负责避免二次包装。不能把常规路径绝对化为「代理永远发生在原始对象完全就绪之后」。
 - **代理不转移生命周期所有权**：一级缓存可以对外保存 AOP 代理，但容器会单独保留自己创建的原始目标；关闭时，`DisposableBean` 与 `destroyMethod` 始终在原始目标上执行，不要求销毁方法暴露到业务接口。
 
 ---
