@@ -19,14 +19,19 @@ MiniSpringBoot 的教学主线回答的是：IoC、AOP、MVC、JDBC 与事务这
 | 教学基线 | `0a8c1d46e256be503ecd948d3d53e123efb08bd7`（2026-08-26 当时的 `main`，`v0.m10.3`） |
 | 原始实验本地 ref | `archive-hardening/minispring-system-boundaries` |
 | 原始实验分支头 | `870c89080621b8d554e2050dded4d2da76300ebd` |
+| 公开归档载体 | annotated tag `archive/raw-hardening-experiment-2026-08-26`；tag object `9d806f677505feb24d947315fac473d121dfcca3`，解引用到上述实验头 |
+| 远端保护 | active tag ruleset [`21699535`](https://github.com/NoctilumeDev/MiniSpringBoot/rules/21699535)，精确命中该 tag，只限制 update / deletion，无 bypass |
+| 离线载体 | `MiniSpringBoot_raw-hardening-experiment_2026-08-26.bundle`；SHA-256 `9ebaa9bfbbfe5c4d9447e10b7107a60c8005037360a9a5ac71e2652fb812d76a` |
 | 与教学基线的关系 | 从上述教学基线分叉；未合入 `main` |
 | 归档裁决 | 冻结为工程化候选证据；不是受支持版本，不是 Release，不是生产就绪证明 |
 
-2026-08-26 本轮读回时，远端没有 `archive-hardening/minispring-system-boundaries` 或 `docs/raw-hardening-experiment` ref，也没有观察到对应 PR、`main` 合入或 Release。这个结论只描述该时间点可见的远端事实，不能证明历史上从未出现过短暂远端引用。此时实验头 `870c890` 只由本地 ref 保持可达；这不影响教学版的构建、运行或阅读。
+2026-08-26 初次读回时，远端没有 `archive-hardening/minispring-system-boundaries` 或 `docs/raw-hardening-experiment` ref，也没有观察到对应 PR、`main` 合入或 Release。这个结论只描述该时间点可见的远端事实，不能证明历史上从未出现过短暂远端引用。当时实验头 `870c890` 只由本地 ref 保持可达；这不影响教学版的构建、运行或阅读。
+
+2026-08-28 最终治理阶段先建立了精确 tag ruleset，再创建上述公开归档 tag。经禁用凭据助手的 fresh HTTPS clone 读回，公开 tag object 为 `9d806f6`，并可检出实验提交 `870c890`；远端 `main` 仍为教学基线 `0a8c1d4`。tag 是 annotated 但未签名，因此本文不把它扩大解释为签名来源证明。ruleset 防止普通 ref 更新与删除，但管理员仍有修改仓库治理配置的能力；半年后的复核仍应同时比对 tag object、解引用提交和 ruleset 事实。
 
 原始实验分支刻意保留当时的施工状态。停止说明作为独立文档变更审议，不反向改写那五个实验提交。
 
-固定 SHA 只解决“对象身份不漂移”，不负责把对象带到新的克隆。要让这段实验成为长期证据，还必须提供持久载体：本地分支只能支持本机追溯；经验证并带 SHA-256 的 Git bundle 可以支持离线恢复；陌生公众复验则需要公开、稳定且明确标为实验的 archival ref 或公开证据资产。在完成最终仓库治理阶段的载体裁决与读回以前，本文只是一份**本地可追溯记录**，不能被主页文章扩大为“公众已可复现”。
+固定 SHA 只解决“对象身份不漂移”，不负责把对象带到新的克隆。因此本次同时保留了三层：本地原始分支用于继续查看施工轨迹；公开且明确标为实验的 tag 供陌生读者取得对象；带 SHA-256 的 Git bundle 用于作者离线恢复。`git bundle verify` 确认 bundle 历史完整，包含 `refs/heads/main` 与公开实验 tag；显式以 `--branch main` fresh clone 后，教学基线和实验对象均可检出。bundle 不携带默认远端 HEAD，故无参数 clone 会停在“未检出工作树”的状态；这是操作条件，不应被写成无条件的一键恢复。
 
 ## 3. 同一机制，新增的是失败空间
 
@@ -84,6 +89,26 @@ MiniSpringBoot 的教学主线回答的是：IoC、AOP、MVC、JDBC 与事务这
 
 这条阅读路径的终点不是“照着候选分支继续造完”，而是理解为什么真正的工业框架会长成今天的样子。
 
+公众可先从公开仓库取得实验对象，并核对 tag 身份：
+
+```bash
+git clone --no-checkout https://github.com/NoctilumeDev/MiniSpringBoot.git
+cd MiniSpringBoot
+git rev-parse refs/remotes/origin/main
+git rev-parse refs/tags/archive/raw-hardening-experiment-2026-08-26
+git rev-parse 'refs/tags/archive/raw-hardening-experiment-2026-08-26^{}'
+git switch --detach archive/raw-hardening-experiment-2026-08-26
+```
+
+持有离线载体时，应先核对 SHA-256，再显式指定教学主分支完成 fresh clone；bundle 没有可供 Git 自动猜测的默认远端 HEAD：
+
+```bash
+sha256sum MiniSpringBoot_raw-hardening-experiment_2026-08-26.bundle
+git bundle verify MiniSpringBoot_raw-hardening-experiment_2026-08-26.bundle
+git clone --branch main MiniSpringBoot_raw-hardening-experiment_2026-08-26.bundle MiniSpringBoot-offline
+git -C MiniSpringBoot-offline switch --detach archive/raw-hardening-experiment-2026-08-26
+```
+
 只有当 Git 对象库同时包含两个固定提交时，以下只读命令才能核对原始轨迹；先检查可达对象，再读取提交和 diff：
 
 ```bash
@@ -94,7 +119,7 @@ git diff --stat 0a8c1d46e256be503ecd948d3d53e123efb08bd7..870c89080621b8d554e205
 git diff 0a8c1d46e256be503ecd948d3d53e123efb08bd7..870c89080621b8d554e2050dded4d2da76300ebd
 ```
 
-在公开合入本文或从主页文章引用这段实验以前，必须先完成实验对象的持久载体、不可变性与 fresh-clone/离线恢复读回；否则只能把它标为作者本地保存、公众无法独立重放的历史记录。
+上述公开 fresh clone、ruleset 读回、bundle 校验与显式分支 clone 已在 2026-08-28 完成。它们证明本次归档时的对象身份与可达性，不承诺 GitHub、作者离线介质或未来工具行为永远不变；复核者仍应重新执行这些读回，而不是只相信本文。
 
 ## 7. 最终边界
 
@@ -102,7 +127,7 @@ git diff 0a8c1d46e256be503ecd948d3d53e123efb08bd7..870c89080621b8d554e2050dded4d
 - 原始 hardening 分支代表一次被冻结的工程化实验，不是平行维护的产品线；
 - 本文解释实验的证据价值与停止理由，不替实验补完实现；
 - 安全扫描与 GitHub 仓库治理属于独立验收域，不由这段实验代替；
-- 实验的公开可复现性以持久 ref / bundle / 证据资产的实际读回为准，固定 SHA 本身不能代替可达性；
+- 实验的公开可复现性由固定 SHA、受规则约束的公开 tag 与离线 bundle 共同承担；三者各自仍需实际读回，不能互相代替；
 - “做过”不等于“应该合入”，“能够继续”也不等于“现在应该继续”。
 
 MiniSpringBoot 负责把机制讲清楚；这段实验负责展示现实为何让机制周围长出复杂度；真正完整的工业答案，应继续到成熟实现中寻找。

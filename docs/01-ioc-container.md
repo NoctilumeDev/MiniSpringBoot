@@ -85,7 +85,7 @@ BeanDefinitionRegistry（保存 BeanDefinition 图纸）
    ↓
 属性填充（@Autowired / @Value 注入）
    ↓
-Aware 回调（BeanNameAware / BeanFactoryAware）
+Aware 注入（BeanFactoryAware；context 层另由初始化前处理器注入 EnvironmentAware / ApplicationEventPublisherAware）
    ↓
 BeanPostProcessor.postProcessBeforeInitialization
    ↓
