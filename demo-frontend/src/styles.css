@@ -570,7 +570,7 @@ tbody tr {
   transition: background 160ms ease;
 }
 
-tbody tr:hover {
+tbody tr:not(.editing):hover {
   background: rgba(77, 164, 216, 0.08);
 }
 
@@ -579,11 +579,6 @@ td:nth-child(3) {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-tr.editing {
-  background: rgba(55, 140, 196, 0.12);
-  box-shadow: inset 2px 0 0 rgba(117, 195, 221, 0.65);
 }
 
 td input {
@@ -1075,13 +1070,15 @@ code {
   }
 
   tbody tr.editing {
-    display: block;
-    padding: 0;
+    display: grid;
+    grid-template-columns: minmax(0, 0.7fr) minmax(0, 1.3fr);
+    padding: 11px 0;
   }
 
   tbody .edit-cell {
-    display: block;
-    padding: 16px 10px 18px;
+    display: grid;
+    grid-column: 1 / -1;
+    padding: 8px 10px;
   }
 
   tbody .edit-cell::before {
@@ -1089,15 +1086,20 @@ code {
   }
 
   .edit-panel {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 0.7fr) minmax(0, 1.3fr);
+    gap: 12px 10px;
   }
 
   .edit-id {
     padding-top: 0;
   }
 
+  .edit-panel > .edit-field:nth-child(3) {
+    grid-column: 1 / -1;
+  }
+
   .edit-actions {
-    grid-column: auto;
+    grid-column: 1 / -1;
     width: 100%;
   }
 
