@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   Database,
   Mail,
@@ -21,7 +21,9 @@ export default function UsersPage({ onError, onNotice }) {
   const [email, setEmail] = useState('');
   const [editingId, setEditingId] = useState(null);
   const [draft, setDraft] = useState({ name: '', email: '' });
+  const [deleteCandidate, setDeleteCandidate] = useState(null);
   const [busy, setBusy] = useState(false);
+  const deleteDialogRef = useRef(null);
 
   const reload = async () => {
     try {
@@ -35,6 +37,11 @@ export default function UsersPage({ onError, onNotice }) {
     reload();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    const dialog = deleteDialogRef.current;
+    if (deleteCandidate && dialog && !dialog.open) dialog.showModal();
+  }, [deleteCandidate]);
 
   const create = async (e) => {
     e.preventDefault();
@@ -75,13 +82,21 @@ export default function UsersPage({ onError, onNotice }) {
     }
   };
 
-  const remove = async (id) => {
-    if (!window.confirm(`确认删除用户 #${id}？将真实删除 MySQL 中的该行。`)) {
-      return;
-    }
+  const requestRemove = (user) => {
+    setDeleteCandidate(user);
+  };
+
+  const cancelRemove = () => {
+    if (!busy) setDeleteCandidate(null);
+  };
+
+  const confirmRemove = async () => {
+    if (!deleteCandidate) return;
+    const id = deleteCandidate.id;
     setBusy(true);
     try {
       await api.deleteUser(id);
+      setDeleteCandidate(null);
       onNotice(`用户 #${id} 已删除（MySQL 行消失）`);
       await reload();
     } catch (err) {
@@ -178,7 +193,7 @@ export default function UsersPage({ onError, onNotice }) {
                             <button type="button" onClick={() => startEdit(u)}>
                               <Pencil size={15} aria-hidden="true" />编辑
                             </button>
-                            <button type="button" className="danger" disabled={busy} onClick={() => remove(u.id)}>
+                            <button type="button" className="danger" disabled={busy} onClick={() => requestRemove(u)}>
                               <Trash2 size={15} aria-hidden="true" />删除
                             </button>
                           </div>
@@ -225,6 +240,45 @@ export default function UsersPage({ onError, onNotice }) {
       </div>
 
       <p className="hint">写后立即重读；当前行数与内容应同 MySQL 的 <code>users</code> 表完全一致。</p>
+
+      {deleteCandidate && (
+        <dialog
+          ref={deleteDialogRef}
+          className="confirm-dialog"
+          role="alertdialog"
+          aria-labelledby="delete-confirm-title"
+          aria-describedby="delete-confirm-description"
+          onCancel={(event) => {
+            event.preventDefault();
+            cancelRemove();
+          }}
+          onKeyDown={(event) => {
+            if (event.key === 'Escape') {
+              event.preventDefault();
+              cancelRemove();
+            }
+          }}
+        >
+          <span className="confirm-dialog__mark" aria-hidden="true">
+            <Trash2 size={20} />
+          </span>
+          <p className="confirm-dialog__eyebrow">DELETE · /users/{deleteCandidate.id}</p>
+          <h3 id="delete-confirm-title">确认删除这条用户记录？</h3>
+          <p id="delete-confirm-description">
+            用户 <strong>{deleteCandidate.name}</strong>（#{deleteCandidate.id}）将从 MySQL 中真实删除，
+            此操作不能撤销。
+          </p>
+          <div className="confirm-dialog__actions">
+            <button type="button" autoFocus disabled={busy} onClick={cancelRemove}>
+              取消
+            </button>
+            <button type="button" className="danger" disabled={busy} onClick={confirmRemove}>
+              <Trash2 size={15} aria-hidden="true" />
+              {busy ? '正在删除…' : '确认删除'}
+            </button>
+          </div>
+        </dialog>
+      )}
     </section>
   );
 }
