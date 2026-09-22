@@ -60,51 +60,14 @@ MiniSpringBoot 是一个 **从零手写** 的 Spring Boot 内核复刻项目。�
 
 ## 架构总览
 
-MiniSpringBoot 采用与 Spring 对齐的分层设计。箭头方向 = 依赖方向（上层依赖下层，越底层越核心）：demo 应用轨道在上方消费内核能力，框架内核在下方提供支撑——虚线是 demo 对内核与基础设施的真实使用关系，与各模块 `pom.xml` 一一对应：
+MiniSpringBoot 采用与 Spring 对齐的分层设计：demo 应用轨道在上方消费内核能力，框架内核在下方提供支撑；两条跨轨关系在中间独立标出。内核区按各模块 `pom.xml` 推导出的依赖层级排列，不把总览图冒充逐线依赖图：
 
-```mermaid
-graph TD
-    subgraph KERNEL["框架内核 · 基于 JDK 17，零强制传递第三方运行时依赖"]
-        direction TB
-        BOOT["boot · 启动器<br/>MiniSpringApplication.run() / Lifecycle 驱动<br/>关闭钩子 / Banner / StartedEvent（不依赖 web）"]
-        AUTO["autoconfigure · 自动配置<br/>@Conditional 派生 / SPI 读取<br/>web · aop · config · jdbc · HikariCP 均 optional：裁掉即消失"]
-        WEB["web · Web/MVC<br/>DispatcherServlet / HandlerMapping / 参数绑定 / 自写 JSON<br/>内嵌 HTTP 服务器（零第三方，经 Lifecycle 由 boot 启动）"]
-        JDBC["jdbc · JDBC 与事务<br/>JdbcTemplate / RowMapper / DataAccessException<br/>编程式 · 声明式事务（@Transactional，纯 java.sql.*）"]
-        AOP["aop · AOP<br/>Pointcut / Advice / JDK 动态代理 / 自动代理创建器"]
-        CTX["context · 上下文<br/>注解扫描 / @Configuration·@Bean / 事件广播 / Lifecycle"]
-        CFG["config · 外部化配置<br/>Environment / PropertySource / @Value"]
-        CORE["core · 核心容器<br/>BeanFactory / BeanDefinition / Bean 生命周期 / BeanPostProcessor"]
-        BOOT --> AUTO
-        AUTO --> WEB
-        AUTO --> JDBC
-        WEB --> AOP
-        JDBC --> AOP
-        AOP --> CTX
-        CTX --> CFG
-        CTX --> CORE
-    end
-    subgraph DEMO["demo 应用轨道 · 双轨制（此层可引真实依赖）"]
-        direction TB
-        BROWSER["浏览器<br/>生产入口 :9080"]
-        NGINX["Nginx 1.28<br/>dist 托管 + least_conn"]
-        FE["demo-frontend dist<br/>React 18 + Vite 8"]
-        APP["mini-spring-demo ×3<br/>:9091 / :9092 / :9093"]
-        STARTER["mini-spring-starter-demo<br/>Starter 验证"]
-        DB[("MySQL 8<br/>deploy/mysql（:13306）")]
-        BROWSER --> NGINX
-        NGINX --> FE
-        NGINX -. "/api · /health" .-> APP
-        APP -. "JDBC" .-> DB
-        APP -.- STARTER
-    end
-    APP -. "run() 入口" .-> BOOT
-    STARTER -. "SPI 自动装配" .-> AUTO
+![MiniSpringBoot 系统总览：真实 demo 轨道由浏览器、Nginx、React、三个无状态应用实例与 MySQL 组成；框架内核的八个模块按 POM 推导的单向依赖层级排列。](docs/architecture-overview.svg)
 
-    classDef kernelNode fill:#eef2f8,stroke:#5b7db1,color:#1f2328
-    classDef demoNode fill:#f6f8fa,stroke:#8b949e,color:#1f2328
-    class BOOT,AUTO,WEB,JDBC,AOP,CTX,CFG,CORE kernelNode
-    class BROWSER,NGINX,FE,APP,STARTER demoNode
-```
+本图是面向 README 的系统总览，回答 demo 运行轨道、应用与内核绑定及模块分层，
+不替代逐模块依赖或完整部署生命周期拓扑。精确内核依赖见
+[总体设计](docs/architecture.md)，M10 三实例、Nginx 与 MySQL 的运行关系见
+[高可用演练](docs/10-high-availability.md)；最终依赖方向仍以各模块 `pom.xml` 为准。
 
 | 模块 | 对应 Spring 的概念 | 责任 |
 | --- | --- | --- |

@@ -109,6 +109,65 @@ def direct_dependencies(module: str) -> list[tuple[str, str, str, bool]]:
     return result
 
 
+def kernel_dependency_layers() -> dict[str, int]:
+    internal_dependencies = {
+        module: {
+            artifact
+            for group, artifact, _scope, _optional in direct_dependencies(module)
+            if group == "com.minispring" and artifact in KERNEL_MODULES
+        }
+        for module in KERNEL_MODULES
+    }
+    layers: dict[str, int] = {}
+    visiting: set[str] = set()
+
+    def resolve(module: str) -> int:
+        if module in layers:
+            return layers[module]
+        if module in visiting:
+            raise ContractError(f"kernel dependency cycle reaches {module}")
+        visiting.add(module)
+        dependencies = internal_dependencies[module]
+        layer = 0 if not dependencies else 1 + max(resolve(item) for item in dependencies)
+        visiting.remove(module)
+        layers[module] = layer
+        return layer
+
+    for module in KERNEL_MODULES:
+        resolve(module)
+    return layers
+
+
+def verify_architecture_overview() -> None:
+    root = ET.parse(ROOT / "docs" / "architecture-overview.svg").getroot()
+    if root.attrib.get("data-view") != "system-overview":
+        raise ContractError("architecture overview must declare system-overview view identity")
+    if root.attrib.get("data-module-source") != "pom.xml":
+        raise ContractError("architecture overview must name pom.xml as its module source")
+
+    observed: dict[str, int] = {}
+    for element in root.iter():
+        module = element.attrib.get("data-kernel-module")
+        if module is None:
+            continue
+        if module in observed:
+            raise ContractError(f"architecture overview duplicates module {module}")
+        try:
+            observed[module] = int(element.attrib["data-layer"])
+        except (KeyError, ValueError) as error:
+            raise ContractError(
+                f"architecture overview has invalid layer for {module}"
+            ) from error
+
+    expected = kernel_dependency_layers()
+    if observed != expected:
+        raise ContractError(
+            "architecture overview module layers drifted from direct POM dependencies: "
+            f"expected {expected!r}, observed {observed!r}"
+        )
+    print("architecture_overview_module_layers=pom_derived")
+
+
 def verify_dependency_contract() -> None:
     mandatory_third_party: list[str] = []
     hikari: tuple[str, str, str, bool] | None = None
@@ -136,6 +195,7 @@ def verify_dependency_contract() -> None:
 
     print("kernel_mandatory_transitive_third_party_runtime_dependencies=0")
     print("autoconfigure_hikari_dependency=direct_optional_compile")
+    verify_architecture_overview()
 
 
 def verify_evidence_attributes(paths: list[str]) -> None:

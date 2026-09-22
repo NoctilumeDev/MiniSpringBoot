@@ -1,0 +1,113 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="900" viewBox="0 0 1400 900" role="img" aria-labelledby="title desc" data-view="system-overview" data-module-source="pom.xml">
+  <title id="title">MiniSpringBoot 系统总览</title>
+  <desc id="desc">面向 README 的系统总览：上方展示真实 demo 运行轨道，中间展示应用到内核的两个显式绑定，下方展示八个严格单向依赖的框架内核模块；它不替代完整部署生命周期拓扑。</desc>
+  <defs>
+    <linearGradient id="space" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#02070e"/><stop offset="0.58" stop-color="#07111d"/><stop offset="1" stop-color="#0d2132"/>
+    </linearGradient>
+    <linearGradient id="glass" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#263d52" stop-opacity="0.78"/><stop offset="0.55" stop-color="#14283a" stop-opacity="0.84"/><stop offset="1" stop-color="#0a1826" stop-opacity="0.92"/>
+    </linearGradient>
+    <linearGradient id="mechanism" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#214764" stop-opacity="0.92"/><stop offset="1" stop-color="#0d2234" stop-opacity="0.96"/>
+    </linearGradient>
+    <linearGradient id="foundation" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#347497"/><stop offset="1" stop-color="#15364e"/>
+    </linearGradient>
+    <radialGradient id="planet" cx="25%" cy="25%" r="75%">
+      <stop offset="0" stop-color="#7cd6f0" stop-opacity="0.34"/><stop offset="0.45" stop-color="#387fa8" stop-opacity="0.19"/><stop offset="1" stop-color="#112c43" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="9" stdDeviation="11" flood-color="#000" flood-opacity="0.4"/></filter>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 Z" fill="#75cce7"/></marker>
+    <style>
+      .sans{font-family:Inter,'Microsoft YaHei',sans-serif}.mono{font-family:ui-monospace,SFMono-Regular,Consolas,monospace}
+      .panel{fill:#0b1724;fill-opacity:.64;stroke:#9edff3;stroke-opacity:.22}.card{fill:url(#glass);stroke:#9edff3;stroke-opacity:.42}.card-mechanism{fill:url(#mechanism);stroke:#9edff3;stroke-opacity:.64}.card-foundation{fill:url(#foundation);stroke:#c0f2ff;stroke-opacity:.82}
+      .kicker{font-size:10px;font-weight:700;letter-spacing:2px;fill:#67c9e6}.name{font-size:18px;font-weight:600;fill:#f4f8ff}.detail{font-size:11px;fill:#a7b2bf}
+      .flow{fill:none;stroke:#75cce7;stroke-width:1.65;marker-end:url(#arrow)}
+    </style>
+  </defs>
+
+  <rect width="1400" height="900" rx="24" fill="url(#space)"/>
+  <circle cx="1370" cy="35" r="345" fill="url(#planet)"/>
+  <path d="M1025 0 C1185 92 1305 212 1400 382" fill="none" stroke="#85dcf4" stroke-opacity="0.11" stroke-width="2"/>
+  <path d="M0 116 H1400 M0 862 H1400" stroke="#7bb8d4" stroke-opacity="0.16"/>
+
+  <text x="62" y="55" class="sans" fill="#f4f8ff" font-size="30" font-weight="700" letter-spacing="1.5">MINISPRINGBOOT · SYSTEM OVERVIEW</text>
+  <text x="62" y="86" class="mono" fill="#67c9e6" font-size="12" letter-spacing="2">DEMO RUNTIME / APPLICATION—KERNEL BINDINGS / MODULE LAYERS</text>
+  <text x="1338" y="73" text-anchor="end" class="sans" fill="#a7b2bf" font-size="11">系统总览 · 非完整部署生命周期图</text>
+
+  <!-- 01: real demo track. Connectors are painted before cards. -->
+  <g filter="url(#shadow)">
+    <rect x="42" y="134" width="1316" height="218" rx="18" class="panel"/>
+    <text x="68" y="168" class="sans kicker">01 · REAL DEMO TRACK · 真实依赖只存在于应用层</text>
+
+    <path d="M240 255 H284" class="flow"/>
+    <path d="M489 242 C514 242 518 214 544 214" class="flow"/>
+    <path d="M489 270 C514 270 518 301 544 301" class="flow"/>
+    <path d="M764 301 H824" class="flow"/>
+
+    <g transform="translate(70 216)"><rect width="170" height="78" rx="10" class="card"/><text x="18" y="29" class="sans kicker">ENTRY · :9080</text><text x="18" y="57" class="sans name">浏览器</text></g>
+    <g transform="translate(284 216)"><rect width="205" height="78" rx="10" class="card-mechanism"/><text x="18" y="24" class="sans kicker">NGINX 1.28</text><text x="18" y="49" class="sans name">dist · least_conn</text><text x="18" y="68" class="sans detail">static / · proxy /api · /health</text></g>
+    <g transform="translate(544 178)"><rect width="220" height="72" rx="10" class="card"/><text x="18" y="27" class="sans kicker">STATIC PRODUCT</text><text x="18" y="53" class="sans name">React 18 · Vite 8</text></g>
+    <g transform="translate(544 265)"><rect width="220" height="72" rx="10" class="card-mechanism"/><text x="18" y="27" class="sans kicker">APPLICATION ×3</text><text x="18" y="53" class="sans name">:9091 · :9092 · :9093</text></g>
+    <g transform="translate(824 265)"><rect width="236" height="72" rx="10" class="card"/><text x="18" y="27" class="sans kicker">MYSQL 8 · :13306</text><text x="18" y="53" class="sans name">deploy/mysql</text></g>
+
+    <g transform="translate(1102 190)">
+      <rect width="220" height="118" rx="10" fill="#0d1d2b" stroke="#7da8bc" stroke-opacity="0.34"/>
+      <text x="18" y="29" class="sans kicker">RUNTIME CLAIM</text>
+      <text x="18" y="58" class="sans name">真前端 · 真后端</text>
+      <text x="18" y="82" class="sans detail">MySQL 全链路</text>
+      <text x="18" y="101" class="sans detail">3 个无状态实例</text>
+    </g>
+  </g>
+
+  <!-- 02: bindings are isolated from both graph layers. -->
+  <g transform="translate(42 373)">
+    <rect width="1316" height="74" rx="14" fill="#0f2232" fill-opacity="0.76" stroke="#9edff3" stroke-opacity="0.24"/>
+    <text x="26" y="29" class="sans kicker">02 · EXPLICIT BINDINGS · 应用消费内核，不改写内核边界</text>
+    <g transform="translate(286 16)">
+      <text x="0" y="38" text-anchor="middle" class="mono" fill="#d9f5ff" font-size="13">mini-spring-demo ×3</text>
+      <text x="142" y="38" class="sans" fill="#67c9e6" font-size="18">→</text>
+      <text x="186" y="38" class="mono" fill="#d9f5ff" font-size="13">boot · run() 入口</text>
+    </g>
+    <line x1="656" y1="18" x2="656" y2="56" stroke="#9edff3" stroke-opacity="0.2"/>
+    <g transform="translate(794 16)">
+      <text x="0" y="38" text-anchor="middle" class="mono" fill="#d9f5ff" font-size="13">starter-demo</text>
+      <text x="116" y="38" class="sans" fill="#67c9e6" font-size="18">→</text>
+      <text x="160" y="38" class="mono" fill="#d9f5ff" font-size="13">autoconfigure · SPI 验证</text>
+    </g>
+  </g>
+
+  <!-- 03: teaching kernel. POM-derived dependency layers avoid a false wiring graph. -->
+  <g filter="url(#shadow)">
+    <rect x="42" y="468" width="1316" height="374" rx="18" class="panel"/>
+    <text x="68" y="502" class="sans kicker">03 · TEACHING KERNEL · JDK 17 · ZERO MANDATORY TRANSITIVE THIRD-PARTY RUNTIME DEPENDENCIES</text>
+    <text x="1332" y="502" text-anchor="end" class="mono" fill="#768595" font-size="10">POM-DERIVED DEPENDENCY LAYERS · HIGH → LOW</text>
+
+    <g class="sans" fill="#768595" font-size="10" font-weight="700">
+      <text x="74" y="548">L5 · ENTRY</text><text x="74" y="596">L4 · ASSEMBLY</text>
+      <text x="74" y="644">L3 · DATA ADAPTER</text><text x="74" y="692">L2 · ADAPTER / MECHANISM</text>
+      <text x="74" y="740">L1 · CONTEXT / CONFIG</text><text x="74" y="788">L0 · FOUNDATION</text>
+    </g>
+    <g stroke="#9edff3" stroke-opacity="0.1">
+      <line x1="220" y1="558" x2="1328" y2="558"/><line x1="220" y1="606" x2="1328" y2="606"/>
+      <line x1="220" y1="654" x2="1328" y2="654"/><line x1="220" y1="702" x2="1328" y2="702"/>
+      <line x1="220" y1="750" x2="1328" y2="750"/><line x1="220" y1="798" x2="1328" y2="798"/>
+    </g>
+
+    <g transform="translate(510 519)" data-kernel-module="mini-spring-boot" data-layer="5"><rect width="380" height="38" rx="8" class="card-mechanism"/><text x="190" y="25" text-anchor="middle" class="sans name" font-size="15">boot · run() / Lifecycle</text></g>
+    <g transform="translate(510 567)" data-kernel-module="mini-spring-autoconfigure" data-layer="4"><rect width="380" height="38" rx="8" class="card"/><text x="190" y="25" text-anchor="middle" class="sans name" font-size="15">autoconfigure · 条件 / SPI 装配</text></g>
+    <g transform="translate(510 615)" data-kernel-module="mini-spring-jdbc" data-layer="3"><rect width="380" height="38" rx="8" class="card"/><text x="190" y="25" text-anchor="middle" class="sans name" font-size="15">jdbc · 事务</text></g>
+    <g transform="translate(360 663)" data-kernel-module="mini-spring-aop" data-layer="2"><rect width="300" height="38" rx="8" class="card-mechanism"/><text x="150" y="25" text-anchor="middle" class="sans name" font-size="15">aop · 切面代理</text></g>
+    <g transform="translate(740 663)" data-kernel-module="mini-spring-web" data-layer="2"><rect width="300" height="38" rx="8" class="card"/><text x="150" y="25" text-anchor="middle" class="sans name" font-size="15">web · MVC / HTTP</text></g>
+    <g transform="translate(360 711)" data-kernel-module="mini-spring-context" data-layer="1"><rect width="300" height="38" rx="8" class="card-mechanism"/><text x="150" y="25" text-anchor="middle" class="sans name" font-size="15">context · 上下文</text></g>
+    <g transform="translate(740 711)" data-kernel-module="mini-spring-config" data-layer="1"><rect width="300" height="38" rx="8" class="card"/><text x="150" y="25" text-anchor="middle" class="sans name" font-size="15">config · 外部化配置</text></g>
+    <g transform="translate(510 759)" data-kernel-module="mini-spring-core" data-layer="0"><rect width="380" height="38" rx="8" class="card-foundation"/><text x="190" y="25" text-anchor="middle" class="sans name" font-size="15">core · Bean 容器</text></g>
+
+    <text x="700" y="824" text-anchor="middle" class="mono" fill="#768595" font-size="10">层级来自直接 POM 依赖的最长路径；逐线边与 optional 细节以 POM 为准</text>
+  </g>
+
+  <circle cx="66" cy="878" r="4" fill="#67c9e6"/>
+  <text x="82" y="883" class="sans" fill="#a7b2bf" font-size="12">内核讲清机制；demo 用真实前端、后端、MySQL 与三实例运行证明它能站起来。</text>
+  <text x="1338" y="883" text-anchor="end" class="sans" fill="#768595" font-size="10">精确逐线关系见工程拓扑与 POM</text>
+</svg>
