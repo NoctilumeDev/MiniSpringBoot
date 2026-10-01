@@ -354,6 +354,16 @@ input:focus-visible {
   min-height: 0;
 }
 
+.workspace-panel {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+}
+
+.workspace-panel[hidden] {
+  display: none;
+}
+
 .workspace-view {
   display: flex;
   width: 100%;
