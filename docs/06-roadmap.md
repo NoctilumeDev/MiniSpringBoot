@@ -162,6 +162,13 @@
 - “收起界面”定义为纯观景态：收起时同步清空当次操作消息，并隐藏 tab、工作区与运行链路，只留下居中的 `MiniSpringBoot`；品牌按钮同时是可键盘操作的展开入口，展开后不恢复过期提示。
 - README 的四张实拍已按同一版 UI 重取：用户 23/96、账户 700/1300；404 与断库均由真实浏览器操作复现，失败前后 MySQL 余额保持 700/1300，容器恢复健康后刷新自愈。
 
+#### M9 错误边界维护修订（2026-10-02）
+
+- 保留上文 M9 原始验收作为历史事实，但撤销“内部根因必须直达 UI”的当前合同：`DispatcherServlet` 与 `SunHttpServer` 两个 5xx sink 统一返回固定通用正文，完整 throwable/cause/stack trace 只进入服务端日志；显式 400 / 404 / 409 仍可携带安全业务消息。
+- 用户 POST / PUT 的 MySQL 1062 重复邮箱由 demo 层稳定映射为 `409 该邮箱已存在`；不让 web 反向依赖 jdbc，也不把其它 SQLState 23 约束误报为邮箱冲突。
+- 前端对 5xx 再做一层通用化并去掉重复 HTTP 状态；余额读取错误以 `balance-read` 作为所有权来源，服务恢复后的显式刷新只能撤销自己的旧错误，不能清掉事务提交或回滚结果。
+- 新增两个后端错误边界约束用例与 5 个 Node 内建前端契约测试；真实浏览器分别复证受控回滚 500、后端不可达 502 及恢复后的反馈所有权，README、`09-frontend.md`、CI 和当前 500 截图随实现同步。冻结的 v0.m10 / v0.m10.3 证据、历史断库截图与当时的 88 项结果不追溯改写，也不与当前 500/502 验收混写。
+
 ### M0–M9 全量复审修复（外审 35 条 + 补充 29–35 号，进入 M10 前收口）
 
 - **P0 系（外审实锤，全部修复）**：P0-1 深嵌套 JSON → `JsonParser` MAX_DEPTH=512 + `DispatcherServlet` 改 catch Throwable（StackOverflowError 也得 500 而非连接层异常）；P0-2 D37 优先级反转纠正（见债务表 D37 条目）；P0-3 08-jdbc.md 的 UserRepository 虚报删除（M8 产出描述与代码对齐：无 Repository 层）；P0-4 转账 check-then-act 竞态 → 单条原子 `UPDATE ... WHERE balance >= ?`（行锁保证，影响行数≠1 即回滚）；P0-5 context 模块 main 源集 10 个 demo 类迁移 test 源集；P0-6 转账响应改「事务内读」——`transfer` 返回事务内快照余额（与提交一致），Controller 不再提交后二次读（前端 fromBalance/toBalance 契约不变）。

@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import UsersPage from './UsersPage.jsx';
 import TransferPage from './TransferPage.jsx';
+import { clearOwnedError, createFeedbackState, withError, withNotice } from './feedback.js';
 
 function BrandContent({ highAvailability = false }) {
   return (
@@ -31,13 +32,6 @@ function BrandContent({ highAvailability = false }) {
 function viewFromLocation() {
   const view = new URL(window.location.href).searchParams.get('view');
   return view === 'transfer' ? 'transfer' : 'users';
-}
-
-function createFeedbackState() {
-  return {
-    users: { error: null, notice: null },
-    transfer: { error: null, notice: null },
-  };
 }
 
 /**
@@ -85,16 +79,20 @@ export default function App() {
     }));
   };
 
-  const showError = (owner, message) => {
-    updateFeedback(owner, { error: message, notice: null });
+  const showError = (owner, message, source, replace) => {
+    setFeedback((current) => withError(current, owner, message, source, replace));
   };
 
   const showNotice = (owner, message) => {
-    updateFeedback(owner, { error: null, notice: message });
+    setFeedback((current) => withNotice(current, owner, message));
+  };
+
+  const clearError = (owner, source) => {
+    setFeedback((current) => clearOwnedError(current, owner, source));
   };
 
   const dismissFeedback = (kind) => {
-    updateFeedback(tab, { [kind]: null });
+    updateFeedback(tab, kind === 'error' ? { error: null, errorSource: null } : { notice: null });
   };
 
   const toggleCollapsed = () => {
@@ -193,8 +191,9 @@ export default function App() {
           {visitedTabs.has('transfer') && (
             <div id="workspace-transfer" className="workspace-panel" hidden={tab !== 'transfer'}>
               <TransferPage
-                onError={(message) => showError('transfer', message)}
+                onError={(message, source, replace) => showError('transfer', message, source, replace)}
                 onNotice={(message) => showNotice('transfer', message)}
+                onClearError={(source) => clearError('transfer', source)}
               />
             </div>
           )}
