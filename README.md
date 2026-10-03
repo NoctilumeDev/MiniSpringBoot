@@ -84,9 +84,9 @@ MiniSpringBoot 采用与 Spring 对齐的分层设计：demo 应用轨道在上�
 
 ---
 
-## 真能跑 —— 今日实拍
+## 真能跑 —— 历史验收截图
 
-四张截图均为浏览器真实操作后截取（非 mock、非设计稿）：页面上的每条数据都同时在 MySQL 里直查得到（`docker exec minispring-mysql mysql ... minispring_demo` 三方对照），每一次写操作都真实落库。
+以下四张截图保留原验收环境的真实浏览器操作：当时页面数据通过 `docker exec minispring-mysql mysql ... minispring_demo` 与 MySQL 对照，写操作真实落库。本轮文档整理没有重拍，截图只证明各自历史验收对象；原始过程见下方路线图。
 
 | 用户管理（CRUD 落 MySQL） | 转账演示（事务提交 / 回滚） |
 | :---: | :---: |

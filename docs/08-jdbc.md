@@ -15,7 +15,7 @@ boot / demo 层（demo 显式引 mysql-connector-j + HikariCP）
 ```
 
 - **`mini-spring-jdbc`**：`DataAccessException`、`JdbcTemplate`、`RowMapper<T>` 和编程式事务面向 JDBC 标准接口；整个模块直接依赖 `mini-spring-aop`，复用切面实现声明式 `@Transactional`，并传递 `context/core`。纯 JDBC 操作部分没有第三方运行时库，不等于整个模块没有框架依赖；精确方向以各模块 POM 和 [架构图](architecture-overview.svg) 为准。
-- **`DataSourceAutoConfiguration` / `JdbcAutoConfiguration` 放 autoconfigure**：对 `mini-spring-jdbc`、HikariCP 全 optional（D45 已验证的模式）；类级条件 `@ConditionalOnClass(name = "com.zaxxer.hikari.HikariDataSource")`，方法体 `new HikariDataSource()` 只在条件命中后执行。
+- 两个自动配置类都在 `autoconfigure`；该模块对 `mini-spring-jdbc` 与 HikariCP 使用 optional 依赖。`DataSourceAutoConfiguration` 要求 HikariCP 类存在且已配置 URL，方法体中的连接池只在命中条件后创建。`JdbcAutoConfiguration` 只要求 `JdbcTemplate` 类存在且容器已有 `DataSource`；数据源可由用户提供，不强制使用 HikariCP。
 - **demo 层**（`mini-spring-demo`）引真实依赖：`com.mysql:mysql-connector-j:8.4.0` + `com.zaxxer:HikariCP:5.1.0`（runtime）。
 
 ## 3. 关键设计
@@ -27,7 +27,7 @@ boot / demo 层（demo 显式引 mysql-connector-j + HikariCP）
 | ① `minispring.datasource.{url,username,password,max-pool-size}` | 前缀显式归属本框架，机制与 Spring 的 `spring.datasource.*` 同构不同名 |
 | ② `datasource.*` | 更短，但与用户习惯的 spring.* 混在 classpath 时语义模糊 |
 
-配套：`@ConditionalOnProperty("minispring.datasource.url")`——没配数据源就不装配（纯内存应用照常跑）。
+配套：`@ConditionalOnProperty(name = "minispring.datasource.url")`——没配数据源就不装配（纯内存应用照常跑）。
 
 ### 3.2 JdbcTemplate（教学子集，够用即止）
 
@@ -35,7 +35,7 @@ boot / demo 层（demo 显式引 mysql-connector-j + HikariCP）
 <T> List<T> query(String sql, RowMapper<T> mapper, Object... args)
 <T> T queryOne(...)
 int update(String sql, Object... args)
-Long insertAndReturnKey(String sql, Object... args)   // GENERATED_KEY，users 自增主键需要
+long insertAndReturnKey(String sql, Object... args)   // GENERATED_KEY，users 自增主键需要
 ```
 
 - 每次操作从 DataSource 取连接、用完即还（池语义由 HikariCP 承担）；
