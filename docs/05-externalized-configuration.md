@@ -100,8 +100,8 @@ app.name=MiniSpringBoot
 | --- | --- |
 | `@Value("${key}")` | 必须有值，找不到则报错 |
 | `@Value("${key:default}")` | 找不到用默认值（冒号后） |
-| `@Value("#{...}")` | SpEL（首版标注为 TODO，不属于核心主线） |
-| 嵌套占位符 `${a.${b}}` | 递归解析，Spring 支持，本项目作为进阶项 |
+| `@Value("#{...}")` | 未实现 SpEL 表达式求值 |
+| 嵌套占位符 `${a.${b}}` | 当前 `StandardEnvironment` 已递归解析，演示断言见 `ConfigDemo` |
 
 ---
 

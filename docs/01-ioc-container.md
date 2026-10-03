@@ -44,12 +44,14 @@ class OrderService {
 | 字段 | 含义 |
 | --- | --- |
 | `beanClass` | 目标类 |
-| `beanName` | 容器内的唯一标识 |
 | `scope` | `singleton` / `prototype` |
-| `lazyInit` | 是否懒加载 |
 | `initMethodName` / `destroyMethodName` | 生命周期回调方法名 |
-| `propertyValues` | 待注入的依赖（字段/方法） |
-| `dependsOn` | 显式声明的依赖顺序 |
+| `factoryBeanName` / `factoryMethodName` / `factoryMethod` | 工厂 Bean 与已解析的工厂方法 |
+| `primary` / `qualifier` | 多候选依赖裁决 |
+| `propertyValues` | 显式属性名与值，供属性填充使用 |
+
+本表列当前实现。Bean 名称是注册表的 map 键，不是 `BeanDefinition` 的字段；
+Spring 的 `lazyInit` / `dependsOn` 元数据未实现。
 
 `BeanDefinition` 是 Spring 内核的「第一公民」——**容器里流转的从来不是对象，而是对象的「图纸」**。有了图纸，才能在合适的时机去「施工」（实例化）。
 
@@ -59,19 +61,19 @@ class OrderService {
 
 很多初学者混淆二者，这里用一句话划清：
 
-- **`BeanFactory`**：一个纯粹的「Bean 工厂」，只负责`getBean`——够用，但缺少很多便利。
-- **`ApplicationContext`**：在 `BeanFactory` 之上，叠加了**扫描、事件、国际化、配置解析**等能力，才是日常 `getBean` 背后真正的东西。
+- **`BeanFactory`**：提供 `getBean`、`containsBean` 等基础对象查找；类型枚举由 `ListableBeanFactory` 扩展。
+- **`ApplicationContext`**：本项目在工厂能力之上增加事件发布与关闭；`AnnotationConfigApplicationContext` 负责扫描、配置类解析和刷新。Spring 的国际化支持不在当前教学子集内。
 
-本项目的对应设计：`DefaultListableBeanFactory` 提供「生产 Bean」的最底层能力，`ApplicationContext` 组合它，并驱动「扫描 → 注册 → 刷新」的完整流程。
+本项目由 `AnnotationConfigApplicationContext` 持有 `DefaultListableBeanFactory` 并驱动「扫描 → 注册 → 刷新」；工厂自身实现 `BeanDefinitionRegistry`、保存定义，不另持有一个注册表对象。
 
 ```
-ApplicationContext（组合，负责编排）
+AnnotationConfigApplicationContext（负责编排）
         │ 持有
         ▼
-DefaultListableBeanFactory（提供 getBean 的底层能力）
-        │ 持有
+DefaultListableBeanFactory（生产和缓存 Bean，保存定义）
+        │ 实现
         ▼
-BeanDefinitionRegistry（保存 BeanDefinition 图纸）
+BeanDefinitionRegistry（定义注册接口）
 ```
 
 ---
@@ -162,20 +164,23 @@ createBean(A):
 
 如果对象将来需要被 AOP 代理，那么「提前暴露的引用」必须是**代理后的引用**，否则注入进来的就是裸对象，AOP 失效。三级缓存里放的是 `ObjectFactory`（一个「能判断要不要代理、并生成正确引用」的工厂），让容器在需要时再决定返回裸对象还是代理对象。
 
-> MiniSpringBoot 首版若暂不实现类级 AOP，三级缓存可能退化为两级即可；这里保留「三级」设计是为了与 Spring 对齐，并在文档中如实说明「第三级何时才是必要的」。
+> 当前 JDK 接口代理也需要这条提前暴露路径：`SmartInstantiationAwareBeanPostProcessor#getEarlyBeanReference` 返回代理，容器复用它作为最终单例，保证循环依赖两端拿到同一引用。是否支持类代理不决定三级缓存是否有用；构造器注入型和 prototype 循环依赖仍明确拒绝。
 
 ---
 
 ## 6. 扩展点：两种 PostProcessor
 
-这是 Spring 优雅扩展的根基，也是本项目「工程级」要求的重点之一：
+下面先对照 Spring 的扩展点，再说明本项目实际支持的子集：
 
-| 扩展点 | 介入时机 | 用途 |
+| 扩展点 | 介入时机 | 用途与实现状态 |
 | --- | --- | --- |
-| `BeanFactoryPostProcessor` | 所有 BeanDefinition 注册后、实例化前 | 修改「图纸」（如解析 `@Value` 里的 `${}`） |
-| `BeanPostProcessor` | 每个 Bean 实例化后的两个环绕点 | 修改「成品」（如生成 AOP 代理） |
+| `BeanFactoryPostProcessor` | 所有 BeanDefinition 注册后、实例化前 | Spring 的定义级扩展点；本项目尚未实现，不能按该接口编写扩展 |
+| `BeanPostProcessor` | 每个 Bean 实例化后的环绕点 | 已实现；包含属性填充阶段扩展和初始化后 AOP 代理 |
 
 二者名字只差一个 `Factory`，意义天差地别：前者改**图纸**，后者改**成品**。务必区分。
+
+本项目的 `@Value` 由 `ValueAnnotationBeanPostProcessor` 在属性填充阶段调用 `Environment`
+解析占位符并注入字段，不通过尚未实现的 `BeanFactoryPostProcessor`。
 
 ---
 
@@ -198,7 +203,7 @@ BeanDefinitionRegistry  — 图纸仓库
 DefaultListableBeanFactory — 施工队（getBean 底层能力）
 ApplicationContext      — 项目经理（编排扫描/刷新）
 BeanPostProcessor       — 质检员（改成品）
-BeanFactoryPostProcessor — 图纸审批员（改图纸）
+BeanFactoryPostProcessor — Spring 对照概念；本项目未实现
 ObjectFactory           — 半成品工厂（三级缓存）
 ```
 

@@ -6,38 +6,37 @@
 
 ## 2. 模块边界与依赖方向
 
-**不变**：依赖单向、禁止环；内核（M1~M7）零第三方依赖。
+**不变**：依赖单向、禁止环；内核保持零强制传递的第三方运行时依赖，optional 集成边界见 [总体设计](architecture.md)。
 
 ```
-依赖方向（A ← B 表示 B 依赖 A；自上而下、无环）：
+直接编译依赖（A → B 表示 A 依赖 B；不展开传递依赖）：
 
-core ← context ← autoconfigure ← config
-              ↑              ← aop
-              ↑              ← starter-demo
-        context ← config / web
-        config ← web / boot
-        autoconfigure ← boot
+config → core
+context → core
+aop → context
+web → context
+jdbc → aop
+autoconfigure → context；optional → config / aop / web / jdbc
+boot → autoconfigure / config
+starter-demo → autoconfigure
 
-demo 层：mini-spring-demo ← (boot + web + aop + starter-demo)
+demo → boot / web / aop / starter-demo / jdbc
 ```
 
-- `mini-spring-boot`：依赖 `mini-spring-autoconfigure` + `mini-spring-config`（`run()` 内调 `ConfigFilePropertySourceLoader` 加载 `application.*`）。
-- `mini-spring-demo`（后端 demo 收口）：依赖 boot + web + aop + starter-demo，用 `run()` 组装。
+- `mini-spring-boot`：运行时依赖 `mini-spring-autoconfigure` + `mini-spring-config`（`run()` 内调 `ConfigFilePropertySourceLoader` 加载 `application.*`）；`web` 仅为直接测试依赖，服务器生命周期经 context 的 `Lifecycle` 接口驱动。
+- `mini-spring-demo`（后端 demo 收口）：显式依赖 boot + web + aop + starter-demo + jdbc，用 `run()` 组装；HikariCP 与 MySQL 驱动由 demo 提供。
 
 ### 关键设计决策（M7 内固化）
 
-1. **自动装配类归位到能力模块，而非集中在 autoconfigure**：
-   - `WebMvcAutoConfiguration` 放 `web` 模块、`AopAutoConfiguration` 放 `aop` 模块、`ValueAutoConfiguration` 放 `config` 模块，各在自身 `META-INF/minispring/EnableAutoConfiguration.imports` 声明。
-   - 靠 `@ConditionalOnClass(name=...)`（用 `name` 判断「可能缺失」的类，避免类字面量在类加载期炸掉）条件装配。
-   - 为此 web/aop/config 需依赖 autoconfigure（仅取 `@EnableAutoConfiguration` / `@ConditionalOnXXX` 注解）；方向仍是单向（autoconfigure 不反向依赖 web/aop/config）。
-2. **D19 是前置**：把 autoconfigure 的 demo 类移出到 `mini-spring-demo`，autoconfigure 内核降为仅依赖 context（去掉「仅 demo 用」的 config 依赖），为上层能力模块腾出干净依赖图。
-3. **D8/D31：维持 JDK 动态代理，不引 CGLIB**（恪守内核零第三方依赖红线）；需要被 AOP 的 Bean 必须接口化。Controller 代理需求延后，不在 M7 强上 CGLIB。
+1. **自动装配类集中在 `autoconfigure`**：`WebMvcAutoConfiguration`、`AopAutoConfiguration`、`ValueAutoConfiguration` 均在该模块，并由自身的 `META-INF/minispring/EnableAutoConfiguration.imports` 声明。对可裁剪能力使用 `@ConditionalOnClass(name=...)`，不让 web/aop/config 反向依赖自动配置模块。
+2. **demo 与内核分开**：示例应用在 `mini-spring-demo`。自动配置层依赖下层公开能力，准确依赖方向以各模块 POM 与 [架构图](architecture-overview.svg) 为准；本节不再沿用已被 M7 终审纠正的中间方案。
+3. **D8/D31：维持 JDK 动态代理，不引 CGLIB**；需要被 AOP 的 Bean 必须接口化，类代理不在当前教学子集内。
 
 ## 3. 关键类
 
-- `MiniSpringApplication`：`public static AnnotationConfigApplicationContext run(Class<?> primarySource, String... args)`。顺序：建 `StandardEnvironment` → `ConfigFilePropertySourceLoader.load(env)`（关掉「配置加载需手动」）→ `new AnnotationConfigApplicationContext(env, primarySource)` → `refresh` → 广播 `StartedEvent` → 返回上下文。
+- `MiniSpringApplication`：`public static AnnotationConfigApplicationContext run(Class<?> primarySource, String... args)`。顺序：建 `StandardEnvironment` → `ConfigFilePropertySourceLoader.load(env)`（关掉「配置加载需手动」）→ `new AnnotationConfigApplicationContext(env, primarySource)`（构造器内完成注册、装配与刷新）→ 启动 `Lifecycle` → Banner → 广播 `StartedEvent` → 注册关闭钩子 → 返回上下文。
 - `@MiniSpringBootApplication`：`@Configuration + @ComponentScan + @EnableAutoConfiguration` 复合注解，复用 M6 的元注解查找。
-- 事件总线：`ApplicationEvent` / `ApplicationEventPublisher` / `ApplicationListener<E>` / `SimpleApplicationEventMulticaster`；在 refresh 前、上下文就绪后、启动后、关闭时广播（`ContextRefreshedEvent` / `StartedEvent` / `ClosedEvent`）。方法级同步广播（教学子集，无需异步）。
+- 事件总线：`ApplicationEvent` / `ApplicationEventPublisher` / `ApplicationListener<E>` / `SimpleApplicationEventMulticaster`；刷新结束时广播 `ContextRefreshedEvent`，全部 `Lifecycle` 启动后广播 `StartedEvent`，关闭时广播 `ContextClosedEvent`。通过 `ApplicationListener<E>` 同步分发；没有刷新前事件，也未实现方法注解式 `@EventListener`。
 - `Banner`：打印框架名 + 版本 + 启动耗时。
 
 ## 4. AOP 收口（B2 + D30 + D5）
