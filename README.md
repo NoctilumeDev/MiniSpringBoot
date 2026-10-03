@@ -72,7 +72,7 @@ MiniSpringBoot 采用与 Spring 对齐的分层设计：demo 应用轨道在上�
 | 模块 | 对应 Spring 的概念 | 责任 |
 | --- | --- | --- |
 | `core` | spring-beans | Bean 定义、实例化、依赖注入、生命周期、循环依赖（三级缓存） |
-| `config` | Environment / Binder | 配置文件解析（properties/yaml/Profile）、`@Value`、属性绑定 |
+| `config` | Environment / `@Value` | 配置文件解析（properties/yaml/手动 Profile）、占位符、字段注入与类型转换 |
 | `context` | spring-context | 注解扫描、配置类解析、`@ComponentScan`、事件广播、`Lifecycle` |
 | `aop` | spring-aop | 切点匹配、通知执行、JDK 动态代理、自动代理创建器 |
 | `web` | spring-webmvc + 内嵌容器 | HTTP 服务器、路由、参数绑定、响应序列化、静态资源 |
@@ -177,7 +177,7 @@ MiniSpringBoot
 
 ## 构建与运行
 
-阅读路线见 [文档导航](docs/README.md)；旧计划、施工记录、历史验收和失败对照分类入口见 [history/](history/README.md)。
+阅读路线和 [当前教学子集边界](docs/README.md#当前教学子集边界) 见文档导航；旧计划、施工记录、历史验收和失败对照分类入口见 [history/](history/README.md)。
 
 ```bash
 # 全量构建 + 测试（JDK 17；mini-spring-jdbc 单测真连 MySQL，需先起容器）

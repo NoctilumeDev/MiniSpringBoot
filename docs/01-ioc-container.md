@@ -164,7 +164,7 @@ createBean(A):
 
 如果对象将来需要被 AOP 代理，那么「提前暴露的引用」必须是**代理后的引用**，否则注入进来的就是裸对象，AOP 失效。三级缓存里放的是 `ObjectFactory`（一个「能判断要不要代理、并生成正确引用」的工厂），让容器在需要时再决定返回裸对象还是代理对象。
 
-> MiniSpringBoot 首版若暂不实现类级 AOP，三级缓存可能退化为两级即可；这里保留「三级」设计是为了与 Spring 对齐，并在文档中如实说明「第三级何时才是必要的」。
+> 当前 JDK 接口代理也需要这条提前暴露路径：`SmartInstantiationAwareBeanPostProcessor#getEarlyBeanReference` 返回代理，容器复用它作为最终单例，保证循环依赖两端拿到同一引用。是否支持类代理不决定三级缓存是否有用；构造器注入型和 prototype 循环依赖仍明确拒绝。
 
 ---
 
