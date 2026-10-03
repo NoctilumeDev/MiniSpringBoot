@@ -37,7 +37,7 @@ interface WebServer {
 }
 ```
 
-首版实现 `SunHttpServer`，基于 JDK 自带的 `com.sun.net.httpserver.HttpServer`。它虽然「藏在 JDK 里」，但足够我们演示 HTTP 服务端；同时把 `HttpServletRequest`/`HttpServletResponse` 抽象成自己的轻量接口，避免直接耦合到 `HttpExchange`。
+首版实现 `SunHttpServer`，基于 JDK 自带的 `com.sun.net.httpserver.HttpServer`。它虽然「藏在 JDK 里」，但足够我们演示 HTTP 服务端；同时使用框架自有的 `HttpRequest`/`HttpResponse` 轻量接口，避免直接耦合到 `HttpExchange`。
 
 **设计要点**：哪怕只写一个实现，也要抽出 `WebServer` 接口——这让「换掉底层服务器」成为可能，也让学生看清「Spring Boot 所谓内嵌容器，本质就是一个可替换的 SPI」。
 
@@ -45,7 +45,7 @@ interface WebServer {
 
 ### 2.1 关于「HTTP 协议」的诚实说明
 
-`SunHttpServer` 已经帮我们完成了 TCP 连接、HTTP 报文解析，所以我们不必手写 socket 逐字节解析。**作为教学补充，文档会把 HTTP 报文（请求行 / 头 / 空行 / 体）的结构、以及与自研 socket 服务器的差异讲清楚**，但不把「手写 socket 服务器」作为首版硬性要求——那是「另一个轮子」，值得单独做，不值得现在阻塞主线。
+底层 JDK `HttpServer` 完成 TCP 连接与 HTTP 报文解析，所以我们不必手写 socket 逐字节解析。**作为教学补充，文档会把 HTTP 报文（请求行 / 头 / 空行 / 体）的结构、以及与自研 socket 服务器的差异讲清楚**，但不把「手写 socket 服务器」作为首版硬性要求——那是「另一个轮子」，值得单独做，不值得现在阻塞主线。
 
 ---
 
@@ -71,10 +71,8 @@ doDispatch(request, response):
 
 ## 4. HandlerMapping：路由是怎么命中的
 
-首版支持两种映射来源：
-
-1. **`@RequestMapping` / `@GetMapping` / `@PostMapping`**：注解驱动，最常用。
-2. 预注册的精确路由（编程式）。
+当前默认 `RequestMappingHandlerMapping` 从 `@RequestMapping` / `@GetMapping` /
+`@PostMapping` 等注解收集映射，支持精确路径与路径模板；没有独立的编程式路由注册 API。
 
 匹配逻辑（简化版）：
 
@@ -91,7 +89,6 @@ doDispatch(request, response):
 class HandlerMethod {
     Object bean;      // Controller 实例
     Method method;    // 具体方法
-    MethodParameter[] parameters; // 方法入参元数据
 }
 ```
 
@@ -106,8 +103,8 @@ class HandlerMethod {
 | `@PathVariable("id") Long id` | 从路径模板取值并做类型转换 |
 | `@RequestParam("name") String name` | 从 query 参数取值 |
 | `@RequestBody Order order` | 读 body 字节 → 反序列化成对象 |
-| `HttpServletRequest` / `HttpServletResponse` | 直接注入框架对象 |
-| 无注解的参数 | 按参数名尝试从 query/body 匹配 |
+| 框架自有 `HttpRequest` / `HttpResponse` | 直接注入框架对象 |
+| 无注解的普通参数 | 未实现自动绑定；没有匹配解析器时抛出异常 |
 
 每个「参数场景」对应一个 `ArgumentResolver`（参数解析器），用「策略模式」串起来：遍历解析器，谁声明「我能解析这个参数」就交给谁。这让 MVC 的参数处理**天然可扩展**——想支持 `@RequestHeader`，加一个解析器即可，不用改动主流程。
 
@@ -118,7 +115,7 @@ class HandlerMethod {
 | 返回值场景 | 处理方式 |
 | --- | --- |
 | `@ResponseBody` + 对象 | 对象 → JSON → 写入 body（`Content-Type: application/json`） |
-| 返回 `String`（无 @ResponseBody） | 视为「视图名 / 重定向」，首版做简化处理 |
+| 返回 `String` | 写为纯文本；不实现视图名或重定向解析 |
 | 返回 `void` / `null` | 空 body + 对应状态码 |
 
 ### 6.1 自写 JSON 解析器
@@ -128,7 +125,7 @@ class HandlerMethod {
 - **`JsonParser`**（反序列化）：把 JSON 字符串 → `JsonNode`（Object/Array/String/Number/Boolean/null 的树结构）。
 - **`JsonSerializer`**（序列化）：把 Java 对象（反射遍历字段）→ JSON 字符串。
 
-定位清晰：**只为满足 MVC 的入参/出参，不追求 JSON 规范的 100% 覆盖**（不支持对重复键、极大数值、Unicode 转义等边角的完整实现，文档如实标注）。
+定位清晰：**只为满足 MVC 的入参/出参，不追求 JSON 规范的 100% 覆盖**（不校验重复键、不保证超大整数精度、不处理 Unicode 代理对；常用字符转义与单个 `\uXXXX` 转义已实现，文档如实标注）。
 
 ---
 
@@ -137,7 +134,7 @@ class HandlerMethod {
 参数从字符串（query/path 本质都是字符串）到强类型（`Long` / `Integer` / `Boolean` / 自定义类型），需要一套**类型转换器**：
 
 ```
-"9527" --[StringToLongConverter]--> 9527L
+"9527" --[TypeConversionService 中的 Long 转换器]--> 9527L
 ```
 
 首版实现常用基本类型的转换，并留出 `Converter<S, T>` 接口供扩展。这与 Spring 的 `ConversionService` 同构，是最能体现「麻雀虽小五脏俱全」的环节之一。
@@ -150,7 +147,7 @@ class HandlerMethod {
 HTTP "GET /users/42?verbose=true"
    │
    ▼
-SunHttpServer 接收 → 封装成 MiniHttpServletRequest
+SunHttpServer 接收 → 用 SunHttpRequest 封装 HttpExchange
    │
    ▼
 DispatcherServlet.doDispatch()

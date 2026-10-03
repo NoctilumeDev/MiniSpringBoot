@@ -33,7 +33,8 @@ class MyConfig {
 
 ```java
 @Configuration
-@ConditionalOnClass(name = "javax.sql.DataSource")      // 有 JDBC 就有资格
+@ConditionalOnClass(name = "com.zaxxer.hikari.HikariDataSource")
+@ConditionalOnProperty(name = "minispring.datasource.url") // 还需配置连接地址
 class DataSourceAutoConfiguration {
     @Bean
     @ConditionalOnMissingBean                          // 用户没自己配才自动造
@@ -63,7 +64,9 @@ interface Condition {
 | `@ConditionalOnClass` | classpath 存在某类（判断「有没有相关依赖」） |
 | `@ConditionalOnMissingBean` | 容器里还没有该 Bean（判断「用户是否已自己配」） |
 | `@ConditionalOnProperty` | 某个配置项等于某值（判断「开关是否打开」） |
-| `@ConditionalOnMissingClass` | 与第一个相反 |
+| `@ConditionalOnBean` | 容器中已有指定类型或名称的 Bean |
+
+`@ConditionalOnMissingClass` 属于 Spring 对照概念，本项目未实现。
 
 这些条件组合起来，就形成了「智能装配」的判断逻辑：**有依赖、没冲突、开关开，才动手。**
 
@@ -71,39 +74,39 @@ interface Condition {
 
 ## 4. 第二把钥匙：自动导入（SPI 机制）
 
-条件注解解决「要不要装配」，但框架还得知道「**有哪些自动配置类等着被考虑**」。Spring Boot 用 `META-INF/spring.factories`（SPI 文件）解决「发现」的问题。MiniSpringBoot 复刻这一机制，命名为 `META-INF/mini.factories`：
+条件注解解决「要不要装配」，候选配置类则由 classpath 资源发现。当前 MiniSpringBoot 使用
+`META-INF/minispring/EnableAutoConfiguration.imports`，每行一个全限定类名，空行和以 `#`
+开头的行被忽略；不解析早期规划中的 `mini.factories` 键值格式。例如演示 starter 的真实资源是：
 
-```properties
-# META-INF/mini.factories
-io.github.noctilumdev.minispring.boot.EnableAutoConfiguration=\
-com.example.DataSourceAutoConfiguration,\
-com.example.WebMvcAutoConfiguration
+```text
+# META-INF/minispring/EnableAutoConfiguration.imports
+com.minispring.starter.demo.FormatAutoConfiguration
 ```
 
-启动流程中，`AutoConfigurationImportSelector` 去读这个文件，把所有候选的自动配置类「批量导入」到容器里，再由 `@Conditional` 逐个筛选。于是：
+`AutoConfigurationLoader` 汇总各 jar 的同名资源，`AutoConfigurationImportSelector` 去重、排序并延迟导入；用户配置和组件扫描先落地，再由 `@Conditional` 筛选候选。于是：
 
 ```
-启动 → 读取 mini.factories → 得到候选配置类清单
+启动 → 读取 EnableAutoConfiguration.imports → 得到候选配置类清单
      → 逐个 @Conditional 判定 → 命中的才注册其 Bean
 ```
 
-**这一段是理解 Spring Boot 的「题眼」**：它解释了为什么引入 `spring-boot-starter-web` 后，`DispatcherServlet`、内嵌 Tomcat、Jackson 全都自动就绪——因为 starter 里那条 SPI 记录指向了 `WebMvcAutoConfiguration`，而它又被 `@ConditionalOnClass` 验证「相关类都在 classpath」后放行。
+本项目可直接观察的例子是 `FormatAutoConfiguration`：引入演示 starter 并开启自动配置后，用户未提供 `FormatService` 时注册 `UpperCaseFormatService`；用户已提供时由 `@ConditionalOnMissingBean` 让路。
 
 ---
 
 ## 5. Starter：把「依赖 + 自动配置」打包成一个约定
 
-一个 Starter 本质上是**一个几乎不含代码的聚合模块**，它只做两件事：
+在本项目中，演示 starter 除依赖声明外还包含格式服务与自动配置类，用于展示这两件事：
 
 1. 用 `pom.xml` 声明「真正干活的依赖」（传递依赖）。
-2. 附带一份 `META-INF/mini.factories`，声明「这些依赖对应的自动配置类」。
+2. 在自身 jar 的 `META-INF/minispring/EnableAutoConfiguration.imports` 中逐行声明自动配置类；框架的配置类清单另由 autoconfigure 模块持有。
 
 这样用户只需引入一个 starter，就同时获得了「依赖」和「对这些依赖的自动装配」，二者缺一不可：
 
 ```
-引入 spring-boot-starter-web
-     ├─ 传递依赖：web / json / server 等实现
-     └─ SPI 记录：WebMvcAutoConfiguration 等
+引入 mini-spring-starter-demo 并开启自动配置
+     ├─ 依赖：mini-spring-autoconfigure
+     └─ imports 记录：FormatAutoConfiguration
               │
               └─ 启动时被自动导入 + @Conditional 放行 → Bean 就绪
 ```
@@ -112,14 +115,14 @@ com.example.WebMvcAutoConfiguration
 
 ---
 
-## 6. 设计类图（规划）
+## 6. 当前发现与导入链
 
 ```
 @Conditional(注解)  →  Condition(接口)  →  具体 Condition 实现
         │
 AutoConfigurationImportSelector  — 读 SPI 文件，批量导入候选
         │
-EnableAutoConfiguration(SpiKey)  — SPI 文件的 key
+@EnableAutoConfiguration        — 通过 @Import 触发选择器，无 SPI 键值项
         │
 xxxAutoConfiguration(配置类)     — 带 @Conditional 的 @Configuration
 ```
@@ -132,4 +135,4 @@ xxxAutoConfiguration(配置类)     — 带 @Conditional 的 @Configuration
 - 写一个演示 starter，引入后自动装配出一组 Bean（无需任何 `@Configuration`）✅
 - 用 `@ConditionalOnClass` 演示「缺依赖时自动跳过、不报错」✅
 - 验证 SPI 文件被正确读取、候选类被逐个条件判定 ✅
-- 文档清晰标注 MiniSpringBoot 的 `mini.factories` 与 Spring `spring.factories` 的对应关系 ✅
+- 当前资源采用逐行 imports 格式，见 `AutoConfigurationLoader.IMPORT_FILE` 与演示 starter 的同名资源；旧 `mini.factories` 只是已被替代的规划，不是可运行输入。

@@ -83,45 +83,43 @@
 
 ## 3. 总体分层
 
+准确分层见按各模块 POM 推导的 [架构总览](architecture-overview.svg)。下列仅列直接编译依赖，
+箭头表示左侧依赖右侧；optional 能力不向消费方传递：
+
 ```
-+--------------------------------------------------------------+
-| boot         启动器 + 事件总线                                 |
-+--------------------------------------------------------------+
-| autoconfigure 自动装配 + Starter                              |
-+--------------------------------------------------------------+
-| web          Web/MVC + 内嵌服务器                              |
-+--------------------------------------------------------------+
-| aop          切面 + 动态代理（依赖 core）                      |
-+--------------------------------------------------------------+
-| core         容器 + Bean 生命周期（最底层，被所有层依赖）        |
-+--------------------------------------------------------------+
-| config       配置系统（被 core 依赖，提供 Environment）         |
-+--------------------------------------------------------------+
+boot → autoconfigure / config
+autoconfigure → context；optional → config / aop / web / jdbc
+jdbc → aop → context → core
+web → context
+config → core
 ```
 
-依赖方向：**上层依赖下层，下层绝不知道上层**。`core` 是供血心脏，`config` 为其提供「外部输入」，二者之上才是 AOP、Web、自动配置与启动器。
+`core` 定义 `Environment` 等基础接口；`config` 依赖 `core`，提供文件加载与字段注入。
+`context`、`config` 并列依赖 `core`，不沿用旧方案中的反向依赖。直接测试依赖与第三方
+optional 集成以 POM 为准，启动器和 demo 的依赖说明见 [07 章](07-boot.md)。
 
 ### 3.1 接口契约：模块解耦的硬约束
 
 「不能牵一发动全身」是本项目的架构红线，也是「只见树木不见森林」的解药。落地为三条铁律：
 
 1. **依赖方向单向**：上层只能依赖下层，下层绝不反向依赖上层。
-2. **编程针对接口**：跨模块访问只能通过下层**导出的接口**，禁止 `import` 下层模块的实现类。实现类统一放 `internal`/`support` 子包，用包名明示「你不该碰我」。
+2. **编程针对接口**：跨模块访问只能通过下层**导出的接口**，禁止 `import` 下层模块的实现类。具体实现的现有位置以源码为准，子包名称本身不构成 Java 访问隔离。
 3. **改动局部化**：内部实现重构不得改动接口签名；接口一旦发布，只在「新增可选方法」的意义上扩展，绝不破坏既有调用方。
 
 > 这是「森林视角」的保证：每个模块对外只暴露一个小而稳定的接口面；内部怎么改，森林都不摇晃。
 
 ---
 
-## 4. 模块职责与核心类（规划）
+## 4. 模块职责与核心类（当前实现）
 
 ### 4.1 `mini-spring-config` —— 配置系统
 
 负责「文件里的字符串」到「内存里的值」的翻译。
 
-- `Environment`：统一配置入口，聚合多个 `PropertySource`
-- `PropertySource`：一个来源（如 `application.properties`）
-- `PropertiesParser` / `YamlParser`：把文本解析为扁平 `key=value`
+- `core.env.Environment` / `PropertySource`：定义统一配置入口与来源抽象
+- `ConfigFilePropertySourceLoader`：编排默认与 Profile 文件加载
+- `PropertiesPropertySourceLoader` / `YamlPropertySourceLoader`：把文本解析为配置源
+- `ValueAnnotationBeanPostProcessor` / `SimpleTypeConverter`：属性填充阶段解析并注入 `@Value`
 - 占位符解析：`${...}` 递归解引用
 
 ### 4.2 `mini-spring-core` —— 核心容器
@@ -129,7 +127,6 @@
 - `BeanDefinition`：Bean 元数据（类名、作用域、依赖、初始化/销毁方法）
 - `BeanDefinitionRegistry`：注册与查找
 - `BeanFactory` / `DefaultListableBeanFactory`：生产与缓存 Bean
-- `ApplicationContext`：在 BeanFactory 之上叠加扫描、事件等能力
 - `BeanPostProcessor`（含 `InstantiationAware` / `SmartInstantiationAware` 派生）：扩展点（`BeanFactoryPostProcessor` 未实现，属规划项）
 - `InitializingBean` / `DisposableBean`：生命周期回调
 - 三级缓存：`singletonObjects` / `earlySingletonObjects` / `singletonFactories`（解决循环依赖）
@@ -137,8 +134,9 @@
 
 ### 4.3 `mini-spring-context` —— 上下文与扫描
 
-- 注解：`@Component` / `@Service` / `@Repository` / `@Controller` / `@Configuration` / `@Bean`
-- 注入注解：`@Autowired` / `@Value` / `@Qualifier` / `@Primary`
+- `ApplicationContext` / `AnnotationConfigApplicationContext`：在 BeanFactory 之上叠加扫描、事件与启动关闭
+- 注解：`@Component` / `@Service` / `@Repository` / `@Configuration` / `@Bean`；`@Controller` 定义在 web 模块
+- 注入注解：`@Autowired` / `@Qualifier` / `@Primary`；`@Value` 定义和处理器在 config 模块
 - 作用域注解：`@Scope`（注解式 `@PostConstruct`/`@PreDestroy` 未实现——生命周期回调走 `InitializingBean`/`DisposableBean`/`@Bean(initMethod/destroyMethod)`，显式边界）
 - `ClassPathScanningCandidateComponentProvider`：扫描 classpath 下的字节码，识别候选 Bean
 
@@ -152,23 +150,24 @@
 
 - `WebServer`：内嵌服务器接口
 - `SunHttpServer`：基于 JDK 的默认实现
-- `DispatcherServlet`（等价物，可能不叫这个名字以保持诚实）
+- `DispatcherServlet`：请求分发入口
 - `HandlerMapping` / `HandlerAdapter`：把 URL + 方法 → 处理器 → 调用结果
-- 参数解析：`@PathVariable` / `@RequestParam` / `@RequestBody` / `HttpServletRequest`
-- 返回值处理：`@ResponseBody` + JSON 序列化、视图名
+- 参数解析：`@PathVariable` / `@RequestParam` / `@RequestBody` / 框架自有 `HttpRequest` 与 `HttpResponse`
+- 返回值处理：`@ResponseBody` / `@RestController` 将对象写为 JSON；String 写为纯文本，void/null 写空响应，不实现视图解析
 - 静态资源托管（为 demo 前端提供 HTML/JS/CSS）
 
 ### 4.6 `mini-spring-autoconfigure` —— 自动配置
 
 - `@Conditional` 及派生：`@ConditionalOnClass` / `@ConditionalOnMissingBean` / `@ConditionalOnProperty`
-- `AutoConfigurationImportSelector`：读取 `META-INF/mini.factories`（等价 `spring.factories`）批量导入
+- `AutoConfigurationLoader`：汇总 classpath 上 `META-INF/minispring/EnableAutoConfiguration.imports` 的逐行类名
+- `AutoConfigurationImportSelector`：延迟导入候选，去重并按 `@AutoConfigureOrder` / `@Order` 排序
 - Starter 约定：`xxx-starter` 模块只做声明式装配
 
 ### 4.7 `mini-spring-boot` —— 启动器
 
 - `MiniSpringApplication.run(主类, args)`：编排完整启动流程
 - `@MiniSpringBootApplication`：复合注解
-- `ApplicationEvent` / `ApplicationListener`：事件总线
+- `StartedEvent`：启动完成事件；`ApplicationEvent` / `ApplicationListener` 与事件广播位于 context 模块
 - `Banner`：启动横幅
 
 ### 4.8 `mini-spring-jdbc` —— 数据访问与事务（M8 新增）
@@ -206,7 +205,7 @@
 HTTP 请求
    │
    ▼
-WebServer(SunHttpServer) ──► 解析成 MiniHttpServletRequest
+WebServer(SunHttpServer) ──► 用 SunHttpRequest 封装 JDK HttpExchange
    │
    ▼
 DispatcherServlet.doDispatch()
@@ -231,7 +230,7 @@ ReturnValueHandler ──► @ResponseBody 走 JSON 序列化
 
 ## 7. 包结构与命名约定
 
-- 内核所有模块统一顶层包：`io.github.noctilumdev.minispring`，实现类收拢在各自 `support`/`internal` 子包。
+- 内核统一包前缀：`com.minispring`，再按模块与职责分包；类名和位置以 `src/main/java` 为准。
 - 命名对齐 Spring 的概念，让读者能「对照着看」Spring 源码。
 - 注释与文档统一中文；标识符用英文。
 
@@ -259,7 +258,7 @@ ReturnValueHandler ──► @ResponseBody 走 JSON 序列化
 | 配置 | 复杂 Environment/Binder/类型转换 | 扁平 `key=value` + 简单类型转换 |
 | 自动配置 | 海量 `*.AutoConfiguration` | 几个演示用的自动配置清单 |
 
-> 这份对照表会在编码过程中持续更新，帮助读者建立「Spring 究竟简化/复杂化了什么」的体感。
+> 这份对照表描述当前教学子集；完整支持边界以各章和源码为准。
 
 ---
 

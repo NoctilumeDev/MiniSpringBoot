@@ -9,20 +9,22 @@
 **不变**：依赖单向、禁止环；内核保持零强制传递的第三方运行时依赖，optional 集成边界见 [总体设计](architecture.md)。
 
 ```
-依赖方向（A ← B 表示 B 依赖 A；自上而下、无环）：
+直接编译依赖（A → B 表示 A 依赖 B；不展开传递依赖）：
 
-core ← context ← autoconfigure ← config
-              ↑              ← aop
-              ↑              ← starter-demo
-        context ← config / web
-        config ← web / boot
-        autoconfigure ← boot
+config → core
+context → core
+aop → context
+web → context
+jdbc → aop
+autoconfigure → context；optional → config / aop / web / jdbc
+boot → autoconfigure / config
+starter-demo → autoconfigure
 
-demo 层：mini-spring-demo ← (boot + web + aop + starter-demo)
+demo → boot / web / aop / starter-demo / jdbc
 ```
 
-- `mini-spring-boot`：依赖 `mini-spring-autoconfigure` + `mini-spring-config`（`run()` 内调 `ConfigFilePropertySourceLoader` 加载 `application.*`）。
-- `mini-spring-demo`（后端 demo 收口）：依赖 boot + web + aop + starter-demo，用 `run()` 组装。
+- `mini-spring-boot`：运行时依赖 `mini-spring-autoconfigure` + `mini-spring-config`（`run()` 内调 `ConfigFilePropertySourceLoader` 加载 `application.*`）；`web` 仅为直接测试依赖，服务器生命周期经 context 的 `Lifecycle` 接口驱动。
+- `mini-spring-demo`（后端 demo 收口）：显式依赖 boot + web + aop + starter-demo + jdbc，用 `run()` 组装；HikariCP 与 MySQL 驱动由 demo 提供。
 
 ### 关键设计决策（M7 内固化）
 
