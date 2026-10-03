@@ -1,5 +1,6 @@
 package com.minispring.web.server;
 
+import com.minispring.web.http.HttpErrorResponse;
 import com.minispring.web.http.HttpRequest;
 import com.minispring.web.http.HttpResponse;
 import com.sun.net.httpserver.HttpExchange;
@@ -81,13 +82,11 @@ public class SunHttpServer implements WebServer {
                 } catch (Throwable e) {
                     // 兜底：任何漏网的异常/错误（含 Error，如 P0-1 的 StackOverflowError）都转成 500，
                     // 避免连接被直接断开、客户端收到无 HTTP 响应的裸连接错误
+                    HttpErrorResponse.log("请求处理异常（内嵌服务器兜底）", e);
                     if (!response.isCommitted()) {
                         response.setStatus(500);
                         response.setContentType("text/plain; charset=utf-8");
-                        response.write("Internal Server Error: " + e.getMessage());
-                    } else {
-                        // L2：响应已提交时无法改写——留日志证据而非静默吞掉（排障黑洞）
-                        System.err.println("请求处理异常（响应已提交，兜底放弃改写）: " + e);
+                        response.write(HttpErrorResponse.body(500, e));
                     }
                 } finally {
                     exchange.close();

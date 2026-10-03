@@ -4,6 +4,7 @@ import com.minispring.core.BeanFactory;
 import com.minispring.core.BeanFactoryAware;
 import com.minispring.core.InitializingBean;
 import com.minispring.core.ListableBeanFactory;
+import com.minispring.web.http.HttpErrorResponse;
 import com.minispring.web.http.HttpRequest;
 import com.minispring.web.http.HttpResponse;
 import com.minispring.web.mvc.HandlerAdapter;
@@ -73,16 +74,20 @@ public class DispatcherServlet implements HttpHandler, BeanFactoryAware, Initial
         response.write("404 Not Found");
     }
 
-    private void writeError(HttpResponse response, Throwable e) {
+    void writeError(HttpResponse response, Throwable e) {
         // 响应头已发出时不能改写状态码或追加错误体，只记录错误并保持已提交响应不变。
         if (response.isCommitted()) {
-            System.err.println("请求处理异常（响应已提交，无法改写为错误状态）: " + e);
+            HttpErrorResponse.log("请求处理异常（响应已提交，无法改写为错误状态）", e);
             return;
         }
         int status = resolveStatus(e);
+        // 未预期 5xx 与带内部 cause 的显式 4xx 都保留完整服务端诊断，但绝不把细节回显给客户端。
+        if (status >= 500 || e.getCause() != null) {
+            HttpErrorResponse.log("请求处理异常（HTTP " + status + "）", e);
+        }
         response.setStatus(status);
         response.setContentType("text/plain; charset=utf-8");
-        response.write(status + " " + statusLabel(status) + ": " + e.getMessage());
+        response.write(HttpErrorResponse.body(status, e));
     }
 
     /**
@@ -105,15 +110,4 @@ public class DispatcherServlet implements HttpHandler, BeanFactoryAware, Initial
         return 500;
     }
 
-    /** 常见状态码的 reason-phrase（响应体前缀用；未知码退化为 "Error"）。 */
-    private static String statusLabel(int status) {
-        switch (status) {
-            case 400: return "Bad Request";
-            case 404: return "Not Found";
-            case 405: return "Method Not Allowed";
-            case 409: return "Conflict";
-            case 500: return "Internal Server Error";
-            default: return "Error";
-        }
-    }
 }

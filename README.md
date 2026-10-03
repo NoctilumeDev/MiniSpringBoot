@@ -10,7 +10,7 @@
 ![里程碑](https://img.shields.io/badge/M0~M10-本机落地自验通过-2e7d32)
 ![数据库](https://img.shields.io/badge/MySQL-8%2FHikariCP-2c3e50?logo=mysql&logoColor=white)
 ![前端](https://img.shields.io/badge/React-18%2FVite-61dafb?logo=react&logoColor=black)
-![Tests](https://img.shields.io/badge/tests-88%2F88-brightgreen)
+![Tests](https://img.shields.io/badge/tests-90%2F90-brightgreen)
 ![License](https://img.shields.io/badge/license-MIT-blue)
 
 MiniSpringBoot 是一个 **从零手写** 的 Spring Boot 内核复刻项目。八个框架内核模块不依赖 Spring，并对使用方保持**零个强制传递的第三方运行时依赖**；JSON、YAML、HTTP 等核心机制由 JDK 实现。`mini-spring-autoconfigure` 同时提供 HikariCP 可选集成：它直接以 `<optional>true>` 编译依赖 HikariCP，只有消费方（包括 demo）显式提供 HikariCP 时才启用。
@@ -18,9 +18,9 @@ MiniSpringBoot 是一个 **从零手写** 的 Spring Boot 内核复刻项目。�
 | | |
 | :--- | :--- |
 | 内核模块 | 8 个（core → config → context → aop → web → jdbc → autoconfigure → boot，依赖严格单向） |
-| 内核代码 | 156 个 Java 文件 / 7,846 个物理行（八个内核模块的 `src/main`；运行 `python scripts/verify_repository_contracts.py --metrics` 精确复核） |
+| 内核代码 | 157 个 Java 文件 / 7,888 个物理行（八个内核模块的 `src/main`；运行 `python scripts/verify_repository_contracts.py --metrics` 精确复核） |
 | 内核强制传递的第三方运行时依赖 | **0**（HikariCP 是 `autoconfigure` 的直接 optional 集成，不会传递给使用方；demo 显式提供 HikariCP 与 MySQL 驱动） |
-| 测试 | 88 个（本地与 [CI](https://github.com/NoctilumeDev/MiniSpringBoot/actions) 云端 MySQL 上均全绿；jdbc 单测真连库） |
+| 测试 | 90 个后端测试（本地与 [CI](https://github.com/NoctilumeDev/MiniSpringBoot/actions) 云端 MySQL 上均全绿；jdbc 单测真连库）+ 5 个零依赖前端契约测试 |
 | 里程碑 | M0–M10 本机落地自验通过；M10 VeriTrail 导入证据复验 15/15 HARD 断言通过（原始冻结坐标 [v0.m10](https://github.com/NoctilumeDev/MiniSpringBoot/releases/tag/v0.m10)，fresh-checkout 终审修订后的当前维护坐标 [v0.m10.3](https://github.com/NoctilumeDev/MiniSpringBoot/releases/tag/v0.m10.3)；账目见 [roadmap](docs/06-roadmap.md)） |
 
 ---
@@ -91,12 +91,12 @@ MiniSpringBoot 采用与 Spring 对齐的分层设计：demo 应用轨道在上�
 | 用户管理（CRUD 落 MySQL） | 转账演示（事务提交 / 回滚） |
 | :---: | :---: |
 | <img src="docs/screenshots/users-page.png" width="640" alt="用户管理页"/> | <img src="docs/screenshots/transfer-page.png" width="640" alt="转账演示页"/> |
-| 表中 id=23 / id=96 两行与 `users` 表逐行一致；新建、编辑、删除均真实落库（唯一键冲突会被 MySQL 约束拒绝并透出到 UI） | 余额卡 700 / 1300 即 `accounts` 表实时值；「中途失败转账」先扣款后抛异常 → 事务整体回滚，两账户分文不动 |
+| 表中 id=23 / id=96 两行与 `users` 表逐行一致；新建、编辑、删除均真实落库（重复邮箱由 MySQL 约束裁决，并以安全的 HTTP 409 反馈给 UI） | 余额卡 700 / 1300 即 `accounts` 表实时值；「中途失败转账」先扣款后抛异常 → 事务整体回滚，两账户分文不动 |
 
-| 错误根因直达 UI（数据库断连） | 状态码语义（404，非一律 500） |
+| 安全错误边界（未预期 500） | 状态码语义（404，非一律 500） |
 | :---: | :---: |
-| <img src="docs/screenshots/error-banner.png" width="640" alt="数据库断连错误提示"/> | <img src="docs/screenshots/404-evidence.png" width="640" alt="404 证据"/> |
-| `docker stop minispring-mysql` 后转账：约 30s 有限阻塞（Hikari connectionTimeout），错误提示条逐字透出根因与连接池状态（`Connection is not available, request timed out after 30003ms`）；事务开启失败即回滚，余额零变动；容器恢复健康后页面刷新立即自愈 | 向不存在的账户（#99999）转账 → 后端返回 **HTTP 404**（非 500），错误消息「入款失败，账户 99999 不存在」逐层透出到错误提示条；事务同步回滚，余额 700/1300 不变。参数非法返回 400（如负数金额），业务规则冲突才是 500——状态码语义清晰，调用方不再靠猜 |
+| <img src="docs/screenshots/error-boundary-current.jpg" width="640" alt="未预期 500 的通用错误提示"/> | <img src="docs/screenshots/404-evidence.png" width="640" alt="404 证据"/> |
+| 真实浏览器触发「中途失败 · 回滚」：后端记录完整 throwable 与调用栈，客户端只显示 **HTTP 500** 通用提示，余额仍为 1000/1000；另以停止后端实证 proxy **HTTP 502**，服务恢复后显式余额刷新只撤销自己留下的旧 502。数据库断连的历史验收仍保留在 roadmap，不与这两个错误类型混写 | 向不存在的账户（#99999）转账 → 后端返回 **HTTP 404**（非 500），安全业务消息「入款失败，账户 99999 不存在」进入错误提示条；事务同步回滚，余额不变。参数非法返回 400（如负数金额），未预期服务器故障才是 500——状态码语义清晰，调用方不再靠猜 |
 
 > 以上四张图的取证过程（含断连前后 DB 快照差分）记录于 [docs/06-roadmap.md](docs/06-roadmap.md) 各轮验收章节。
 
@@ -206,7 +206,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File deploy/m10/stop-cluster.
 
 验证：浏览器打开 `http://127.0.0.1:9080/`。容量曲线、故障切换、事务、就绪演练和证据哈希见 [M10 高可用与有界容量验证](docs/10-high-availability.md)。
 
-> 推送到 main 或更新 PR 即触发 [GitHub Actions CI](.github/workflows/ci.yml)：backend 在云端起 MySQL service 跑全量 88 个测试（jdbc 单测真连库），frontend 在 Node 22 上执行 `npm ci`、Vite build 与 moderate 级依赖审计——本地能跑的，云端同样验证。
+> 推送到 main 或更新 PR 即触发 [GitHub Actions CI](.github/workflows/ci.yml)：backend 在云端起 MySQL service 跑全量 90 个测试（jdbc 单测真连库），frontend 在 Node 22 上执行 `npm ci`、5 个零依赖契约测试、Vite build 与 moderate 级依赖审计——本地能跑的，云端同样验证。
 
 ---
 

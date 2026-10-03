@@ -112,6 +112,7 @@ jobs:
       - name: Install and build
         run: |
           npm ci --registry=https://registry.npmjs.org
+          npm test
           npm run build
 
       - name: Audit frontend dependencies

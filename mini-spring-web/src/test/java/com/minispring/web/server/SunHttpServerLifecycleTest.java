@@ -57,6 +57,32 @@ class SunHttpServerLifecycleTest {
         webServer.stop();
     }
 
+    @Test
+    void topLevelFailureReturnsGenericBodyWithoutLeakingHandlerDetails() throws Exception {
+        SunHttpServer webServer = new SunHttpServer((request, response) -> {
+            throw new IllegalStateException("top-level-secret uk_users_email");
+        });
+        try {
+            webServer.start(0);
+            HttpServer server = (HttpServer) field("server").get(webServer);
+            URL url = new URL("http://127.0.0.1:" + server.getAddress().getPort() + "/probe");
+            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+            connection.setConnectTimeout(3000);
+            connection.setReadTimeout(3000);
+            try {
+                assertEquals(500, connection.getResponseCode());
+                String body = new String(connection.getErrorStream().readAllBytes(), StandardCharsets.UTF_8);
+                assertEquals("500 Internal Server Error", body);
+                assertFalse(body.contains("secret"));
+                assertFalse(body.contains("uk_users_email"));
+            } finally {
+                connection.disconnect();
+            }
+        } finally {
+            webServer.stop();
+        }
+    }
+
     private static String request(SunHttpServer webServer) throws Exception {
         HttpServer server = (HttpServer) field("server").get(webServer);
         URL url = new URL("http://127.0.0.1:" + server.getAddress().getPort() + "/probe");

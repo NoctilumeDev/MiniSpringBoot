@@ -1,8 +1,13 @@
 package com.minispring.web.servlet;
 
+import com.minispring.web.http.HttpResponse;
 import org.junit.jupiter.api.Test;
 
+import java.nio.charset.StandardCharsets;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * 外审复核第三轮（D16 部分收口）的约束用例：异常 → HTTP 状态码的内建映射。
@@ -33,5 +38,70 @@ class DispatcherServletErrorMappingTest {
         assertEquals(500, servlet.resolveStatus(new IllegalStateException("transfer-fail-in-middle")));
         assertEquals(500, servlet.resolveStatus(new RuntimeException("SQL 执行失败")));
         assertEquals(500, servlet.resolveStatus(new Error("溢出")));
+    }
+
+    @Test
+    void errorResponseKeeps4xxBusinessMessageButNeverExposes5xxDetails() {
+        DispatcherServlet servlet = new DispatcherServlet();
+
+        RecordingResponse conflict = new RecordingResponse();
+        servlet.writeError(conflict, new ResponseStatusException(409, "该邮箱已存在"));
+        assertEquals(409, conflict.status);
+        assertEquals("409 Conflict: 该邮箱已存在", conflict.body.toString());
+
+        for (Throwable failure : new Throwable[] {
+                new RuntimeException("INSERT INTO users ... uk_users_email ... secret@example.com"),
+                new ResponseStatusException(500, "explicit-server-secret"),
+                new Error("fatal-server-secret")
+        }) {
+            RecordingResponse response = new RecordingResponse();
+            servlet.writeError(response, failure);
+            assertEquals(500, response.status);
+            assertEquals("500 Internal Server Error", response.body.toString());
+            assertFalse(response.body.toString().contains("secret"));
+        }
+
+        RecordingResponse committed = new RecordingResponse();
+        committed.committed = true;
+        committed.status = 202;
+        committed.body.append("already-written");
+        servlet.writeError(committed, new RuntimeException("must-not-be-appended"));
+        assertEquals(202, committed.status);
+        assertEquals("already-written", committed.body.toString());
+        assertTrue(committed.committed);
+    }
+
+    private static final class RecordingResponse implements HttpResponse {
+        private int status;
+        private boolean committed;
+        private final StringBuilder body = new StringBuilder();
+
+        @Override
+        public void setStatus(int status) {
+            this.status = status;
+        }
+
+        @Override
+        public void setContentType(String contentType) {
+        }
+
+        @Override
+        public void setHeader(String name, String value) {
+        }
+
+        @Override
+        public void write(byte[] bytes) {
+            body.append(new String(bytes, StandardCharsets.UTF_8));
+        }
+
+        @Override
+        public void write(String text) {
+            body.append(text);
+        }
+
+        @Override
+        public boolean isCommitted() {
+            return committed;
+        }
     }
 }

@@ -1,6 +1,7 @@
 package com.minispring.demo.app;
 
 import com.minispring.context.annotation.Autowired;
+import com.minispring.jdbc.DuplicateKeyException;
 import com.minispring.jdbc.JdbcTemplate;
 import com.minispring.web.mvc.annotation.DeleteMapping;
 import com.minispring.web.mvc.annotation.GetMapping;
@@ -12,6 +13,7 @@ import com.minispring.web.mvc.annotation.RequestMapping;
 import com.minispring.web.mvc.annotation.RestController;
 import com.minispring.web.servlet.ResponseStatusException;
 
+import java.sql.SQLException;
 import java.util.List;
 
 /**
@@ -47,16 +49,24 @@ public class UserController {
 
     @PostMapping
     public User createUser(@RequestBody User user) {
-        long id = jdbc.insertAndReturnKey("INSERT INTO users(name, email) VALUES (?, ?)",
-                user.getName(), user.getEmail());
-        user.setId(id);
-        return user;
+        try {
+            long id = jdbc.insertAndReturnKey("INSERT INTO users(name, email) VALUES (?, ?)",
+                    user.getName(), user.getEmail());
+            user.setId(id);
+            return user;
+        } catch (DuplicateKeyException e) {
+            throw duplicateEmailConflict(e);
+        }
     }
 
     @PutMapping("/{id}")
     public int updateUser(@PathVariable("id") Long id, @RequestBody User user) {
-        return jdbc.update("UPDATE users SET name = ?, email = ? WHERE id = ?",
-                user.getName(), user.getEmail(), id);
+        try {
+            return jdbc.update("UPDATE users SET name = ?, email = ? WHERE id = ?",
+                    user.getName(), user.getEmail(), id);
+        } catch (DuplicateKeyException e) {
+            throw duplicateEmailConflict(e);
+        }
     }
 
     @DeleteMapping("/{id}")
@@ -70,5 +80,21 @@ public class UserController {
         user.setName(rs.getString("name"));
         user.setEmail(rs.getString("email"));
         return user;
+    }
+
+    private static RuntimeException duplicateEmailConflict(DuplicateKeyException failure) {
+        // DuplicateKeyException 也覆盖其它 SQLState 23 约束；本 demo 只把 MySQL 1062 稳定映射成邮箱冲突。
+        Throwable current = failure;
+        for (int depth = 0; current != null && depth < 16; depth++) {
+            if (current instanceof SQLException sqlException && sqlException.getErrorCode() == 1062) {
+                return new ResponseStatusException(409, "该邮箱已存在", failure);
+            }
+            Throwable next = current.getCause();
+            if (next == current) {
+                break;
+            }
+            current = next;
+        }
+        return failure;
     }
 }
