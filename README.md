@@ -17,7 +17,7 @@ MiniSpringBoot 是一个 **从零手写** 的 Spring Boot 内核复刻项目。�
 
 | | |
 | :--- | :--- |
-| 内核模块 | 8 个（core → config → context → aop → web → jdbc → autoconfigure → boot，依赖严格单向） |
+| 内核模块 | 8 个（core/config/context/aop/web/jdbc/autoconfigure/boot；精确依赖见 [架构图](docs/architecture-overview.svg)） |
 | 内核代码 | 156 个 Java 文件 / 7,846 个物理行（八个内核模块的 `src/main`；运行 `python scripts/verify_repository_contracts.py --metrics` 精确复核） |
 | 内核强制传递的第三方运行时依赖 | **0**（HikariCP 是 `autoconfigure` 的直接 optional 集成，不会传递给使用方；demo 显式提供 HikariCP 与 MySQL 驱动） |
 | 测试 | 88 个（本地与 [CI](https://github.com/NoctilumeDev/MiniSpringBoot/actions) 云端 MySQL 上均全绿；jdbc 单测真连库） |
@@ -108,9 +108,9 @@ MiniSpringBoot 采用与 Spring 对齐的分层设计：demo 应用轨道在上�
 
 ### 1. 最小强制依赖（内核）——造轮子本身就是目的
 
-框架内核不引入 Spring、不引入 Jackson、不引入 Tomcat、不引入 YAML 库。JSON 解析、YAML 解析、HTTP 服务器全部自己写；`autoconfigure` 仅保留不会向使用方传递的 HikariCP 可选集成。
+框架内核不引入 Spring、不引入 Jackson、不引入 Tomcat、不引入 YAML 库。JSON 与 YAML 子集解析、MVC 路由和服务器生命周期由本项目实现；TCP 连接与 HTTP 报文解析使用 JDK `HttpServer`。`autoconfigure` 保留不会向使用方强制传递的 HikariCP 可选集成。
 
-这不代表「自己写的更好」，而是因为 **一个初学者只有亲手写过一个 HTTP 服务器，才真正理解 Spring Boot 内嵌的 Tomcat 到底替我们做了什么**。轮子不是用来省事的，而是用来理解「为什么需要这个轮子」的。
+教学重点是亲手连接服务器生命周期、请求分发、参数绑定和响应处理，理解嵌入式 Web 容器与 MVC 的职责边界。JDK 承担的网络与协议能力见 [Web MVC 教程](docs/03-web-mvc.md)。
 
 ### 2. 剥洋葱——每一层都能被单独打开
 
@@ -177,14 +177,20 @@ MiniSpringBoot
 
 ## 构建与运行
 
+阅读路线见 [文档导航](docs/README.md)；旧计划、施工记录、历史验收和失败对照分类入口见 [history/](history/README.md)。
+
 ```bash
 # 全量构建 + 测试（JDK 17；mini-spring-jdbc 单测真连 MySQL，需先起容器）
 docker compose -f deploy/mysql/docker-compose.yml up -d   # MySQL 8（宿主 13306）
-mvn clean test
+mvn clean install
 
 # 启动后端 demo（一条 run() 拉起：自动配置 + AOP + 事件 + 数据源 + 内嵌服务器 9090 端口）
 mvn -pl mini-spring-demo exec:java "-Dexec.mainClass=com.minispring.demo.app.DemoApplication"
 ```
+
+`install` 把同仓库模块安装到本地 Maven 仓库，供下一条仅选择 demo 的命令解析。
+Docker 在这条路径中只运行 MySQL，Java 与前端仍是宿主机进程；建表和种子数据来自
+[数据库初始化说明](deploy/mysql/README.md)。已有数据卷不会因重启再次执行 SQL。
 
 验证：浏览器访问 `http://localhost:9090/hello`、`http://localhost:9090/users`（CRUD 落 MySQL）、`http://localhost:9090/accounts/1`（转账事务：`POST /accounts/transfer?from=1&to=2&amount=100`，`POST /accounts/transfer-fail` 回滚取证；资源缺失返回 404、参数非法返回 400）等接口。
 
@@ -219,7 +225,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File deploy/m10/stop-cluster.
 | 注解扫描 | `@ComponentScan`、`@Configuration`/`@Bean`、复合/元注解递归 | ✅ 真实扫描 |
 | 事件机制 | `ApplicationEvent`、`ApplicationListener` 泛型事件分发（接口式监听）、初始化期事件 | ✅ 真实按序触发 |
 | AOP | JDK 动态代理、execution/`@annotation` 切点、Before/After/Around | ✅ 真实织入（事务/日志） |
-| Web/MVC | 自写 HTTP 服务器 + JSON、`@RequestMapping` 及派生注解、路径模板、异常→状态码映射（404/400/500，`ResponseStatusException`） | ✅ 浏览器真实请求 |
+| Web/MVC | JDK HTTP Server 上的自研 MVC + JSON、`@RequestMapping` 及派生注解、路径模板、异常→状态码映射（404/400/500，`ResponseStatusException`） | ✅ 浏览器真实请求 |
 | 自动配置 | `@Conditional` 派生、SPI 装配、optional 依赖裁剪即消失 | ✅ 分离 classpath 实证 |
 | 启动器 | `MiniSpringApplication.run()`、Lifecycle 驱动、关闭钩子、Banner | ✅ 一条命令拉起全栈 |
 | JDBC/事务 | JdbcTemplate、`DataAccessException` 体系、编程式 + `@Transactional` | ✅ 真连 MySQL 落库 |

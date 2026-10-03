@@ -7,16 +7,14 @@
 ## 2. 模块边界与依赖方向
 
 ```
-core ← context ← aop
- ↑        ↑
- jdbc（新，零依赖：纯 java.sql.*，不依赖任何 minispring 模块）
- ↑
-autoconfigure（对 jdbc / HikariCP 均 optional，@ConditionalOnClass(name) 探测）
- ↑
-boot / demo 层（demo 引 mysql-connector-j + HikariCP，双轨制允许）
+core ← context ← aop ← jdbc
+                 ↑      ↑
+autoconfigure（对 jdbc / HikariCP 均 optional，按类路径条件启用）
+      ↑
+boot / demo 层（demo 显式引 mysql-connector-j + HikariCP）
 ```
 
-- **`mini-spring-jdbc`（新模块）**：`DataAccessException` 体系、`JdbcTemplate`、`RowMapper<T>`、`TransactionManager`（编程式）+ `@Transactional`（声明式，基于 M3 的 AOP）。**不依赖任何 minispring 模块**——它只面向 JDBC 标准接口，天然零第三方（内核纪律延伸）。
+- **`mini-spring-jdbc`**：`DataAccessException`、`JdbcTemplate`、`RowMapper<T>` 和编程式事务面向 JDBC 标准接口；整个模块直接依赖 `mini-spring-aop`，复用切面实现声明式 `@Transactional`，并传递 `context/core`。纯 JDBC 操作部分没有第三方运行时库，不等于整个模块没有框架依赖；精确方向以各模块 POM 和 [架构图](architecture-overview.svg) 为准。
 - **`DataSourceAutoConfiguration` / `JdbcAutoConfiguration` 放 autoconfigure**：对 `mini-spring-jdbc`、HikariCP 全 optional（D45 已验证的模式）；类级条件 `@ConditionalOnClass(name = "com.zaxxer.hikari.HikariDataSource")`，方法体 `new HikariDataSource()` 只在条件命中后执行。
 - **demo 层**（`mini-spring-demo`）引真实依赖：`com.mysql:mysql-connector-j:8.4.0` + `com.zaxxer:HikariCP:5.1.0`（runtime）。
 
@@ -58,7 +56,7 @@ Long insertAndReturnKey(String sql, Object... args)   // GENERATED_KEY，users �
 
 `@Bean(initMethod=…, destroyMethod=…)`：`AnnotatedBeanDefinitionReader` 读取两属性 → `BeanDefinition` 已有 `initMethodName/destroyMethodName` 字段（M1 就有，只缺注解入口）。**DataSource 销毁必须靠它**（HikariDataSource.close() 释放池，否则 demo 停止时线程泄漏）。
 
-## 4. demo 数据流（MySQL 容器：mysql:8.0，mem_limit 512M，宿主端口 3306——占用则 13306，决策点 C）
+## 4. demo 数据流（MySQL 容器：mysql:8.0，mem_limit 512M，默认宿主端口 13306）
 
 - 表：`users(id PK AI, name, email)`（对齐现有 User）、`accounts(id PK, balance DECIMAL)`（转账）；
 - `UserController`（直接注入 `JdbcTemplate`，无独立 Repository 层——教学子集不设 DAO 抽象）：GET/POST/PUT/DELETE `/users`，**写后 docker exec 直查 MySQL 取证**；

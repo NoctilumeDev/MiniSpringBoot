@@ -59,10 +59,13 @@ doDispatch(request, response):
     2. 找到能处理该 Handler 的 Adapter（HandlerAdapter）
     3. Adapter 解析入参 → 调用 Handler → 拿到返回值
     4. 用 ReturnValueHandler 把返回值写成响应
-    5. 途中任何异常 → 交给异常处理器（首版先记录日志并返回 500）
+    5. 异常 → ResponseStatusException 使用显式状态码；IllegalArgumentException 返回 400；其余返回 500
 ```
 
 前端控制器的价值：**让「找处理器」「调方法」「写响应」这三件事彼此独立**，任何一环都能单独扩展，而不影响其它环。
+
+未命中路由返回 404。当前不支持 Spring 的 `@ExceptionHandler` / `@ResponseStatus`
+注解解析；demo 通过 `ResponseStatusException` 表达资源缺失等业务边界，数据库异常仍返回 500。
 
 ---
 

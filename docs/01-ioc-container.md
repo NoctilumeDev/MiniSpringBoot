@@ -168,14 +168,17 @@ createBean(A):
 
 ## 6. 扩展点：两种 PostProcessor
 
-这是 Spring 优雅扩展的根基，也是本项目「工程级」要求的重点之一：
+下面先对照 Spring 的扩展点，再说明本项目实际支持的子集：
 
-| 扩展点 | 介入时机 | 用途 |
+| 扩展点 | 介入时机 | 用途与实现状态 |
 | --- | --- | --- |
-| `BeanFactoryPostProcessor` | 所有 BeanDefinition 注册后、实例化前 | 修改「图纸」（如解析 `@Value` 里的 `${}`） |
-| `BeanPostProcessor` | 每个 Bean 实例化后的两个环绕点 | 修改「成品」（如生成 AOP 代理） |
+| `BeanFactoryPostProcessor` | 所有 BeanDefinition 注册后、实例化前 | Spring 的定义级扩展点；本项目尚未实现，不能按该接口编写扩展 |
+| `BeanPostProcessor` | 每个 Bean 实例化后的环绕点 | 已实现；包含属性填充阶段扩展和初始化后 AOP 代理 |
 
 二者名字只差一个 `Factory`，意义天差地别：前者改**图纸**，后者改**成品**。务必区分。
+
+本项目的 `@Value` 由 `ValueAnnotationBeanPostProcessor` 在属性填充阶段调用 `Environment`
+解析占位符并注入字段，不通过尚未实现的 `BeanFactoryPostProcessor`。
 
 ---
 
@@ -198,7 +201,7 @@ BeanDefinitionRegistry  — 图纸仓库
 DefaultListableBeanFactory — 施工队（getBean 底层能力）
 ApplicationContext      — 项目经理（编排扫描/刷新）
 BeanPostProcessor       — 质检员（改成品）
-BeanFactoryPostProcessor — 图纸审批员（改图纸）
+BeanFactoryPostProcessor — Spring 对照概念；本项目未实现
 ObjectFactory           — 半成品工厂（三级缓存）
 ```
 

@@ -4,7 +4,7 @@
 
 ### 1.1 目标
 
-复刻 Spring Boot 的核心能力，且框架内核**只依赖 JDK**。当开发者读完代码，能独立回答下面六个问题：
+复刻 Spring Boot 的核心机制，八个框架内核模块保持**零强制传递的第三方运行时依赖**；`autoconfigure` 直接 optional 编译依赖 HikariCP，启用时由使用方显式提供该库。当开发者读完代码，能独立回答下面六个问题：
 
 1. Bean 是怎么被扫描、定义、实例化、注入、销毁的？
 2. 循环依赖是怎么被「解开」的？
@@ -30,7 +30,7 @@
 
 | 轨道 | 组成 | 第三方依赖 | 使命 |
 | --- | --- | --- | --- |
-| **框架内核** | `core/context/aop/web/config/autoconfigure/boot` | **零**（仅 JDK） | 把 Spring 的「魔法」摊开讲透 |
+| **框架内核** | `core/config/context/aop/web/jdbc/autoconfigure/boot` | 零强制传递的第三方运行时依赖；HikariCP 为 direct optional 集成 | 把 Spring 的核心机制摊开讲透 |
 | **demo 应用** | 业务代码 + React 前端 + MySQL 接入 + Nginx/压测脚本 | **允许** | 证明内核「真能用」，跑通全链路并验收高可用 |
 
 **边界铁律**：内核绝不依赖 demo；demo 只能通过内核暴露的公开接口使用框架，绝不触碰内核实现类。

@@ -6,7 +6,7 @@
 
 ## 2. 模块边界与依赖方向
 
-**不变**：依赖单向、禁止环；内核（M1~M7）零第三方依赖。
+**不变**：依赖单向、禁止环；内核保持零强制传递的第三方运行时依赖，optional 集成边界见 [总体设计](architecture.md)。
 
 ```
 依赖方向（A ← B 表示 B 依赖 A；自上而下、无环）：
@@ -26,12 +26,9 @@ demo 层：mini-spring-demo ← (boot + web + aop + starter-demo)
 
 ### 关键设计决策（M7 内固化）
 
-1. **自动装配类归位到能力模块，而非集中在 autoconfigure**：
-   - `WebMvcAutoConfiguration` 放 `web` 模块、`AopAutoConfiguration` 放 `aop` 模块、`ValueAutoConfiguration` 放 `config` 模块，各在自身 `META-INF/minispring/EnableAutoConfiguration.imports` 声明。
-   - 靠 `@ConditionalOnClass(name=...)`（用 `name` 判断「可能缺失」的类，避免类字面量在类加载期炸掉）条件装配。
-   - 为此 web/aop/config 需依赖 autoconfigure（仅取 `@EnableAutoConfiguration` / `@ConditionalOnXXX` 注解）；方向仍是单向（autoconfigure 不反向依赖 web/aop/config）。
-2. **D19 是前置**：把 autoconfigure 的 demo 类移出到 `mini-spring-demo`，autoconfigure 内核降为仅依赖 context（去掉「仅 demo 用」的 config 依赖），为上层能力模块腾出干净依赖图。
-3. **D8/D31：维持 JDK 动态代理，不引 CGLIB**（恪守内核零第三方依赖红线）；需要被 AOP 的 Bean 必须接口化。Controller 代理需求延后，不在 M7 强上 CGLIB。
+1. **自动装配类集中在 `autoconfigure`**：`WebMvcAutoConfiguration`、`AopAutoConfiguration`、`ValueAutoConfiguration` 均在该模块，并由自身的 `META-INF/minispring/EnableAutoConfiguration.imports` 声明。对可裁剪能力使用 `@ConditionalOnClass(name=...)`，不让 web/aop/config 反向依赖自动配置模块。
+2. **demo 与内核分开**：示例应用在 `mini-spring-demo`。自动配置层依赖下层公开能力，准确依赖方向以各模块 POM 与 [架构图](architecture-overview.svg) 为准；本节不再沿用已被 M7 终审纠正的中间方案。
+3. **D8/D31：维持 JDK 动态代理，不引 CGLIB**；需要被 AOP 的 Bean 必须接口化，类代理不在当前教学子集内。
 
 ## 3. 关键类
 
