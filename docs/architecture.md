@@ -161,7 +161,7 @@
 ### 4.6 `mini-spring-autoconfigure` —— 自动配置
 
 - `@Conditional` 及派生：`@ConditionalOnClass` / `@ConditionalOnMissingBean` / `@ConditionalOnProperty`
-- `AutoConfigurationImportSelector`：读取 `META-INF/mini.factories`（等价 `spring.factories`）批量导入
+- `AutoConfigurationImportSelector`：通过 `AutoConfigurationLoader` 读取 `META-INF/minispring/EnableAutoConfiguration.imports`，每行一个自动配置类全限定名，再批量导入
 - Starter 约定：`xxx-starter` 模块只做声明式装配
 
 ### 4.7 `mini-spring-boot` —— 启动器
@@ -231,7 +231,7 @@ ReturnValueHandler ──► @ResponseBody 走 JSON 序列化
 
 ## 7. 包结构与命名约定
 
-- 内核所有模块统一顶层包：`io.github.noctilumdev.minispring`，实现类收拢在各自 `support`/`internal` 子包。
+- 内核所有模块统一顶层包：`com.minispring`，按模块划分子包。
 - 命名对齐 Spring 的概念，让读者能「对照着看」Spring 源码。
 - 注释与文档统一中文；标识符用英文。
 
