@@ -178,9 +178,9 @@ MiniSpringBoot
 ## 构建与运行
 
 ```bash
-# 全量构建 + 测试（JDK 17；mini-spring-jdbc 单测真连 MySQL，需先起容器）
+# 全量构建 + 测试 + 安装内部模块到本地 Maven 仓库（JDK 17；mini-spring-jdbc 单测真连 MySQL，需先起容器）
 docker compose -f deploy/mysql/docker-compose.yml up -d   # MySQL 8（宿主 13306）
-mvn clean test
+mvn clean install
 
 # 启动后端 demo（一条 run() 拉起：自动配置 + AOP + 事件 + 数据源 + 内嵌服务器 9090 端口）
 mvn -pl mini-spring-demo exec:java "-Dexec.mainClass=com.minispring.demo.app.DemoApplication"
