@@ -161,7 +161,7 @@ optional 集成以 POM 为准，启动器和 demo 的依赖说明见 [07 章](07
 - `@Conditional` 及派生：`@ConditionalOnClass` / `@ConditionalOnMissingBean` / `@ConditionalOnProperty`
 - `AutoConfigurationLoader`：汇总 classpath 上 `META-INF/minispring/EnableAutoConfiguration.imports` 的逐行类名
 - `AutoConfigurationImportSelector`：延迟导入候选，去重并按 `@AutoConfigureOrder` / `@Order` 排序
-- Starter 约定：`xxx-starter` 模块只做声明式装配
+- 演示 starter 包含格式服务、`FormatAutoConfiguration` 与自身 imports 资源，具体机制见 [04 章](04-auto-configuration.md)
 
 ### 4.7 `mini-spring-boot` —— 启动器
 
@@ -266,7 +266,7 @@ ReturnValueHandler ──► @ResponseBody 走 JSON 序列化
 
 ### 10.1 demo 应用架构
 
-demo 是一套「用户管理 + 账户转账」三层 Web 应用，用于证明内核「真能用」并跑通全链路。下图是 M10 已落地的本机生产形态：
+demo 是一套「用户管理 + 账户转账」Web 应用，用于证明内核「真能用」并跑通全链路。下图是 M10 已落地的本机生产形态：
 
 ```
 浏览器（:9080，React 前端，F12 可调试）
@@ -282,7 +282,7 @@ Nginx（dist 托管 + least_conn + 被动故障判定）
 ```
 
 - 前端（React）通过 JSON API 访问后端，F12 里直接看请求/响应/状态码。
-- 后端提供 `GET/POST` 资源接口，内部走 Service → DAO → JDBC → MySQL 完整链路。
+- 用户 CRUD 由 `UserController` 直接调用 `JdbcTemplate`；账户转账由 `AccountController` → `AccountService` 的 AOP 代理 → `AccountServiceImpl` → `JdbcTemplate` → MySQL，事务由 `@Transactional` 驱动。demo 没有独立 DAO 层。
 - 每个实例**完全无状态**，会话与数据全部落在 MySQL，因此可被任意替换。
 
 ### 10.2 高可用设计（无状态 + 外部负载均衡）

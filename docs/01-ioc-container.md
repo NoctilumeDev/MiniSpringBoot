@@ -44,12 +44,14 @@ class OrderService {
 | 字段 | 含义 |
 | --- | --- |
 | `beanClass` | 目标类 |
-| `beanName` | 容器内的唯一标识 |
 | `scope` | `singleton` / `prototype` |
-| `lazyInit` | 是否懒加载 |
 | `initMethodName` / `destroyMethodName` | 生命周期回调方法名 |
-| `propertyValues` | 待注入的依赖（字段/方法） |
-| `dependsOn` | 显式声明的依赖顺序 |
+| `factoryBeanName` / `factoryMethodName` / `factoryMethod` | 工厂 Bean 与已解析的工厂方法 |
+| `primary` / `qualifier` | 多候选依赖裁决 |
+| `propertyValues` | 显式属性名与值，供属性填充使用 |
+
+本表列当前实现。Bean 名称是注册表的 map 键，不是 `BeanDefinition` 的字段；
+Spring 的 `lazyInit` / `dependsOn` 元数据未实现。
 
 `BeanDefinition` 是 Spring 内核的「第一公民」——**容器里流转的从来不是对象，而是对象的「图纸」**。有了图纸，才能在合适的时机去「施工」（实例化）。
 
@@ -59,19 +61,19 @@ class OrderService {
 
 很多初学者混淆二者，这里用一句话划清：
 
-- **`BeanFactory`**：一个纯粹的「Bean 工厂」，只负责`getBean`——够用，但缺少很多便利。
-- **`ApplicationContext`**：在 `BeanFactory` 之上，叠加了**扫描、事件、国际化、配置解析**等能力，才是日常 `getBean` 背后真正的东西。
+- **`BeanFactory`**：提供 `getBean`、`containsBean` 等基础对象查找；类型枚举由 `ListableBeanFactory` 扩展。
+- **`ApplicationContext`**：本项目在工厂能力之上增加事件发布与关闭；`AnnotationConfigApplicationContext` 负责扫描、配置类解析和刷新。Spring 的国际化支持不在当前教学子集内。
 
-本项目的对应设计：`DefaultListableBeanFactory` 提供「生产 Bean」的最底层能力，`ApplicationContext` 组合它，并驱动「扫描 → 注册 → 刷新」的完整流程。
+本项目由 `AnnotationConfigApplicationContext` 持有 `DefaultListableBeanFactory` 并驱动「扫描 → 注册 → 刷新」；工厂自身实现 `BeanDefinitionRegistry`、保存定义，不另持有一个注册表对象。
 
 ```
-ApplicationContext（组合，负责编排）
+AnnotationConfigApplicationContext（负责编排）
         │ 持有
         ▼
-DefaultListableBeanFactory（提供 getBean 的底层能力）
-        │ 持有
+DefaultListableBeanFactory（生产和缓存 Bean，保存定义）
+        │ 实现
         ▼
-BeanDefinitionRegistry（保存 BeanDefinition 图纸）
+BeanDefinitionRegistry（定义注册接口）
 ```
 
 ---

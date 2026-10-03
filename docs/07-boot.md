@@ -34,9 +34,9 @@ demo → boot / web / aop / starter-demo / jdbc
 
 ## 3. 关键类
 
-- `MiniSpringApplication`：`public static AnnotationConfigApplicationContext run(Class<?> primarySource, String... args)`。顺序：建 `StandardEnvironment` → `ConfigFilePropertySourceLoader.load(env)`（关掉「配置加载需手动」）→ `new AnnotationConfigApplicationContext(env, primarySource)` → `refresh` → 广播 `StartedEvent` → 返回上下文。
+- `MiniSpringApplication`：`public static AnnotationConfigApplicationContext run(Class<?> primarySource, String... args)`。顺序：建 `StandardEnvironment` → `ConfigFilePropertySourceLoader.load(env)`（关掉「配置加载需手动」）→ `new AnnotationConfigApplicationContext(env, primarySource)`（构造器内完成注册、装配与刷新）→ 启动 `Lifecycle` → Banner → 广播 `StartedEvent` → 注册关闭钩子 → 返回上下文。
 - `@MiniSpringBootApplication`：`@Configuration + @ComponentScan + @EnableAutoConfiguration` 复合注解，复用 M6 的元注解查找。
-- 事件总线：`ApplicationEvent` / `ApplicationEventPublisher` / `ApplicationListener<E>` / `SimpleApplicationEventMulticaster`；在 refresh 前、上下文就绪后、启动后、关闭时广播（`ContextRefreshedEvent` / `StartedEvent` / `ClosedEvent`）。方法级同步广播（教学子集，无需异步）。
+- 事件总线：`ApplicationEvent` / `ApplicationEventPublisher` / `ApplicationListener<E>` / `SimpleApplicationEventMulticaster`；刷新结束时广播 `ContextRefreshedEvent`，全部 `Lifecycle` 启动后广播 `StartedEvent`，关闭时广播 `ContextClosedEvent`。通过 `ApplicationListener<E>` 同步分发；没有刷新前事件，也未实现方法注解式 `@EventListener`。
 - `Banner`：打印框架名 + 版本 + 启动耗时。
 
 ## 4. AOP 收口（B2 + D30 + D5）
