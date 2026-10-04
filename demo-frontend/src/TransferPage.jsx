@@ -16,14 +16,15 @@ import { api } from './api.js';
  * [中途失败转账] 验证事务回滚（扣款已执行但异常回滚，余额不变）。
  * 两个余额卡操作后刷新，页面读数即 MySQL 读数。
  */
-export default function TransferPage({ onError, onNotice }) {
+export default function TransferPage({ onError, onNotice, onClearError }) {
   const [from, setFrom] = useState('1');
   const [to, setTo] = useState('2');
   const [amount, setAmount] = useState('10');
   const [balances, setBalances] = useState({ 1: null, 2: null });
   const [busy, setBusy] = useState(false);
 
-  const reloadBalances = async (ids = [1, 2]) => {
+  const reloadBalances = async (ids = [1, 2], { manageFeedback = true } = {}) => {
+    if (manageFeedback) onClearError('balance-read');
     try {
       const next = { ...balances };
       for (const id of ids) {
@@ -31,7 +32,8 @@ export default function TransferPage({ onError, onNotice }) {
       }
       setBalances(next);
     } catch (e) {
-      onError(`读取余额失败 — ${e.message}`);
+      // 事务后的后台复读没有资格覆盖刚完成的提交/回滚结果；显式刷新仍可更新自己的错误。
+      onError(`读取余额失败 — ${e.message}`, 'balance-read', manageFeedback);
     }
   };
 
@@ -61,13 +63,17 @@ export default function TransferPage({ onError, onNotice }) {
       }
     } catch (err) {
       if (kind === 'fail') {
-        onError(`[中途失败] 后端已回滚 — ${err.message}（两账户余额应保持不变）`);
+        onError(`[中途失败] 后端已回滚 — ${err.message}（两账户余额应保持不变）`, 'transfer');
       } else {
-        onError(`转账失败 — ${err.message}`);
+        onError(`转账失败 — ${err.message}`, 'transfer');
       }
     } finally {
       setBusy(false);
-      await reloadBalances([from, to].map(Number).filter((n) => n === 1 || n === 2));
+      // 余额复读只是验证事务事实，不能抹掉刚刚产生的提交/回滚结果。
+      await reloadBalances(
+        [from, to].map(Number).filter((n) => n === 1 || n === 2),
+        { manageFeedback: false },
+      );
     }
   };
 

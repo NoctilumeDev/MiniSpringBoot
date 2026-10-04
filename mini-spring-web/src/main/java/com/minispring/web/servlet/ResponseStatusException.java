@@ -19,6 +19,12 @@ public class ResponseStatusException extends RuntimeException {
         this.status = status;
     }
 
+    /** 业务状态保持稳定，同时把内部根因仅留给服务端诊断。 */
+    public ResponseStatusException(int status, String message, Throwable cause) {
+        super(message, cause);
+        this.status = status;
+    }
+
     public int getStatus() {
         return status;
     }
