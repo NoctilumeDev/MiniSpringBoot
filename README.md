@@ -154,6 +154,7 @@ MiniSpringBoot
 │   ├── 08-jdbc.md             # JDBC 与事务
 │   ├── 09-frontend.md         # React 前端与联调
 │   ├── 10-high-availability.md # M10 三实例、容量、故障与证据契约
+│   ├── 11-residual-hygiene.md  # 阶段退出时的遗留物所有权与收口门禁
 │   ├── teaching-to-engineering.md # 未合入主线的工程化实验与停止边界
 │   ├── evidence/m10/           # M10 原始报告、SHA-256 清单与复核坐标
 │   └── screenshots/           # 联调验收实拍（README 引用）

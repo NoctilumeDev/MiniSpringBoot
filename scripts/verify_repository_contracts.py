@@ -30,6 +30,14 @@ BUNDLE_MANIFESTS = (
     "docs/evidence/m10/veritrail/bundle/bundle-manifest.json",
     "docs/evidence/m10/veritrail/negative-control-bundle/bundle-manifest.json",
 )
+GENERATED_DIRECTORY_NAMES = {
+    "coverage",
+    "dist",
+    "node_modules",
+    "target",
+    "test-results",
+}
+TEMPORARY_SUFFIXES = (".bak", ".orig", ".rej", ".tmp", "~")
 
 
 class ContractError(RuntimeError):
@@ -55,6 +63,40 @@ def tracked_paths() -> list[str]:
         for path in git("ls-files", "-z").split(b"\0")
         if path
     ]
+
+
+def ignored_tracked_paths() -> list[str]:
+    return [
+        os.fsdecode(path)
+        for path in git("ls-files", "-ci", "--exclude-standard", "-z").split(b"\0")
+        if path
+    ]
+
+
+def residual_hygiene_violations(
+    paths: list[str], ignored_paths: list[str]
+) -> list[str]:
+    ignored = set(ignored_paths)
+    violations: list[str] = []
+    for repository_path in sorted(set(paths)):
+        parts = PurePosixPath(repository_path).parts
+        if repository_path in ignored:
+            violations.append(f"TRACKED_IGNORED_ARTIFACT: {repository_path}")
+        if any(part in GENERATED_DIRECTORY_NAMES for part in parts):
+            violations.append(f"TRACKED_GENERATED_OUTPUT: {repository_path}")
+        if repository_path.endswith(TEMPORARY_SUFFIXES):
+            violations.append(f"TRACKED_TEMPORARY_FILE: {repository_path}")
+    return violations
+
+
+def verify_residual_hygiene(paths: list[str]) -> None:
+    violations = residual_hygiene_violations(paths, ignored_tracked_paths())
+    if violations:
+        raise ContractError("residual hygiene violations: " + "; ".join(violations))
+    print("residual_hygiene=PASS")
+    print("tracked_ignored_artifacts=0")
+    print("tracked_generated_outputs=0")
+    print("tracked_temporary_files=0")
 
 
 def verify_metrics(paths: list[str]) -> None:
@@ -271,8 +313,16 @@ def main() -> int:
     parser.add_argument(
         "--evidence", action="store_true", help="verify LF attributes and bundle hashes"
     )
+    parser.add_argument(
+        "--hygiene", action="store_true", help="verify tracked residual hygiene"
+    )
     arguments = parser.parse_args()
-    verify_all = not (arguments.metrics or arguments.dependencies or arguments.evidence)
+    verify_all = not (
+        arguments.metrics
+        or arguments.dependencies
+        or arguments.evidence
+        or arguments.hygiene
+    )
 
     try:
         paths = tracked_paths()
@@ -283,6 +333,8 @@ def main() -> int:
         if verify_all or arguments.evidence:
             verify_evidence_attributes(paths)
             verify_bundle_hashes()
+        if verify_all or arguments.hygiene:
+            verify_residual_hygiene(paths)
     except (ContractError, OSError, ET.ParseError, json.JSONDecodeError) as error:
         print(f"ERROR: {error}", file=sys.stderr)
         return 1

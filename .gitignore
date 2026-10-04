@@ -21,12 +21,18 @@ buildNumber.properties
 .project
 .factorypath
 
+# Python verification cache
+__pycache__/
+*.py[cod]
+
 # OS
 .DS_Store
 Thumbs.db
 
 # Logs
 *.log
+!docs/evidence/m10/20260822-021933-failover-load.err.log
+!docs/evidence/m10/20260822-021933-failover-load.out.log
 logs/
 
 # Node（demo-frontend，M9）
