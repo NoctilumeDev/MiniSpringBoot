@@ -6,7 +6,6 @@ import com.minispring.context.annotation.AnnotationConfigApplicationContext;
 import com.minispring.core.env.StandardEnvironment;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 /**
@@ -38,35 +37,58 @@ public final class MiniSpringApplication {
 
         // 4) A-3/D45：驱动容器里全部 Lifecycle 组件（如内嵌服务器）；纯后端应用无此类组件，自然跳过
         List<Lifecycle> lifecycles = new ArrayList<>();
-        for (String name : context.getBeanNamesForType(Lifecycle.class)) {
-            lifecycles.add(context.getBean(name, Lifecycle.class));
-        }
-        for (Lifecycle lifecycle : lifecycles) {
-            lifecycle.start();
-        }
+        try {
+            List<Lifecycle> components = new ArrayList<>();
+            for (String name : context.getBeanNamesForType(Lifecycle.class)) {
+                components.add(context.getBean(name, Lifecycle.class));
+            }
+            for (Lifecycle lifecycle : components) {
+                // start 可能先占用资源再抛错：失败的组件也必须进入逆序停止集合。
+                lifecycles.add(lifecycle);
+                lifecycle.start();
+            }
 
-        // 5) Banner + 启动耗时
-        Banner.print(System.currentTimeMillis() - start);
+            // 5) Banner + 启动耗时
+            Banner.print(System.currentTimeMillis() - start);
 
-        // 6) 广播「启动完成」
-        context.publishEvent(new StartedEvent(context));
+            // 6) 广播「启动完成」
+            context.publishEvent(new StartedEvent(context));
 
-        // 7) 关闭钩子：与启动顺序相反——逆序停 Lifecycle，再关上下文（广播 Closed + 销毁 Bean）
-        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-            Collections.reverse(lifecycles);
-            for (Lifecycle lifecycle : lifecycles) {
-                try {
-                    lifecycle.stop();
-                } catch (Throwable e) {
-                    // L1：只 catch RuntimeException 时，stop() 抛 Error 会跳过 context.close()——
-                    // 连接池等资源不释放（与 TransactionManager 对 Error 的回滚纪律对称）
-                    System.err.println("停止 Lifecycle[" + lifecycle.getClass().getName() + "]失败: " + e);
+            // 7) 关闭钩子：逆序停 Lifecycle，再关上下文（广播 Closed + 销毁 Bean）
+            Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+                stopLifecycles(lifecycles, null);
+                context.close();
+            }, "minispring-shutdown"));
+        } catch (RuntimeException | Error failure) {
+            stopLifecycles(lifecycles, failure);
+            try {
+                context.close();
+            } catch (Throwable cleanupFailure) {
+                if (cleanupFailure != failure) {
+                    failure.addSuppressed(cleanupFailure);
                 }
             }
-            context.close();
-        }, "minispring-shutdown"));
+            throw failure;
+        }
 
         // args 暂保留：留给后续「命令行参数 → 属性 / profile / 端口」覆盖用，教学子集不解析
         return context;
+    }
+
+    private static void stopLifecycles(List<Lifecycle> lifecycles, Throwable startupFailure) {
+        for (int i = lifecycles.size() - 1; i >= 0; i--) {
+            Lifecycle lifecycle = lifecycles.get(i);
+            try {
+                lifecycle.stop();
+            } catch (Throwable cleanupFailure) {
+                if (startupFailure != null) {
+                    if (cleanupFailure != startupFailure) {
+                        startupFailure.addSuppressed(cleanupFailure);
+                    }
+                } else {
+                    System.err.println("停止 Lifecycle[" + lifecycle.getClass().getName() + "]失败: " + cleanupFailure);
+                }
+            }
+        }
     }
 }

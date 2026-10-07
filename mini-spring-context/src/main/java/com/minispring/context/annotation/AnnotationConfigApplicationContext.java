@@ -79,15 +79,25 @@ public class AnnotationConfigApplicationContext implements ApplicationContext {
         // 内置：事件发布器注入（A-6）：Bean 在初始化回调里即可发布事件，且此时监听器已先注册（见 refresh）
         beanFactory.addBeanPostProcessor(new EventPublisherAwareProcessor(eventMulticaster));
 
-        // 注册入口配置类（会递归处理 @Bean 与 @ComponentScan 与 @Import）
-        for (Class<?> source : primarySources) {
-            registerConfigClass(source);
+        try {
+            // 注册入口配置类（会递归处理 @Bean 与 @ComponentScan 与 @Import）
+            for (Class<?> source : primarySources) {
+                registerConfigClass(source);
+            }
+            // 用户配置落地后，再执行「延迟导入」：先用户、后自动，缺失条件才能正确回退
+            invokeDeferredImports();
+            refresh();
+        } catch (RuntimeException | Error failure) {
+            // 构造失败时调用方拿不到 context；已创建单例的释放仍由本上下文负责。
+            try {
+                beanFactory.close();
+            } catch (Throwable cleanupFailure) {
+                if (cleanupFailure != failure) {
+                    failure.addSuppressed(cleanupFailure);
+                }
+            }
+            throw failure;
         }
-        // 用户配置落地后，再执行「延迟导入」（自动配置选择器）：先用户、后自动，@ConditionalOnMissingBean 才能正确回退
-        invokeDeferredImports();
-
-        // 预实例化所有单例
-        refresh();
     }
 
     /** 返回当前上下文持有的配置环境（后续 Web 阶段读取 server.port 等会用到）。 */
