@@ -2,7 +2,6 @@ package com.minispring.boot;
 
 import com.minispring.context.Lifecycle;
 import com.minispring.context.annotation.Bean;
-import com.minispring.context.annotation.Configuration;
 import com.minispring.core.DisposableBean;
 import org.junit.jupiter.api.Test;
 
@@ -24,7 +23,7 @@ class MiniSpringApplicationFailureTest {
     private static Throwable startupFailure;
     private static final Error STOP_FAILURE = new AssertionError("stop failed");
 
-    @Configuration
+    // 显式作为 run 的入口注册；不参与其他测试应用的 @ComponentScan。
     static class PartialApplication {
         @Bean SocketResource resource() throws IOException { return new SocketResource(); }
         @Bean Lifecycle first(SocketResource resource) { return new Component("first"); }
