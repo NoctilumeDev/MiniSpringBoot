@@ -8,6 +8,7 @@ import com.sun.net.httpserver.HttpServer;
 import java.net.InetSocketAddress;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
@@ -119,11 +120,18 @@ public class SunHttpServer implements WebServer {
         this.executor = null;
         try {
             if (runningServer != null) {
-                runningServer.stop(0);
+                // 先拒绝新请求，再给已经接收的 exchange 最多 5 秒完成响应。
+                runningServer.stop(5);
             }
         } finally {
             if (ownedExecutor != null) {
+                // exchange 已完成或宽限期已到；中断剩余任务，并有限等待协作线程退出。
                 ownedExecutor.shutdownNow();
+                try {
+                    ownedExecutor.awaitTermination(2, TimeUnit.SECONDS);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
             }
         }
     }
