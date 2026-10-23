@@ -180,6 +180,10 @@ MiniSpringBoot
 
 ## 构建与运行
 
+希望省去源码编译、直接体验现有 demo，可使用预编译演示 ZIP：
+解压后由 Docker Compose 启动单实例应用、MySQL 和前端。
+构建、下载渠道与验收范围见 [预编译 demo 包](docs/demo-package.md)。
+
 ```bash
 # 全量构建 + 测试 + 安装内部模块到本地 Maven 仓库（JDK 17；mini-spring-jdbc 单测真连 MySQL，需先起容器）
 docker compose -f deploy/mysql/docker-compose.yml up -d   # MySQL 8（宿主 13306）
