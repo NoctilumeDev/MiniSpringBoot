@@ -1,0 +1,61 @@
+name: Demo package
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: demo-package-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  demo-package:
+    name: Precompiled ZIP with real MySQL smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5.7.0
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: demo-frontend/package-lock.json
+      - name: Build precompiled demo ZIP
+        run: python3 scripts/build_demo_package.py
+      - name: Audit frontend build dependencies
+        working-directory: demo-frontend
+        run: npm audit --audit-level=moderate --registry=https://registry.npmjs.org
+      - name: Verify the extracted package outside the checkout
+        run: python3 scripts/verify_demo_package.py dist/demo-package/*.zip
+      - name: Retain package verification evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: demo-smoke-evidence-${{ github.sha }}
+          path: |
+            /tmp/MiniSpring demo smoke */result.json
+            /tmp/MiniSpring demo smoke */compose.log
+          if-no-files-found: warn
+          retention-days: 14
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: minispringboot-demo-${{ github.sha }}
+          path: |
+            dist/demo-package/*.zip
+            dist/demo-package/*.sha256
+          if-no-files-found: error
+          retention-days: 14

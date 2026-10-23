@@ -1,0 +1,62 @@
+name: minispring-demo
+
+services:
+  mysql:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: demo_root_local
+      MYSQL_DATABASE: minispring_demo
+      MYSQL_USER: minispring
+      MYSQL_PASSWORD: demo_local
+    volumes:
+      - demo-data:/var/lib/mysql
+      - ./mysql/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "MYSQL_PWD=$$MYSQL_PASSWORD mysql -h 127.0.0.1 -u minispring minispring_demo -e 'SELECT COUNT(*) FROM accounts'"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+
+  backend:
+    image: eclipse-temurin:17-jre
+    depends_on:
+      mysql:
+        condition: service_healthy
+    working_dir: /demo
+    volumes:
+      - ./app:/demo/app:ro
+      - ./lib:/demo/lib:ro
+    command:
+      - java
+      - -Xms64m
+      - -Xmx256m
+      - -Dfile.encoding=UTF-8
+      - -Dserver.port=9090
+      - -Dapp.instance-id=demo-package
+      - -Dminispring.datasource.url=jdbc:mysql://mysql:3306/minispring_demo?useSSL=false&allowPublicKeyRetrieval=true
+      - -Dminispring.datasource.username=minispring
+      - -Dminispring.datasource.password=demo_local
+      - -cp
+      - app:lib/*
+      - com.minispring.demo.app.DemoApplication
+
+  web:
+    image: nginx:1.28-alpine
+    depends_on:
+      backend:
+        condition: service_started
+    ports:
+      - "127.0.0.1:${DEMO_PORT:-19090}:80"
+    volumes:
+      - ./frontend:/usr/share/nginx/html:ro
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 10s
+
+volumes:
+  demo-data:

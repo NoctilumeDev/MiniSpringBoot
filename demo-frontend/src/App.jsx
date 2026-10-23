@@ -12,7 +12,7 @@ import {
 import UsersPage from './UsersPage.jsx';
 import TransferPage from './TransferPage.jsx';
 
-function BrandContent({ highAvailability = false }) {
+function BrandContent({ highAvailability = false, packagedDemo = false }) {
   return (
     <>
       <span className="brand-mark" aria-hidden="true">
@@ -21,7 +21,7 @@ function BrandContent({ highAvailability = false }) {
       <span>
         <span className="brand-name">MiniSpringBoot</span>
         <span className="brand-kicker">
-          APPLICATION KERNEL · {highAvailability ? 'M10 HA' : 'M9'}
+          APPLICATION KERNEL · {packagedDemo ? '单实例 DEMO' : highAvailability ? 'M10 HA' : 'M9'}
         </span>
       </span>
     </>
@@ -45,7 +45,10 @@ function createFeedbackState() {
  * 横幅展示后端返回的可读错误消息。
  */
 export default function App() {
-  const highAvailability = window.location.port === '9080';
+  const packagedDemo = import.meta.env.VITE_DEMO_PACKAGE === 'true';
+  const highAvailability = !packagedDemo && window.location.port === '9080';
+  const proxied = highAvailability || packagedDemo;
+  const browserPort = window.location.port || (window.location.protocol === 'https:' ? '443' : '80');
   const [tab, setTab] = useState(viewFromLocation);
   const [visitedTabs, setVisitedTabs] = useState(() => new Set([viewFromLocation()]));
   const [feedback, setFeedback] = useState(createFeedbackState);
@@ -116,11 +119,11 @@ export default function App() {
               title="展开界面"
               onClick={toggleCollapsed}
             >
-              <BrandContent highAvailability={highAvailability} />
+              <BrandContent highAvailability={highAvailability} packagedDemo={packagedDemo} />
             </button>
           ) : (
             <div className="brand-lockup">
-              <BrandContent highAvailability={highAvailability} />
+              <BrandContent highAvailability={highAvailability} packagedDemo={packagedDemo} />
             </div>
           )}
 
@@ -201,27 +204,27 @@ export default function App() {
         </main>
 
         <footer
-          className={`system-rail${highAvailability ? ' system-rail--ha' : ''}`}
+          className={`system-rail${proxied ? ' system-rail--ha' : ''}`}
           aria-label="运行链路"
           hidden={collapsed}
         >
           <div className="rail-node">
             <Globe2 size={22} aria-hidden="true" />
-            <span><strong>浏览器</strong><small>{highAvailability ? ':9080' : ':9010'}</small></span>
+            <span><strong>浏览器</strong><small>:{browserPort}</small></span>
           </div>
           <span className="rail-link" aria-hidden="true">/api</span>
           <div className="rail-node">
             <ServerCog size={22} aria-hidden="true" />
             <span>
-              <strong>{highAvailability ? 'Nginx' : 'MiniSpring'}</strong>
-              <small>{highAvailability ? 'least_conn' : ':9090'}</small>
+              <strong>{proxied ? 'Nginx' : 'MiniSpring'}</strong>
+              <small>{highAvailability ? 'least_conn' : packagedDemo ? '单实例代理' : ':9090'}</small>
             </span>
           </div>
-          {highAvailability && <span className="rail-link" aria-hidden="true">proxy</span>}
-          {highAvailability && (
+          {proxied && <span className="rail-link" aria-hidden="true">proxy</span>}
+          {proxied && (
             <div className="rail-node">
               <Activity size={22} aria-hidden="true" />
-              <span><strong>MiniSpring ×3</strong><small>:9091 · :9092 · :9093</small></span>
+              <span><strong>MiniSpring {highAvailability ? '×3' : '×1'}</strong><small>{highAvailability ? ':9091 · :9092 · :9093' : ':9090'}</small></span>
             </div>
           )}
           <span className="rail-link" aria-hidden="true">JDBC</span>
