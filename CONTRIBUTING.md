@@ -37,7 +37,7 @@ npm audit --audit-level=moderate --registry=https://registry.npmjs.org
 
 - 一次 PR 只解决一个边界清晰的问题。
 - 给出复现步骤、实际执行的验证以及未执行项。
-- 代码行为、测试、README、路线图与 Release 坐标必须一致。
+- 代码行为、测试、README、路线图与里程碑 Tag 坐标必须一致。
 - 修复缺陷时补充能阻止回归的测试；纯文档修订说明事实来源。
 - 视觉改动至少检查一个桌面视口和一个窄屏视口，并检查控制台与横向溢出。
 

@@ -15,13 +15,15 @@
 
 MiniSpringBoot 是一个 **从零手写** 的 Spring Boot 内核复刻项目。八个框架内核模块不依赖 Spring，并对使用方保持**零个强制传递的第三方运行时依赖**；JSON、YAML、HTTP 等核心机制由 JDK 实现。`mini-spring-autoconfigure` 同时提供 HikariCP 可选集成：它直接以 `<optional>true>` 编译依赖 HikariCP，只有消费方（包括 demo）显式提供 HikariCP 时才启用。
 
+本项目按源码教学项目维护，不提供软件发行版。里程碑以 Git Tag 和文档记录；原五条 GitHub Release 的说明与坐标见 [历史里程碑与维护记录](history/releases/README.md)。当前开发状态以本 README 与主线源码为准。
+
 | | |
 | :--- | :--- |
 | 内核模块 | 8 个（core → config → context → aop → web → jdbc → autoconfigure → boot，依赖严格单向） |
 | 内核代码 | 156 个 Java 文件 / 7,886 个物理行（八个内核模块的 `src/main`；运行 `python scripts/verify_repository_contracts.py --metrics` 精确复核） |
 | 内核强制传递的第三方运行时依赖 | **0**（HikariCP 是 `autoconfigure` 的直接 optional 集成，不会传递给使用方；demo 显式提供 HikariCP 与 MySQL 驱动） |
 | 测试 | 94 个（本地与 [CI](https://github.com/NoctilumeDev/MiniSpringBoot/actions) 云端 MySQL 上均全绿；jdbc 单测真连库） |
-| 里程碑 | M0–M10 本机落地自验通过；M10 VeriTrail 导入证据复验 15/15 HARD 断言通过（原始冻结坐标 [v0.m10](https://github.com/NoctilumeDev/MiniSpringBoot/releases/tag/v0.m10)，fresh-checkout 终审修订后的当前维护坐标 [v0.m10.3](https://github.com/NoctilumeDev/MiniSpringBoot/releases/tag/v0.m10.3)；账目见 [roadmap](docs/06-roadmap.md)） |
+| 里程碑 | M0–M10 本机落地自验通过；M10 VeriTrail 导入证据复验 15/15 HARD 断言通过（原始冻结坐标 [v0.m10](https://github.com/NoctilumeDev/MiniSpringBoot/tree/v0.m10)，2026-08-26 终审维护标签 [v0.m10.3](https://github.com/NoctilumeDev/MiniSpringBoot/tree/v0.m10.3)；账目见 [roadmap](docs/06-roadmap.md)） |
 
 ---
 
@@ -247,7 +249,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File deploy/m10/stop-cluster.
 - **M8** ✅：数据库接入（MySQL + HikariCP + JdbcTemplate + 声明式事务；V1~V10 唯一事实验收）
 - **M9** ✅：React 前端 + 前后端联调（Vite proxy 同源；浏览器/Network/MySQL 三方对照验收）
 - **M0–M9 三轮全量复审** ✅：外审 + 自审 + 他机环境复核，累计揪出并修复 40+ 真实缺陷（详见 [docs/06-roadmap.md](docs/06-roadmap.md) 各轮记录），测试 45→69
-- **M10** ✅：Nginx + 3 实例 + 前端 `dist` 同源托管；有界容量、单实例故障切换、事务与 MySQL 就绪演练本机通过；VeriTrail 导入证据复验 15/15 HARD 断言通过（原始冻结发布 [`v0.m10`](https://github.com/NoctilumeDev/MiniSpringBoot/releases/tag/v0.m10)，当前维护发布 [`v0.m10.3`](https://github.com/NoctilumeDev/MiniSpringBoot/releases/tag/v0.m10.3)；全拓扑生命周期所有权仍明确为 `NOT_PROVEN`）
+- **M10** ✅：Nginx + 3 实例 + 前端 `dist` 同源托管；有界容量、单实例故障切换、事务与 MySQL 就绪演练本机通过；VeriTrail 导入证据复验 15/15 HARD 断言通过（原始冻结标签 [`v0.m10`](https://github.com/NoctilumeDev/MiniSpringBoot/tree/v0.m10)，2026-08-26 维护标签 [`v0.m10.3`](https://github.com/NoctilumeDev/MiniSpringBoot/tree/v0.m10.3)；全拓扑生命周期所有权仍明确为 `NOT_PROVEN`）
 
 ---
 
