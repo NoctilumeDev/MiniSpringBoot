@@ -45,9 +45,13 @@ Compose 项目、空数据库卷和本机随机端口。它检查：
 失败时保留该测试环境、日志和结果路径，定位后再清理该专属项目。
 验收结果只证明当前包在所记录环境下的这些行为。
 
-## 分发
+## 获取演示构建产物
 
-`Demo package` 工作流构建并验收 ZIP，成功后保存为 Actions artifact。
-它不自动创建 Release。正式发布时应从已审核的发布标签构建、验收，
-再把对应 ZIP 与 `.sha256` 附到该版本，保持包内 SHA 和发布源码一致。
-历史 Release 的源码与证据不因新包而改写。
+在 [Demo package Actions](https://github.com/NoctilumeDev/MiniSpringBoot/actions/workflows/demo-package.yml)
+中选择 `main` 分支的成功运行，下载 `minispringboot-demo-<源码 SHA>` 构建产物。
+解开 Actions 下载的外层归档后，使用其中的演示 ZIP 和 `.sha256` 校验文件。
+产物保留 14 天；[下载需要登录 GitHub](https://docs.github.com/en/actions/how-tos/manage-workflow-runs/download-workflow-artifacts)。
+
+这些产物用于体验教学 demo，项目继续以源码、Git Tag 和里程碑文档维护，不创建 GitHub Release。
+体验前核对构建产物名称中的源码 SHA 与包内 `BUILD-INFO.json` 一致；
+历史里程碑与调整说明见 [历史记录](../history/releases/README.md)。
